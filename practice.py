@@ -30,8 +30,8 @@ from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 # Define the model. For the purpose of this example, the model components
 # (encoder, decoder, etc.) will be called separately.
-
-strategy = tf.distribute.MirroredStrategy(devices=None)
+devices = tf.config.experimental.list_logical_devices(device_type="GPU")
+strategy = tf.distribute.MirroredStrategy(devices=devices)
 
 
 def train(source_file,
@@ -126,18 +126,18 @@ def train(source_file,
   while True:
     #####Training batch
     loss = next(data_flow)    
-    print(".....var numb: ", len(model.trainable_variables))
+    #print(".....var numb: ", len(model.trainable_variables))
     snapshots = [v.value() for v in model.trainable_variables]
-    print("model: ", model.trainable_variables[3])
-    print("snapshot: ", snapshots[3])    
+    #print("model: ", model.trainable_variables[3])
+    #print("snapshot: ", snapshots[3])    
     _step()
-    print("model: ", model.trainable_variables[3])
-    print("snapshot: ", snapshots[3])
+    # print("model: ", model.trainable_variables[3])
+    # print("snapshot: ", snapshots[3])
     #####Testing batch
     loss = next(data_flow)
     weight_reset(snapshots)
-    print("model: ", model.trainable_variables[3])
-    print("snapshot: ", snapshots[3])
+    # print("model: ", model.trainable_variables[3])
+    # print("snapshot: ", snapshots[3])
     _step()
     ####
     step = optimizer.iterations.numpy()
@@ -259,7 +259,7 @@ def main():
       dropout=0.1,
       attention_dropout=0.1,
       ffn_dropout=0.1))
-      
+
     model.initialize(data_config)
     model.build(None)
     learning_rate = onmt.schedules.NoamDecay(scale=2.0, model_dim=512, warmup_steps=8000)
