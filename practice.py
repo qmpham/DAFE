@@ -259,6 +259,7 @@ def main():
       dropout=0.1,
       attention_dropout=0.1,
       ffn_dropout=0.1))
+      
     model.initialize(data_config)
     model.build(None)
     learning_rate = onmt.schedules.NoamDecay(scale=2.0, model_dim=512, warmup_steps=8000)

@@ -10,7 +10,7 @@ import tensorflow_addons as tfa
 from opennmt import constants
 from opennmt import inputters
 from opennmt import layers
-
+from opennmt.models.sequence_to_sequence import SequenceToSequence
 from opennmt.data import noise
 from opennmt.data import text
 from opennmt.data import vocab
@@ -249,3 +249,65 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         predictions[key] = value[:, :num_hypotheses]
     return predictions
 
+  def compute_loss(self, outputs, labels, training=True):
+    params = self.params
+    if not isinstance(outputs, dict):
+      outputs = dict(logits=outputs)
+    logits = outputs["logits"]
+    noisy_logits = outputs.get("noisy_logits")
+    attention = outputs.get("attention")
+    if noisy_logits is not None and params.get("contrastive_learning"):
+      return losses.max_margin_loss(
+          logits,
+          labels["ids_out"],
+          labels["length"],
+          noisy_logits,
+          labels["noisy_ids_out"],
+          labels["noisy_length"],
+          eta=params.get("max_margin_eta", 0.1))
+    labels_lengths = self.labels_inputter.get_length(labels)
+    loss, loss_normalizer, loss_token_normalizer = losses.cross_entropy_sequence_loss(
+        logits,
+        labels["ids_out"],
+        labels_lengths,
+        label_smoothing=params.get("label_smoothing", 0.0),
+        average_in_time=params.get("average_loss_in_time", False),
+        training=training)
+    if training:
+      gold_alignments = labels.get("alignment")
+      guided_alignment_type = params.get("guided_alignment_type")
+      if gold_alignments is not None and guided_alignment_type is not None:
+        if attention is None:
+          tf.get_logger().warning("This model did not return attention vectors; "
+                                  "guided alignment will not be applied")
+        else:
+          loss += losses.guided_alignment_cost(
+              attention[:, :-1],  # Do not constrain last timestep.
+              gold_alignments,
+              sequence_length=labels_lengths - 1,
+              cost_type=guided_alignment_type,
+              weight=params.get("guided_alignment_weight", 1))
+    return loss, loss_normalizer, loss_token_normalizer
+  
+  def print_prediction(self, prediction, params=None, stream=None):
+    if params is None:
+      params = {}
+    num_hypotheses = len(prediction["tokens"])
+    for i in range(num_hypotheses):
+      target_length = prediction["length"][i]
+      tokens = prediction["tokens"][i][:target_length]
+      sentence = self.labels_inputter.tokenizer.detokenize(tokens)
+      score = None
+      attention = None
+      alignment_type = None
+      if params.get("with_scores"):
+        score = prediction["log_probs"][i]
+      if params.get("with_alignments"):
+        attention = prediction["alignment"][i][:target_length]
+        alignment_type = params["with_alignments"]
+      sentence = format_translation_output(
+          sentence,
+          score=score,
+          attention=attention,
+          alignment_type=alignment_type)
+      print_bytes(tf.compat.as_bytes(sentence), stream=stream)
