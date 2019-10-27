@@ -147,7 +147,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         memory_sequence_length=encoder_sequence_length,
         initial_state=encoder_state)
     logits, _, attention = self.decoder(
-        target_inputs,
+        [target_inputs, labels["domain"]],
         self.labels_inputter.get_length(labels),
         state=initial_state,
         input_fn=input_fn,
