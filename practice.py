@@ -97,7 +97,17 @@ def train(source_file,
     gradient_accumulator.reset()
 
   @dataset_util.function_on_next(meta_train_dataset)
-  def _forward(next_fn):    
+  def _meta_train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+    return loss
+
+  @dataset_util.function_on_next(meta_test_dataset)
+  def _meta_test_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
       per_replica_loss = strategy.experimental_run_v2(
@@ -123,10 +133,11 @@ def train(source_file,
   # Runs the training loop.
   import time
   start = time.time()  
-  data_flow = iter(_forward())
+  meta_train_data_flow = iter(_meta_train_forward())
+  meta_test_data_flow = iter(_meta_test_forward())
   while True:
     #####Training batch
-    loss = next(data_flow)    
+    loss = next(meta_train_data_flow)    
     #print(".....var numb: ", len(model.trainable_variables))
     snapshots = [v.value() for v in model.trainable_variables]
     #print("model: ", model.trainable_variables[3])
@@ -135,7 +146,7 @@ def train(source_file,
     # print("model: ", model.trainable_variables[3])
     # print("snapshot: ", snapshots[3])
     #####Testing batch
-    loss = next(data_flow)
+    loss = next(meta_test_data_flow)
     weight_reset(snapshots)
     # print("model: ", model.trainable_variables[3])
     # print("snapshot: ", snapshots[3])
