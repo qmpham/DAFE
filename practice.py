@@ -31,6 +31,7 @@ from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 # Define the model. For the purpose of this example, the model components
 # (encoder, decoder, etc.) will be called separately.
 devices = tf.config.experimental.list_logical_devices(device_type="GPU")
+print(devices)
 strategy = tf.distribute.MirroredStrategy(devices=devices)
 
 
