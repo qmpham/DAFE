@@ -43,8 +43,8 @@ class Multi_domain_SelfAttentionEncoder(Encoder):
         for i in range(num_layers)]
 
   def call(self, inputs, sequence_length=None, training=None):
-    domain = inputs[0]
-    inputs = inputs[1]
+    domain = inputs[1]
+    inputs = inputs[0]
     inputs *= self.num_units**0.5
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs)
