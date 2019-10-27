@@ -22,7 +22,7 @@ from opennmt.utils.misc import print_bytes, format_translation_output, merge_dic
 from opennmt.decoders import decoder as decoder_util
 from opennmt.models.sequence_to_sequence import EmbeddingsSharingLevel, SequenceToSequence, SequenceToSequenceInputter, replace_unknown_target, _add_noise
 from utils.my_inputter import My_inputter
-class Multi_domain_SequenceToSequence(SequenceToSequence):
+class Multi_domain_SequenceToSequence(model.SequenceGenerator):
   """A sequence to sequence model."""
 
   def __init__(self,
