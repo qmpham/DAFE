@@ -79,7 +79,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
            training=None):
     # Process inputs.
     domain = inputs[1]
-    mask = tf.nn.embedding_lookup(self.mask, domain)
+    domain_mask = tf.nn.embedding_lookup(self.mask, domain)
     inputs = inputs[0]
     inputs *= self.num_units**0.5
     if self.position_encoder is not None:
@@ -119,7 +119,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      inputs = multi_domain_layer(inputs, mask) + inputs
+      inputs = multi_domain_layer(inputs, domain_mask) + inputs
 
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
