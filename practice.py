@@ -40,7 +40,8 @@ def train(source_file,
           optimizer,
           gradient_accumulator,
           learning_rate,
-          model,          
+          model,    
+          checkpoint_manager,
           maximum_length=100,
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=400,
@@ -162,7 +163,7 @@ def train(source_file,
       start = time.time()
     if step % save_every == 0:
       tf.get_logger().info("Saving checkpoint for step %d", step)
-      #checkpoint_manager.save(checkpoint_number=step)
+      checkpoint_manager.save(checkpoint_number=step)
     if step // 2 > train_steps:
       break
 
@@ -171,13 +172,7 @@ def translate(source_file,
               model,
               batch_size=32,
               beam_size=4):
-  """Runs translation.
-  Args:
-    source_file: The source file.
-    batch_size: The batch size to use.
-    beam_size: The beam size to use. Set to 1 for greedy search.
-  """
-
+  
   # Create the inference dataset.
   dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size)
   iterator = iter(dataset)
@@ -254,34 +249,36 @@ def main():
 
   with strategy.scope():
     model = Multi_domain_SequenceToSequence(
-  source_inputter=My_inputter(embedding_size=512, domain=1),
-  target_inputter=My_inputter(embedding_size=512, domain=1),
-  encoder= Multi_domain_SelfAttentionEncoder(
-      num_layers=6,
-      num_units=512,
-      num_heads=8,
-      ffn_inner_dim=2048,
-      dropout=0.1,
-      attention_dropout=0.1,
-      ffn_dropout=0.1),
-  decoder= Multi_domain_SelfAttentionDecoder(
-      num_layers=6,
-      num_domains=6,
-      num_units=512,
-      num_heads=8,
-      ffn_inner_dim=2048,
-      dropout=0.1,
-      attention_dropout=0.1,
-      ffn_dropout=0.1))
+      source_inputter=My_inputter(embedding_size=512, domain=1),
+      target_inputter=My_inputter(embedding_size=512, domain=1),
+      encoder= Multi_domain_SelfAttentionEncoder(
+          num_layers=6,
+          num_units=512,
+          num_heads=8,
+          ffn_inner_dim=2048,
+          dropout=0.1,
+          attention_dropout=0.1,
+          ffn_dropout=0.1),
+      decoder= Multi_domain_SelfAttentionDecoder(
+          num_layers=6,
+          num_domains=6,
+          num_units=512,
+          num_heads=8,
+          ffn_inner_dim=2048,
+          dropout=0.1,
+          attention_dropout=0.1,
+          ffn_dropout=0.1))
 
     model.initialize(data_config)
     model.build(None)
     learning_rate = onmt.schedules.NoamDecay(scale=2.0, model_dim=512, warmup_steps=8000)
     optimizer = tfa.optimizers.LazyAdam(learning_rate)            
     gradient_accumulator = optimizer_util.GradientAccumulator()  
-
+    checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
+    
+  checkpoint_manager = tf.train.CheckpointManager(checkpoint, args.model_dir, max_to_keep=5)
   if args.run == "train":
-    train(args.src, args.tgt, optimizer, gradient_accumulator, learning_rate, model)
+    train(args.src, args.tgt, optimizer, gradient_accumulator, learning_rate, model, checkpoint_manager)
   elif args.run == "translate":
     translate(args.src, model)
    
