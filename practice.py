@@ -289,7 +289,7 @@ def main():
     translate(args.src, model, args.output_file)
   """
   for v in model.trainable_variables:
-    print(v.name, tf.shape(v))
+    print(v.name, tf.shape(v.value()))
   
 if __name__ == "__main__":
   main()
