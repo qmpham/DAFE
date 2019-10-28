@@ -119,6 +119,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
+      print("inputs_%d"%i,inputs)
       inputs = multi_domain_layer(inputs, domain_mask) + inputs
 
     outputs = self.layer_norm(inputs)
