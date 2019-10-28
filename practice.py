@@ -172,7 +172,7 @@ def translate(source_file,
               model,
               output_file,
               batch_size=32,
-              beam_size=4):
+              beam_size=5):
   
   # Create the inference dataset.
   dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size)
@@ -182,15 +182,14 @@ def translate(source_file,
   ids_to_tokens = model.labels_inputter.ids_to_tokens
 
   @tf.function
-  def predict_next():
-    
+  def predict_next():    
     source = next(iterator)
 
     # Run the encoder.
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
-    encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
+    encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length)
 
     # Prepare the decoding strategy.
     if beam_size > 1:
@@ -205,7 +204,7 @@ def translate(source_file,
         memory=encoder_outputs,
         memory_sequence_length=source_length)
     decoded = model.decoder.dynamic_decode(
-        model.labels_inputter.embedding,
+        lambda ids: [model.labels_inputter({"ids": ids}), tf.tile(features["domain"],[beam_size])],
         tf.fill([batch_size], START_OF_SENTENCE_ID),
         end_id=END_OF_SENTENCE_ID,
         initial_state=decoder_state,
