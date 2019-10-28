@@ -116,16 +116,7 @@ class Runner(object):
     return self._init_model(config), config
 
   def train(self, num_devices=1, with_eval=False, checkpoint_path=None):
-    """Runs the training loop.
-
-    Args:
-      num_devices: Number of devices to use for training.
-      with_eval: Enable evaluation during training.
-      checkpoint_path: The checkpoint path to load the model weights from it.
-
-    Returns:
-      The path to the final model directory.
-    """
+    
     checkpoint, config = self._init_run(num_devices=num_devices, training=True)
     checkpoint.restore(
         checkpoint_path=checkpoint_path, weights_only=checkpoint_path is not None)

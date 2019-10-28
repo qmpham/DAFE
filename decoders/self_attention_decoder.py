@@ -6,12 +6,14 @@ from opennmt.decoders.decoder import Decoder
 from opennmt.decoders.self_attention_decoder import SelfAttentionDecoder
 from opennmt.layers import common, transformer
 from opennmt.layers.position import SinusoidalPositionEncoder
-
-
+from layers.layers import Multi_domain_FeedForwardNetwork
+from utils.utils_ import make_domain_mask
 class Multi_domain_SelfAttentionDecoder(Decoder):
   
   def __init__(self,
                num_layers,
+               num_domains,
+               num_domain_units=8,
                num_units=512,
                num_heads=8,
                ffn_inner_dim=2048,
@@ -41,6 +43,10 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
             attention_dropout=attention_dropout,
             ffn_dropout=ffn_dropout,
             ffn_activation=ffn_activation)
+        for i in range(num_layers)]
+    self.mask = make_domain_mask(num_domains, num_domain_units=num_domain_units)
+    self.multi_domain_layers = [
+        Multi_domain_FeedForwardNetwork(num_domains*num_domain_units, num_units)
         for i in range(num_layers)]
 
   @property
@@ -73,6 +79,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
            training=None):
     # Process inputs.
     domain = inputs[1]
+    mask = self.mask[domain,:]
     inputs = inputs[0]
     inputs *= self.num_units**0.5
     if self.position_encoder is not None:
@@ -102,7 +109,8 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
 
     # Run each layer.
     new_cache = []
-    for i, layer in enumerate(self.layers):
+    for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
+
       inputs, layer_cache, attention = layer(
           inputs,
           mask=mask,
@@ -111,6 +119,8 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
+      inputs = multi_domain_layer(inputs, mask) + inputs
+
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
 
