@@ -44,8 +44,8 @@ def train(source_file,
           checkpoint_manager,
           maximum_length=100,
           shuffle_buffer_size=-1,  # Uniform shuffle.
-          train_steps=15000,
-          save_every=1000,
+          train_steps=300,
+          save_every=100,
           report_every=100):  
   
   meta_train_dataset = model.examples_inputter.make_training_dataset(
@@ -271,25 +271,21 @@ def main():
           attention_dropout=0.1,
           ffn_dropout=0.1))
 
-    model.initialize(data_config)
-    model.build(None)
     learning_rate = onmt.schedules.NoamDecay(scale=2.0, model_dim=512, warmup_steps=8000)
     optimizer = tfa.optimizers.LazyAdam(learning_rate)            
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
-    
-  checkpoint_manager = tf.train.CheckpointManager(checkpoint, args.model_dir, max_to_keep=5)
+    model.initialize(data_config)
+    model.build(None)
+    checkpoint_manager = tf.train.CheckpointManager(checkpoint, args.model_dir, max_to_keep=5)
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
-  """
+  
   if args.run == "train":
     train(args.src, args.tgt, optimizer, gradient_accumulator, learning_rate, model, checkpoint_manager)
   elif args.run == "translate":
     translate(args.src, model, args.output_file)
-  """
-  for v in model.trainable_variables:
-    print(v.name, tf.shape(v.value()))
   
 if __name__ == "__main__":
   main()
