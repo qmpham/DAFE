@@ -79,7 +79,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
            training=None):
     # Process inputs.
     domain = inputs[1]
-    mask = self.mask[domain,:]
+    mask = tf.nn.embedding_lookup(self.mask, domain)
     inputs = inputs[0]
     inputs *= self.num_units**0.5
     if self.position_encoder is not None:
