@@ -222,6 +222,7 @@ def translate(source_file,
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
           sentence = b" ".join(tokens[0][:length[0]])
           print_bytes(sentence, stream=stream)
+          print_bytes(sentence)
       except tf.errors.OutOfRangeError:
         break
 
