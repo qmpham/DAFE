@@ -17,7 +17,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 import opennmt as onmt
-
+import io
 from opennmt import START_OF_SENTENCE_ID
 from opennmt import END_OF_SENTENCE_ID
 from opennmt.utils.misc import print_bytes
@@ -170,6 +170,7 @@ def train(source_file,
 
 def translate(source_file,
               model,
+              output_file,
               batch_size=32,
               beam_size=4):
   
@@ -182,8 +183,7 @@ def translate(source_file,
 
   @tf.function
   def predict_next():
-    # For efficiency, we advance the iterator within the tf.function,
-    # see https://github.com/tensorflow/tensorflow/issues/29075.
+    
     source = next(iterator)
 
     # Run the encoder.
@@ -217,13 +217,14 @@ def translate(source_file,
 
   # Iterates on the dataset.
   while True:
-    try:
-      batch_tokens, batch_length = predict_next()
-      for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
-        sentence = b" ".join(tokens[0][:length[0]])
-        print_bytes(sentence)
-    except tf.errors.OutOfRangeError:
-      break
+    with io.open(output_file, encoding="utf-8", mode="w") as stream:
+      try:
+        batch_tokens, batch_length = predict_next()
+        for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
+          sentence = b" ".join(tokens[0][:length[0]])
+          print_bytes(sentence, stream=stream)
+      except tf.errors.OutOfRangeError:
+        break
 
 
 def main():
@@ -234,6 +235,8 @@ def main():
                       help="Path to the source file.")
   parser.add_argument("--tgt",
                       help="Path to the target file.")
+  parser.add_argument("--output_file", required=True,
+                      help="Path to the output file.")
   parser.add_argument("--src_vocab", required=True,
                       help="Path to the source vocabulary.")
   parser.add_argument("--tgt_vocab", required=True,
@@ -284,7 +287,7 @@ def main():
   if args.run == "train":
     train(args.src, args.tgt, optimizer, gradient_accumulator, learning_rate, model, checkpoint_manager)
   elif args.run == "translate":
-    translate(args.src, model)
+    translate(args.src, model, args.output_file)
    
   
 if __name__ == "__main__":

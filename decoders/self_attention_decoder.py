@@ -13,7 +13,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
   def __init__(self,
                num_layers,
                num_domains,
-               num_domain_units=8,
+               num_domain_units=128,
                num_units=512,
                num_heads=8,
                ffn_inner_dim=2048,
