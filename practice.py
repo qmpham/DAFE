@@ -277,6 +277,10 @@ def main():
     checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
     
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, args.model_dir, max_to_keep=5)
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+
   if args.run == "train":
     train(args.src, args.tgt, optimizer, gradient_accumulator, learning_rate, model, checkpoint_manager)
   elif args.run == "translate":
