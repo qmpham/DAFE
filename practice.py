@@ -266,6 +266,7 @@ def main():
       ffn_dropout=0.1),
   decoder= Multi_domain_SelfAttentionDecoder(
       num_layers=6,
+      num_domains=6,
       num_units=512,
       num_heads=8,
       ffn_inner_dim=2048,
