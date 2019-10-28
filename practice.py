@@ -282,12 +282,14 @@ def main():
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
-
+  """
   if args.run == "train":
     train(args.src, args.tgt, optimizer, gradient_accumulator, learning_rate, model, checkpoint_manager)
   elif args.run == "translate":
     translate(args.src, model, args.output_file)
-   
+  """
+  for v in model.trainable_variables:
+    print(v.name, tf.shape(v))
   
 if __name__ == "__main__":
   main()
