@@ -56,6 +56,7 @@ def train(source_file,
     length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
     maximum_features_length=maximum_length,
     maximum_labels_length=maximum_length)
+
   meta_test_dataset = model.examples_inputter.make_training_dataset(
     source_file,
     target_file,
@@ -134,7 +135,7 @@ def train(source_file,
   import time
   start = time.time()  
   meta_train_data_flow = iter(_meta_train_forward())
-  #meta_test_data_flow = iter(_meta_test_forward())
+  meta_test_data_flow = iter(_meta_test_forward())
   while True:
     #####Training batch
     loss = next(meta_train_data_flow)    
@@ -146,7 +147,7 @@ def train(source_file,
     # print("model: ", model.trainable_variables[3])
     # print("snapshot: ", snapshots[3])
     #####Testing batch
-    loss = next(meta_train_data_flow)
+    loss = next(meta_test_data_flow)
     weight_reset(snapshots)
     # print("model: ", model.trainable_variables[3])
     # print("snapshot: ", snapshots[3])
