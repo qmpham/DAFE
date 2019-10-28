@@ -179,7 +179,7 @@ def translate(source_file,
   iterator = iter(dataset)
 
   # Create the mapping for target ids to tokens.
-  ids_to_tokens = model.labels_inputter.vocabulary_lookup_reverse()
+  ids_to_tokens = model.labels_inputter.ids_to_tokens
 
   @tf.function
   def predict_next():
