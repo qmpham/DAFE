@@ -130,8 +130,14 @@ def train(source_file,
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
     return loss
-  meta_train_data_flow= iter(_meta_train_forward())
-  print(meta_train_dataset)
+
+  @dataset_util.function_on_next(meta_train_dataset)
+  def _meta_train_iteration(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      return per_replica_source, per_replica_target
+  meta_train_data_flow= iter(_meta_train_iteration())
+  print(meta_train_data_flow)
   """
   meta_test_data_flows = [] 
   for meta_test_dataset in meta_test_datasets:
