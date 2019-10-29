@@ -242,11 +242,12 @@ def main():
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("run", choices=["train", "translate"],
                       help="Run type.")
-  parser.add_argument("--src", required=True,
+                      
+  parser.add_argument("--src", nargs='+', required=True,
                       help="Path to the source file.")
-  parser.add_argument("--tgt",
+  parser.add_argument("--tgt", nargs='+',
                       help="Path to the target file.")
-  parser.add_argument("--output_file", required=True,
+  parser.add_argument("--output_file", nargs='+',
                       help="Path to the output file.")
   parser.add_argument("--src_vocab", required=True,
                       help="Path to the source vocabulary.")
