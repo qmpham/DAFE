@@ -53,7 +53,7 @@ def merge_map_fn(*args):
       src_batch.get(feature, tf.concat([b[feature] for b in src_batches],0))
     else:
       print(2,feature,tf.rank(src_batches[0][feature]))
-      len_max = tf.reduce_max(tf.concat([tf.shape(batch[feature])[1] for batch in src_batches],0))
+      len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in src_batches])
       if src_batches[0][feature].dtype == tf.string:
         src_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],0) for batch in src_batches],0))
       else:
@@ -65,7 +65,7 @@ def merge_map_fn(*args):
       tgt_batch.get(feature, tf.concat([b[feature] for b in tgt_batches],0))
     else:
       print(feature)
-      len_max = tf.reduce_max(tf.concat([tf.shape(batch[feature])[1] for batch in tgt_batches],0))
+      len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in tgt_batches])
       if tgt_batches[0][feature].dtype == tf.string:
         tgt_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],0) for batch in tgt_batches],0))
       else:
