@@ -35,6 +35,22 @@ print(devices)
 strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
 import numpy as np
 
+def map_fn(*args):
+  num = len(args)
+  assert num % 2 == 0
+  src_batches = [args[2*i] for i in range(num/2)]
+  tgt_batches = [args[2*i+1] for i in range(num/2)]
+
+  src_batch = {}
+  tgt_batch = {}
+  for feature in list(src_batches[0].keys()):
+    if tf.rank(src_batches[0][feature]==1):
+      src_batch[feature] = tf.concat([b[feature] for b in src_batches],0)
+    #elif tf.rank(src_batches[0][feature]==2):
+
+      
+
+  
 
 def train(source_file,
           target_file,
@@ -48,7 +64,7 @@ def train(source_file,
           train_steps=300,
           save_every=100,
           report_every=100): 
-  batch_size = 4096 
+  batch_size = 10 
   meta_train_datasets = [] 
   meta_test_datasets = [] 
   print("There are %d in-domain corpora"%len(source_file))
@@ -73,6 +89,8 @@ def train(source_file,
     maximum_features_length=maximum_length,
     maximum_labels_length=maximum_length))
   
+  meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets)
+
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
@@ -102,21 +120,20 @@ def train(source_file,
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
-
-  meta_train_data_flows = []
-  meta_test_data_flows = []
-  for meta_train_dataset in meta_train_datasets:
-    @dataset_util.function_on_next(meta_train_dataset)
-    def _meta_train_forward(next_fn):    
-      with strategy.scope():
-        per_replica_source, per_replica_target = next_fn()
-        per_replica_loss = strategy.experimental_run_v2(
-            _accumulate_gradients, args=(per_replica_source, per_replica_target))
-        # TODO: these reductions could be delayed until _step is called.
-        loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-      return loss
-    meta_train_data_flows.append(iter(_meta_train_forward()))
-
+ 
+  @dataset_util.function_on_next(meta_train_dataset)
+  def _meta_train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+    return loss
+  meta_train_data_flow= iter(_meta_train_forward())
+  print(meta_train_dataset)
+  """
+  meta_test_data_flows = [] 
   for meta_test_dataset in meta_test_datasets:
     @dataset_util.function_on_next(meta_test_dataset)
     def _meta_test_forward(next_fn):    
@@ -128,7 +145,7 @@ def train(source_file,
         loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
       return loss
     meta_test_data_flows.append(iter(_meta_test_forward()))
-
+  """
   @tf.function
   def _step():
     with strategy.scope():
@@ -148,10 +165,11 @@ def train(source_file,
   start = time.time()  
   #meta_train_data_flow = iter(_meta_train_forward())
   #meta_test_data_flow = iter(_meta_test_forward())
+
+  """
   while True:
     #####Training batch
-    id_meta_train = np.random.choice(len(source_file),1)
-    loss = next(meta_train_data_flows[id_meta_train[0]])    
+    loss = next(meta_train_data_flow)    
     #print(".....var numb: ", len(model.trainable_variables))
     snapshots = [v.value() for v in model.trainable_variables]
     #print("model: ", model.trainable_variables[3])
@@ -179,6 +197,7 @@ def train(source_file,
       checkpoint_manager.save(checkpoint_number=step)
     if step // 2 > train_steps:
       break
+  """
 
 
 def translate(source_file,
