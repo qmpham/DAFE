@@ -35,7 +35,7 @@ print(devices)
 strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
 import numpy as np
 
-def map_fn(*args):
+def merge_map_fn(*args):
   num = len(args)
   assert num % 2 == 0
   src_batches = [args[2*i] for i in range(num/2)]
@@ -46,11 +46,24 @@ def map_fn(*args):
   for feature in list(src_batches[0].keys()):
     if tf.rank(src_batches[0][feature]==1):
       src_batch[feature] = tf.concat([b[feature] for b in src_batches],0)
-    #elif tf.rank(src_batches[0][feature]==2):
+    elif tf.rank(src_batches[0][feature]==2):
+      len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in src_batches])
+      if src_batches[0][feature].dtype == tf.string:
+        src_batch = tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],0) for batch in src_batches],0)
+      else:
+        src_batch = tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],0)],0) for batch in src_batches],0)
+    
+  for feature in list(tgt_batches[0].keys()):
+    if tf.rank(tgt_batches[0][feature]==1):
+      tgt_batch[feature] = tf.concat([b[feature] for b in tgt_batches],0)
+    elif tf.rank(tgt_batches[0][feature]==2):
+      len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in tgt_batches])
+      if tgt_batches[0][feature].dtype == tf.string:
+        tgt_batch = tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],0) for batch in tgt_batches],0)
+      else:
+        src_batch = tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],0)],0) for batch in tgt_batches],0)
 
-      
-
-  
+  return (src_batch, tgt_batch)
 
 def train(source_file,
           target_file,
@@ -90,7 +103,7 @@ def train(source_file,
     maximum_labels_length=maximum_length))
   
   meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets)
-
+  meta_test_dataset = tf.data.Dataset.zip(meta_test_datasets).apply(merge_map_fn)
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
@@ -136,8 +149,16 @@ def train(source_file,
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
       return per_replica_source, per_replica_target
-  meta_train_data_flow= iter(_meta_train_iteration())
+  @dataset_util.function_on_next(meta_test_dataset)
+  def _meta_test_iteration(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      return per_replica_source, per_replica_target
+
+  meta_train_data_flow = iter(_meta_train_iteration())
+  meta_test_data_flow = iter(_meta_test_iteration())
   print(next(meta_train_data_flow))
+  print(next(meta_test_data_flow))
   """
   meta_test_data_flows = [] 
   for meta_test_dataset in meta_test_datasets:
