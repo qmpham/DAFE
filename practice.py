@@ -85,7 +85,7 @@ def train(source_file,
           train_steps=300,
           save_every=100,
           report_every=100): 
-  batch_size = 30
+  batch_size = 1024
   meta_train_datasets = [] 
   meta_test_datasets = [] 
   print("There are %d in-domain corpora"%len(source_file))
