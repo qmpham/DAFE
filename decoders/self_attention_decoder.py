@@ -46,7 +46,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
         for i in range(num_layers)]
     self.mask = make_domain_mask(num_domains, num_domain_units=num_domain_units)
     self.multi_domain_layers = [
-        Multi_domain_FeedForwardNetwork(num_domains*num_domain_units, num_units)
+        Multi_domain_FeedForwardNetwork(num_domains*num_domain_units, num_units, name="ADAP_%d"%i)
         for i in range(num_layers)]
 
   @property

@@ -169,7 +169,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           training=training)
       outputs["noisy_logits"] = noisy_logits
     return outputs
-
+ 
   def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length):
     params = self.params
     batch_size = tf.shape(tf.nest.flatten(encoder_outputs)[0])[0]

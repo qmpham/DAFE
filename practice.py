@@ -33,6 +33,7 @@ from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 devices = tf.config.experimental.list_logical_devices(device_type="GPU")
 print(devices)
 strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
+import numpy as np
 
 
 def train(source_file,
@@ -46,27 +47,29 @@ def train(source_file,
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=300,
           save_every=100,
-          report_every=100):  
-  
-  meta_train_dataset = model.examples_inputter.make_training_dataset(
-    source_file,
-    target_file,
+          report_every=100): 
+  batch_size = 4096 
+  meta_train_datasets = [] 
+  meta_test_datasets = [] 
+  for src,tgt in zip(source_file,target_file):
+    meta_train_datasets.append(model.examples_inputter.make_training_dataset(
+    src,
+    tgt,
     batch_size=3072,
     batch_type="tokens",
     shuffle_buffer_size=shuffle_buffer_size,
     length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
     maximum_features_length=maximum_length,
-    maximum_labels_length=maximum_length)
-
-  meta_test_dataset = model.examples_inputter.make_training_dataset(
-    source_file,
-    target_file,
-    batch_size=3072,
+    maximum_labels_length=maximum_length))
+    meta_test_datasets.append(model.examples_inputter.make_training_dataset(
+    src,
+    tgt,
+    batch_size= batch_size//len(source_file),
     batch_type="tokens",
     shuffle_buffer_size=shuffle_buffer_size,
     length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
     maximum_features_length=maximum_length,
-    maximum_labels_length=maximum_length)
+    maximum_labels_length=maximum_length))
   
   def _accumulate_gradients(source, target):
     outputs, _ = model(
@@ -98,25 +101,31 @@ def train(source_file,
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
 
-  @dataset_util.function_on_next(meta_train_dataset)
-  def _meta_train_forward(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      per_replica_loss = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
-      # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-    return loss
+  meta_train_data_flows = []
+  meta_test_data_flows = []
+  for meta_train_dataset in meta_train_datasets:
+    @dataset_util.function_on_next(meta_train_dataset)
+    def _meta_train_forward(next_fn):    
+      with strategy.scope():
+        per_replica_source, per_replica_target = next_fn()
+        per_replica_loss = strategy.experimental_run_v2(
+            _accumulate_gradients, args=(per_replica_source, per_replica_target))
+        # TODO: these reductions could be delayed until _step is called.
+        loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      return loss
+    meta_train_data_flows.append(iter(_meta_train_forward()))
 
-  @dataset_util.function_on_next(meta_test_dataset)
-  def _meta_test_forward(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      per_replica_loss = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
-      # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-    return loss
+  for meta_test_dataset in meta_test_datasets:
+    @dataset_util.function_on_next(meta_test_dataset)
+    def _meta_test_forward(next_fn):    
+      with strategy.scope():
+        per_replica_source, per_replica_target = next_fn()
+        per_replica_loss = strategy.experimental_run_v2(
+            _accumulate_gradients, args=(per_replica_source, per_replica_target))
+        # TODO: these reductions could be delayed until _step is called.
+        loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      return loss
+    meta_test_data_flows.append(iter(_meta_test_forward()))
 
   @tf.function
   def _step():
@@ -135,11 +144,12 @@ def train(source_file,
   # Runs the training loop.
   import time
   start = time.time()  
-  meta_train_data_flow = iter(_meta_train_forward())
-  meta_test_data_flow = iter(_meta_test_forward())
+  #meta_train_data_flow = iter(_meta_train_forward())
+  #meta_test_data_flow = iter(_meta_test_forward())
   while True:
     #####Training batch
-    loss = next(meta_train_data_flow)    
+    id_meta_train = np.random.choice(len(source_file),1)
+    loss = next(meta_train_data_flows[id_meta_train])    
     #print(".....var numb: ", len(model.trainable_variables))
     snapshots = [v.value() for v in model.trainable_variables]
     #print("model: ", model.trainable_variables[3])
@@ -148,7 +158,8 @@ def train(source_file,
     # print("model: ", model.trainable_variables[3])
     # print("snapshot: ", snapshots[3])
     #####Testing batch
-    loss = next(meta_test_data_flow)
+    for meta_test_data_flow in meta_test_data_flows:
+      loss = next(meta_test_data_flow)
     weight_reset(snapshots)
     # print("model: ", model.trainable_variables[3])
     # print("snapshot: ", snapshots[3])
