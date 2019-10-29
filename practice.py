@@ -59,12 +59,12 @@ def train(source_file,
           learning_rate,
           model,    
           checkpoint_manager,
-          maximum_length=100,
+          maximum_length=10,
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=300,
           save_every=100,
           report_every=100): 
-  batch_size = 10 
+  batch_size = 30
   meta_train_datasets = [] 
   meta_test_datasets = [] 
   print("There are %d in-domain corpora"%len(source_file))
