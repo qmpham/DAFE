@@ -37,10 +37,12 @@ import numpy as np
 
 def merge_map_fn(*args):
   num = len(args)
-  assert num % 2 == 0
-  src_batches = [args[2*i] for i in range(num/2)]
-  tgt_batches = [args[2*i+1] for i in range(num/2)]
 
+  src_batches = []
+  tgt_batches = []
+  for (src,tgt) in args:
+    src_batches.append(src)
+    tgt_batches.append(tgt)
   src_batch = {}
   tgt_batch = {}
   for feature in list(src_batches[0].keys()):
@@ -103,7 +105,7 @@ def train(source_file,
     maximum_labels_length=maximum_length))
   
   meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets)
-  meta_test_dataset = tf.data.Dataset.zip(meta_test_datasets).apply(merge_map_fn)
+  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).apply(merge_map_fn)
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
