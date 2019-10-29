@@ -36,7 +36,7 @@ strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
 import numpy as np
 
 def merge_map_fn(dataset):
-  print(dataset[0])
+  print(tf.nest.flatten(dataset))
   print(dataset.element_spec)
   num = len(dataset.element_spec)
   print("args num: ", num)
