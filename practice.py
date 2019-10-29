@@ -48,10 +48,10 @@ def merge_map_fn(*args):
   tgt_batch = {}
   print(src_batches[0].keys())
   for feature in list(src_batches[0].keys()):
-    if tf.rank(src_batches[0][feature])==1:
+    if tf.rank(src_batches[0][feature]).numpy()==1:
       print(1,feature, tf.rank(src_batches[0][feature]))
       src_batch.get(feature, tf.concat([b[feature] for b in src_batches],0))
-    elif tf.rank(src_batches[0][feature])==2:
+    elif tf.rank(src_batches[0][feature]).numpy()==2:
       print(2,feature,tf.rank(src_batches[0][feature]))
       len_max = tf.reduce_max(tf.concat([tf.shape(batch[feature])[1] for batch in src_batches]))
       if src_batches[0][feature].dtype == tf.string:
