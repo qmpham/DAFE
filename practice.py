@@ -55,9 +55,9 @@ def merge_map_fn(*args):
       print(2,feature,tf.rank(src_batches[0][feature]))
       len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in src_batches])
       if src_batches[0][feature].dtype == tf.string:
-        src_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],0) for batch in src_batches],0))
+        src_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],1) for batch in src_batches],0))
       else:
-        src_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.cast(tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],0),tf.int64)],0) for batch in src_batches],0))
+        src_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.cast(tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],0),tf.int64)],1) for batch in src_batches],0))
     
   for feature in list(tgt_batches[0].keys()):
     if feature!="ids" and feature!="tokens":
@@ -67,9 +67,9 @@ def merge_map_fn(*args):
       print(feature)
       len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in tgt_batches])
       if tgt_batches[0][feature].dtype == tf.string:
-        tgt_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],0) for batch in tgt_batches],0))
+        tgt_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],1) for batch in tgt_batches],0))
       else:
-        tgt_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.cast(tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],0),tf.int64)],0) for batch in tgt_batches],0))
+        tgt_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.cast(tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],0),tf.int64)],1) for batch in tgt_batches],0))
 
   return (src_batch, tgt_batch)
 
