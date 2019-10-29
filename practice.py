@@ -37,7 +37,7 @@ import numpy as np
 
 def merge_map_fn(*args):
   num = len(args)
-
+  print("args num: ", num)
   src_batches = []
   tgt_batches = []
   for (src,tgt) in args:
@@ -105,7 +105,7 @@ def train(source_file,
     maximum_labels_length=maximum_length))
   
   meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets)
-  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets))#.apply(merge_map_fn)
+  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).apply(merge_map_fn)
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
@@ -151,15 +151,16 @@ def train(source_file,
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
       return per_replica_source, per_replica_target
+  
   @dataset_util.function_on_next(meta_test_dataset)
   def _meta_test_iteration(next_fn):    
     with strategy.scope():
       #per_replica_source, per_replica_target = next_fn()
       return next_fn()#per_replica_source, per_replica_target
 
-  meta_train_data_flow = iter(_meta_train_iteration())
+  #meta_train_data_flow = iter(_meta_train_iteration())
   meta_test_data_flow = iter(_meta_test_iteration())
-  print(next(meta_train_data_flow))
+  #print(next(meta_train_data_flow))
   print(next(meta_test_data_flow))
   """
   meta_test_data_flows = [] 
