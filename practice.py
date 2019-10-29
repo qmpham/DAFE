@@ -35,11 +35,13 @@ print(devices)
 strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
 import numpy as np
 
-def merge_map_fn(dataset):
+def merge_map_fn(*args):
+  """
   print(dataset[0])
   print(tf.nest.flatten(dataset))
   print(dataset.element_spec)
-  num = len(dataset.element_spec)
+  """
+  num = len(args)#len(dataset.element_spec)
   print("args num: ", num)
   src_batches = []
   tgt_batches = []
@@ -107,7 +109,7 @@ def train(source_file,
     maximum_labels_length=maximum_length))
   
   meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets)
-  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).apply(merge_map_fn)
+  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
