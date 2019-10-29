@@ -105,7 +105,7 @@ def train(source_file,
     maximum_labels_length=maximum_length))
   
   meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets)
-  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).apply(merge_map_fn)
+  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets))#.apply(merge_map_fn)
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
