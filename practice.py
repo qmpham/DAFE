@@ -149,7 +149,7 @@ def train(source_file,
   while True:
     #####Training batch
     id_meta_train = np.random.choice(len(source_file),1)
-    loss = next(meta_train_data_flows[id_meta_train])    
+    loss = next(meta_train_data_flows[id_meta_train[0]])    
     #print(".....var numb: ", len(model.trainable_variables))
     snapshots = [v.value() for v in model.trainable_variables]
     #print("model: ", model.trainable_variables[3])
