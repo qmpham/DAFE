@@ -35,14 +35,14 @@ print(devices)
 strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
 import numpy as np
 
-def merge_map_fn(*args):
-  print(args)
-  args = tf.nest.flatten(args)
-  num = len(args)
+def merge_map_fn(dataset):
+  print(dataset)
+  print(dataset.output_shapes.key())
+  num = len(dataset.output_shapes.key())
   print("args num: ", num)
   src_batches = []
   tgt_batches = []
-  for (src,tgt) in args:
+  for (src,tgt) in dataset:
     src_batches.append(src)
     tgt_batches.append(tgt)
   src_batch = {}
