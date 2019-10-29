@@ -43,6 +43,7 @@ def merge_map_fn(dataset):
   src_batches = []
   tgt_batches = []
   for (src,tgt) in dataset:
+    print(1)
     src_batches.append(src)
     tgt_batches.append(tgt)
   print("element numb: ",len(src_batches))
