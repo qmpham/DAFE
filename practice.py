@@ -46,11 +46,12 @@ def merge_map_fn(*args):
   print("element numb: ",len(src_batches))
   src_batch = {}
   tgt_batch = {}
+  print(src_batches[0].keys())
   for feature in list(src_batches[0].keys()):
     print(feature)
-    if tf.rank(src_batches[0][feature]==1):
+    if tf.rank(src_batches[0][feature])==1:
       src_batch[feature] = tf.concat([b[feature] for b in src_batches],0)
-    elif tf.rank(src_batches[0][feature]==2):
+    elif tf.rank(src_batches[0][feature])==2:
       len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in src_batches])
       if src_batches[0][feature].dtype == tf.string:
         src_batch = tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],0) for batch in src_batches],0)
@@ -58,9 +59,9 @@ def merge_map_fn(*args):
         src_batch = tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],0)],0) for batch in src_batches],0)
     
   for feature in list(tgt_batches[0].keys()):
-    if tf.rank(tgt_batches[0][feature]==1):
+    if tf.rank(tgt_batches[0][feature])==1:
       tgt_batch[feature] = tf.concat([b[feature] for b in tgt_batches],0)
-    elif tf.rank(tgt_batches[0][feature]==2):
+    elif tf.rank(tgt_batches[0][feature])==2:
       len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in tgt_batches])
       if tgt_batches[0][feature].dtype == tf.string:
         tgt_batch = tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],0) for batch in tgt_batches],0)
