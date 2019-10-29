@@ -45,6 +45,7 @@ def merge_map_fn(dataset):
   for (src,tgt) in dataset:
     src_batches.append(src)
     tgt_batches.append(tgt)
+  print("element numb: ",len(src_batches))
   src_batch = {}
   tgt_batch = {}
   for feature in list(src_batches[0].keys()):
