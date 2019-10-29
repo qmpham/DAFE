@@ -51,16 +51,18 @@ def train(source_file,
   batch_size = 4096 
   meta_train_datasets = [] 
   meta_test_datasets = [] 
+  print("There are %d in-domain corpora"%len(source_file))
   for src,tgt in zip(source_file,target_file):
     meta_train_datasets.append(model.examples_inputter.make_training_dataset(
     src,
     tgt,
-    batch_size=3072,
+    batch_size=batch_size,
     batch_type="tokens",
     shuffle_buffer_size=shuffle_buffer_size,
     length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
     maximum_features_length=maximum_length,
     maximum_labels_length=maximum_length))
+
     meta_test_datasets.append(model.examples_inputter.make_training_dataset(
     src,
     tgt,
@@ -263,6 +265,7 @@ def main():
   }
 
   with strategy.scope():
+    """
     model = Multi_domain_SequenceToSequence(
       source_inputter=My_inputter(embedding_size=512, domain=1),
       target_inputter=My_inputter(embedding_size=512, domain=1),
@@ -283,7 +286,26 @@ def main():
           dropout=0.1,
           attention_dropout=0.1,
           ffn_dropout=0.1))
-
+    """
+    model = onmt.models.SequenceToSequence(
+    source_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
+    target_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
+    encoder=onmt.encoders.SelfAttentionEncoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1),
+    decoder=onmt.decoders.SelfAttentionDecoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1))
     learning_rate = onmt.schedules.NoamDecay(scale=2.0, model_dim=512, warmup_steps=8000)
     optimizer = tfa.optimizers.LazyAdam(learning_rate)            
     gradient_accumulator = optimizer_util.GradientAccumulator()  
