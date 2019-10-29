@@ -154,8 +154,8 @@ def train(source_file,
   @dataset_util.function_on_next(meta_test_dataset)
   def _meta_test_iteration(next_fn):    
     with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      return per_replica_source, per_replica_target
+      #per_replica_source, per_replica_target = next_fn()
+      return next_fn()#per_replica_source, per_replica_target
 
   meta_train_data_flow = iter(_meta_train_iteration())
   meta_test_data_flow = iter(_meta_test_iteration())
