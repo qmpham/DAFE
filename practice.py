@@ -37,8 +37,8 @@ import numpy as np
 
 def merge_map_fn(dataset):
   print(dataset)
-  print(dataset.output_shapes.key())
-  num = len(dataset.output_shapes.key())
+  print(dataset.element_spec)
+  num = len(dataset.element_spec)
   print("args num: ", num)
   src_batches = []
   tgt_batches = []
