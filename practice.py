@@ -48,6 +48,7 @@ def merge_map_fn(dataset):
   src_batch = {}
   tgt_batch = {}
   for feature in list(src_batches[0].keys()):
+    print(feature)
     if tf.rank(src_batches[0][feature]==1):
       src_batch[feature] = tf.concat([b[feature] for b in src_batches],0)
     elif tf.rank(src_batches[0][feature]==2):
