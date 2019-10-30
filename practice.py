@@ -324,6 +324,7 @@ def main():
   if args.run == "train":
     train(args.src, args.tgt, optimizer, gradient_accumulator, learning_rate, model, checkpoint_manager)
   elif args.run == "translate":
+    model.build(None)
     translate(args.src[0], model, args.output_file, int(args.domain))
   
 if __name__ == "__main__":
