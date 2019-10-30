@@ -248,9 +248,8 @@ def translate(source_file,
 def main():
   
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run",choices=["train", "translate"],
-                      help="Run type.")
-  parser.add_argument("--config_file", required=True , help="configuration file")
+  parser.add_argument("run", choices=["train", "translate"], help="Run type.")
+  parser.add_argument("--config", required=True , help="configuration file")
   args = parser.parse_args()
 
   config_file = args.config_file
