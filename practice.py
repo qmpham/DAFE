@@ -215,6 +215,7 @@ def translate(source_file,
     decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
         memory_sequence_length=source_length)
+    print("domain",domain)
     decoded = model.decoder.dynamic_decode(
         lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)],
         tf.fill([batch_size], START_OF_SENTENCE_ID),
