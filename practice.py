@@ -61,7 +61,7 @@ def merge_map_fn(*args):
                                               len_max-tf.shape(batch[feature])[1]],0),tf.int64)],1) for batch in src_batches],0)})
     
   for feature in list(tgt_batches[0].keys()):
-    if feature!="ids" and feature!="tokens":
+    if feature!="ids" and feature!="tokens" and feature!="ids_out":
       print(feature, tgt_batches[0][feature])
       tgt_batch.update({feature: tf.concat([b[feature] for b in tgt_batches],0)})
     else:
