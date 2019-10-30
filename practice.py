@@ -45,8 +45,8 @@ def train(source_file,
           checkpoint_manager,
           maximum_length=80,
           shuffle_buffer_size=-1,  # Uniform shuffle.
-          train_steps=500,
-          save_every=100,
+          train_steps=15000,
+          save_every=1000,
           report_every=100): 
   batch_size = 2048
   meta_train_datasets = [] 
@@ -303,7 +303,7 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1))
 
-  learning_rate = onmt.schedules.NoamDecay(scale=2.0, model_dim=512, warmup_steps=8000)
+  learning_rate = onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=4000)
   optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
   with strategy.scope():                  
