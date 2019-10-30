@@ -32,10 +32,6 @@ import numpy as np
 from utils.dataprocess import merge_map_fn
 from opennmt.utils import BLEUScorer
 
-devices = tf.config.experimental.list_logical_devices(device_type="GPU")
-print(devices)
-strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
-
 def train(source_file,
           target_file,
           optimizer,
@@ -258,6 +254,13 @@ def main():
       "source_vocabulary": config["src_vocab"],
       "target_vocabulary": config["tgt_vocab"]
   }
+
+  devices = tf.config.experimental.list_logical_devices(device_type="GPU")
+  print(devices)
+  if args.run == "train":
+    strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
+  else:
+    strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices[0]])
   
   """
   model = onmt.models.SequenceToSequence(
