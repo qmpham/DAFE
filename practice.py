@@ -48,7 +48,7 @@ def train(source_file,
           train_steps=500,
           save_every=100,
           report_every=100): 
-  batch_size = 3072
+  batch_size = 2048
   meta_train_datasets = [] 
   meta_test_datasets = [] 
   print("There are %d in-domain corpora"%len(source_file))
@@ -131,12 +131,7 @@ def train(source_file,
   def _meta_test_iteration(next_fn):    
     with strategy.scope():
       return next_fn()
-
-  #meta_train_data_flow = iter(_meta_train_iteration())
-  #print(next(meta_train_data_flow))
-  #meta_test_data_flow = iter(_meta_test_iteration())
-  #print(next(meta_test_data_flow))
-  
+ 
   @tf.function
   def _step():
     with strategy.scope():
@@ -156,23 +151,15 @@ def train(source_file,
   start = time.time()  
   meta_train_data_flow = iter(_meta_train_forward())
   meta_test_data_flow = iter(_meta_test_forward())
-
   
   while True:
     #####Training batch
     loss = next(meta_train_data_flow)    
-    #print(".....var numb: ", len(model.trainable_variables))
     snapshots = [v.value() for v in model.trainable_variables]
-    #print("model: ", model.trainable_variables[3])
-    #print("snapshot: ", snapshots[3])    
     _step()
-    # print("model: ", model.trainable_variables[3])
-    # print("snapshot: ", snapshots[3])
     #####Testing batch
     loss = next(meta_test_data_flow)
     weight_reset(snapshots)
-    # print("model: ", model.trainable_variables[3])
-    # print("snapshot: ", snapshots[3])
     _step()
     ####
     step = optimizer.iterations.numpy()
