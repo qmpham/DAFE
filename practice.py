@@ -294,8 +294,8 @@ def main():
   """
 
   model = Multi_domain_SequenceToSequence(
-    source_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
-    target_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
+    source_inputter=My_inputter(embedding_size=512),
+    target_inputter=My_inputter(embedding_size=512),
     encoder=Multi_domain_SelfAttentionEncoder(
         num_layers=6,
         num_units=512,
