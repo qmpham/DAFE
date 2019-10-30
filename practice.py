@@ -64,6 +64,9 @@ def merge_map_fn(*args):
     if feature!="ids" and feature!="tokens" and feature!="ids_out":
       print(feature, tgt_batches[0][feature])
       tgt_batch.update({feature: tf.concat([b[feature] for b in tgt_batches],0)})
+    elif feature=="ids_out":
+      tgt_batch.update({feature: tf.concat([tf.concat([batch[feature][:,:-1], tf.cast(tf.fill([tf.shape(batch[feature])[0], 
+                                              len_max-tf.shape(batch[feature])[1]],0),tf.int64), batch[feature][:,-1]],1) for batch in tgt_batches],0)})
     else:
       print(feature, tgt_batches[0][feature])
       len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in tgt_batches])
@@ -114,7 +117,7 @@ def train(source_file,
     maximum_labels_length=maximum_length))
   
   meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets)
-  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
+  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets))#.map(merge_map_fn)
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
