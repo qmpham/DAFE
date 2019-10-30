@@ -153,9 +153,7 @@ def train(source_file,
   start = time.time()  
   meta_train_data_flow = iter(_meta_train_forward())
   meta_test_data_flow = iter(_meta_test_forward())
-  _loss = []
-
-  
+  _loss = []  
 
   while True:
     #####Training batch
@@ -234,7 +232,7 @@ def translate(source_file,
   # Iterates on the dataset.
   scorer = BLEUScorer()
   while True:
-    with io.open(output_file, encoding="utf-8", mode="w") as stream:
+    with open(output_file, "w") as stream:
       try:
         batch_tokens, batch_length = predict_next()
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
