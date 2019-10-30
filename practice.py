@@ -12,7 +12,7 @@ gradient accumulation, etc.
 
 import argparse
 import logging
-
+import yaml
 import tensorflow as tf
 import tensorflow_addons as tfa
 
@@ -234,7 +234,7 @@ def translate(source_file,
   # Iterates on the dataset.
   scorer = BLEUScorer()
   while True:
-    with io.open(output_file, encoding="utf-8", mode="w") as stream:
+    with open(output_file, mode="w") as stream:
       try:
         batch_tokens, batch_length = predict_next()
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
@@ -246,31 +246,18 @@ def translate(source_file,
   print("score: ", scorer(reference, output_file))
 
 def main():
+  
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "translate"],
-                      help="Run type.")
-                      
-  parser.add_argument("--src", nargs='+', required=True,
-                      help="Path to the source file.")
-  parser.add_argument("--tgt", nargs='+',
-                      help="Path to the target file.")
-  parser.add_argument("--output_file",
-                      help="Path to the output file.")
-  parser.add_argument("--reference",
-                      help="Path to the output file.")
-  parser.add_argument("--domain",
-                      help="domain in which model translates")
-  parser.add_argument("--src_vocab", required=True,
-                      help="Path to the source vocabulary.")
-  parser.add_argument("--tgt_vocab", required=True,
-                      help="Path to the target vocabulary.")
-  parser.add_argument("--model_dir", default="checkpoint",
-                      help="Directory where checkpoint are written.")
+  parser.add_argument("--config_file", required=True , help="configuration file")
   args = parser.parse_args()
 
+  config_file = args.config_file
+  with open(config_file, "r") as stream:
+      config = yaml.load(stream)
+
   data_config = {
-      "source_vocabulary": args.src_vocab,
-      "target_vocabulary": args.tgt_vocab
+      "source_vocabulary": config["src_vocab"],
+      "target_vocabulary": config["tgt_vocab"]
   }
   
   """
@@ -323,18 +310,18 @@ def main():
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     
   model.initialize(data_config)
-  checkpoint_manager = tf.train.CheckpointManager(checkpoint, args.model_dir, max_to_keep=5)
+  checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
 
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
   
-  if args.run == "train":
-    train(args.src, args.tgt, optimizer, gradient_accumulator, learning_rate, model, checkpoint_manager)
-  elif args.run == "translate":
+  if config["mode"] == "train":
+    train(config["src"], config["tgt"], optimizer, gradient_accumulator, learning_rate, model, checkpoint_manager)
+  elif config["mode"] == "translate":
     model.build(None)
-    print(int(args.domain))
-    translate(args.src[0], args.reference, model, int(args.domain), args.output_file)
+    print(int(config["domain"]))
+    translate(config["test"], config["reference"], model, int(config["domain"]), config["output_file"])
   
 if __name__ == "__main__":
   main()

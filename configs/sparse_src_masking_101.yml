@@ -1,143 +1,23 @@
-model_dir: /mnt/beegfs/home/pham/multi-domain-nmt/LDR_8/models/sparse_src_masking_101
-
-domain_numb: 6
-
-training_generic_feature_file: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/all.train.en
-training_generic_label_file: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/all.train.fr
-training_generic_tag_file: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/all.train.en.tag.0
-
-training_feature_file:
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/UFAL.med.en-fr.train.en
+mode: train #translate                      
+src: 
+        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.train.en 
+        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/JRC-Acquis.en-fr.train.en 
+        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/UFAL.med.en-fr.train.en 
+        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/TED2013.en-fr.train.en 
+        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/Tanzil.en-fr.train.en 
         - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/ECB.en-fr.train.en
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.train.en
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/JRC-Acquis.en-fr.train.en
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/Tanzil.en-fr.train.en
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/TED2013.en-fr.train.en
-
-training_label_file:
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/UFAL.med.en-fr.train.fr
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/ECB.en-fr.train.fr
+tgt: 
         - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.train.fr
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/JRC-Acquis.en-fr.train.fr
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/Tanzil.en-fr.train.fr
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/TED2013.en-fr.train.fr
-
-training_tag_file:
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/UFAL.med.en-fr.train.en.tag.0
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/ECB.en-fr.train.en.tag.0
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.train.en.tag.0
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/JRC-Acquis.en-fr.train.en.tag.0
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/Tanzil.en-fr.train.en.tag.0
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/TED2013.en-fr.train.en.tag.0
-
-eval_feature_file:
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/UFAL.med.en-fr.dev.en
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/ECB.en-fr.dev.en
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.dev.en
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/JRC-Acquis.en-fr.dev.en
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/Tanzil.en-fr.dev.en
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/TED2013.en-fr.dev.en 
-
-eval_label_file:
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/UFAL.med.en-fr.dev.fr
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/ECB.en-fr.dev.fr
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.dev.fr
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/JRC-Acquis.en-fr.dev.fr
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/Tanzil.en-fr.dev.fr
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/TED2013.en-fr.dev.fr
-
-eval_tag_file:
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/UFAL.med.en-fr.dev.en.tag.0
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/ECB.en-fr.dev.en.tag.0
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.dev.en.tag.0
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/JRC-Acquis.en-fr.dev.en.tag.0
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/Tanzil.en-fr.dev.en.tag.0
-        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/TED2013.en-fr.dev.en.tag.0
-
-Architecture: Transformer
-
-src_vocab_path: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/vocab.en_fr
-
-tgt_vocab_path: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/vocab.en_fr
-
-src_vocab_size: 31265
-
-tgt_vocab_size: 31265
-
-optimizer_parameters:
-        optimizer: LazyAdamOptimizer #GradientDescentOptimizer
-        learning_rate: 1.0 # The scale constant.
-        decay_type: noam_decay_v2
-        decay_params:
-            model_dim: 512
-            warmup_steps: 4000
-        decay_step_duration: 8
-        start_decay_steps: 0
-        clip_gradients: Null
-        gradients_accum: 1
+        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/JRC-Acquis.en-fr.train.fr 
+        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/UFAL.med.en-fr.train.fr 
+        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/TED2013.en-fr.train.fr 
+        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/Tanzil.en-fr.train.fr 
+        - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/ECB.en-fr.train.fr
         
-#OPTIMIZER_CLS_NAMES = {
-#    "Adagrad": train.AdagradOptimizer,
-#    "Adam": train.AdamOptimizer,
-#    "Ftrl": train.FtrlOptimizer,
-#    "Momentum": lambda learning_rate: train.MomentumOptimizer(learning_rate, momentum=0.9),  # pylint: disable=line-too-long
-#    "RMSProp": train.RMSPropOptimizer,
-#    "SGD": train.GradientDescentOptimizer,
-#    }
-
-mode: Training
-generic_domain_training: false
-generic+domain_training: false
-generic_training: true
-domain_training: false
-
-average_loss_in_time: true
-label_smoothing: 0.1
-beam_width: 5
-length_penalty: 0.6
-
-num_devices: 3
-num_threads: 5
-
-daisy_chain_variables: false
-
-iteration_number: 300000
-
-training_batch_type: tokens
-
-example_sampling_distribution: Balanced
-
-dataprocess_version: 1
-
-training_batch_size: 4096
-
-eval_batch_size: 60
-
-max_len: 80
-
-Standard: true
-
-src_sharing_embedding_region_size: 512
-
-src_domain_embedding_region_size: 
-        - 8
-        - 8
-        - 8
-        - 8
-        - 8
-        - 8
-tgt_embedding_size: 512
-
-hidden_size: 512
-
-save_freq: 5000
-
-printing_freq: 100
-
-eval_freq: 15000
-
-summary_freq: 200
-
-max_to_keep : 5
-
-sample_buffer_size : 5000000
+test: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.dev.en
+output_file: IT.en-fr.dev.en.trans
+reference: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.dev.fr
+domain: 0
+src_vocab: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/vocab.en_fr
+tgt_vocab: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/vocab.en_fr
+model_dir: /mnt/beegfs/home/pham/multi-domain-nmt/meta_learning/models/practice
