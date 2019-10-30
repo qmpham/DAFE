@@ -162,7 +162,7 @@ def train(source_file,
     #####Training batch
     loss = next(meta_train_data_flow)    
     #print(".....var numb: ", len(model.trainable_variables))
-    #snapshots = [v.value() for v in model.trainable_variables]
+    snapshots = [v.value() for v in model.trainable_variables]
     #print("model: ", model.trainable_variables[3])
     #print("snapshot: ", snapshots[3])    
     _step()
@@ -170,7 +170,7 @@ def train(source_file,
     # print("snapshot: ", snapshots[3])
     #####Testing batch
     loss = next(meta_test_data_flow)
-    #weight_reset(snapshots)
+    weight_reset(snapshots)
     # print("model: ", model.trainable_variables[3])
     # print("snapshot: ", snapshots[3])
     _step()
@@ -270,6 +270,7 @@ def main():
       "source_vocabulary": args.src_vocab,
       "target_vocabulary": args.tgt_vocab
   }
+  
   model = onmt.models.SequenceToSequence(
     source_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
     target_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
