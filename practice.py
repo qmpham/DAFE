@@ -53,25 +53,21 @@ def train(source_file,
   meta_test_datasets = [] 
   print("There are %d in-domain corpora"%len(source_file))
   for src,tgt in zip(source_file,target_file):
-    meta_train_datasets.append(model.examples_inputter.make_training_dataset(
-    src,
-    tgt,
-    batch_size=batch_size,
-    batch_type="tokens",
-    shuffle_buffer_size=shuffle_buffer_size,
-    length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
-    maximum_features_length=maximum_length,
-    maximum_labels_length=maximum_length))
+    meta_train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size=batch_size,
+              batch_type="tokens",
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length))
 
-    meta_test_datasets.append(model.examples_inputter.make_training_dataset(
-    src,
-    tgt,
-    batch_size= batch_size//len(source_file),
-    batch_type="tokens",
-    shuffle_buffer_size=shuffle_buffer_size,
-    length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
-    maximum_features_length=maximum_length,
-    maximum_labels_length=maximum_length))
+    meta_test_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size= batch_size//len(source_file),
+              batch_type="tokens",
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length))
   
   meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets)
   meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
@@ -166,7 +162,7 @@ def train(source_file,
     #####Training batch
     loss = next(meta_train_data_flow)    
     #print(".....var numb: ", len(model.trainable_variables))
-    snapshots = [v.value() for v in model.trainable_variables]
+    #snapshots = [v.value() for v in model.trainable_variables]
     #print("model: ", model.trainable_variables[3])
     #print("snapshot: ", snapshots[3])    
     _step()
@@ -174,7 +170,7 @@ def train(source_file,
     # print("snapshot: ", snapshots[3])
     #####Testing batch
     loss = next(meta_test_data_flow)
-    weight_reset(snapshots)
+    #weight_reset(snapshots)
     # print("model: ", model.trainable_variables[3])
     # print("snapshot: ", snapshots[3])
     _step()
