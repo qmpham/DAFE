@@ -153,7 +153,7 @@ def train(source_file,
   start = time.time()  
   meta_train_data_flow = iter(_meta_train_forward())
   meta_test_data_flow = iter(_meta_test_forward())
-  
+  _loss = []
   while True:
     #####Training batch
     loss = next(meta_train_data_flow)    
@@ -164,12 +164,14 @@ def train(source_file,
     weight_reset(snapshots)
     _step()
     ####
+    _loss.append(loss)
     step = optimizer.iterations.numpy()
     if step % report_every == 0:
       elapsed = time.time() - start
       tf.get_logger().info(
           "Step = %d ; Learning rate = %f ; Loss = %f; after %f seconds",
-          step, learning_rate(step), loss, elapsed)
+          step, learning_rate(step), np.mean(_loss), elapsed)
+      _loss = []
       start = time.time()
     if step % save_every == 0:
       tf.get_logger().info("Saving checkpoint for step %d", step)
