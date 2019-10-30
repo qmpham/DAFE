@@ -22,6 +22,7 @@ from opennmt.utils.misc import print_bytes, format_translation_output, merge_dic
 from opennmt.decoders import decoder as decoder_util
 from opennmt.models.sequence_to_sequence import EmbeddingsSharingLevel, SequenceToSequence, SequenceToSequenceInputter, replace_unknown_target, _add_noise
 from utils.my_inputter import My_inputter
+from my_inputter import Multi_domain_SequenceToSequenceInputter
 class Multi_domain_SequenceToSequence(model.SequenceGenerator):
   """A sequence to sequence model."""
 
@@ -44,7 +45,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           raise TypeError("Sharing embeddings requires all inputters to be a "
                           "WordEmbedder")
 
-    examples_inputter = SequenceToSequenceInputter(
+    examples_inputter = Multi_domain_SequenceToSequenceInputter(
         source_inputter,
         target_inputter,
         share_parameters=EmbeddingsSharingLevel.share_input_embeddings(share_embeddings))
