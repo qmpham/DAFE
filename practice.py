@@ -249,7 +249,7 @@ def main():
                       help="Path to the source file.")
   parser.add_argument("--tgt", nargs='+',
                       help="Path to the target file.")
-  parser.add_argument("--output_file", nargs='+',
+  parser.add_argument("--output_file",
                       help="Path to the output file.")
   parser.add_argument("--domain",
                       help="domain in which model translates")
