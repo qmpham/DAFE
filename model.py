@@ -21,8 +21,8 @@ from opennmt.utils import losses
 from opennmt.utils.misc import print_bytes, format_translation_output, merge_dict, shape_list
 from opennmt.decoders import decoder as decoder_util
 from opennmt.models.sequence_to_sequence import EmbeddingsSharingLevel, SequenceToSequence, SequenceToSequenceInputter, replace_unknown_target, _add_noise
-from utils.my_inputter import My_inputter
-from my_inputter import Multi_domain_SequenceToSequenceInputter
+from utils.my_inputter import My_inputter, Multi_domain_SequenceToSequenceInputter
+
 class Multi_domain_SequenceToSequence(model.SequenceGenerator):
   """A sequence to sequence model."""
 
