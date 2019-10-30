@@ -250,6 +250,8 @@ def main():
                       help="Path to the target file.")
   parser.add_argument("--output_file", nargs='+',
                       help="Path to the output file.")
+  parser.add_argument("--domain",
+                      help="domain in which model translates")
   parser.add_argument("--src_vocab", required=True,
                       help="Path to the source vocabulary.")
   parser.add_argument("--tgt_vocab", required=True,
@@ -322,7 +324,7 @@ def main():
   if args.run == "train":
     train(args.src, args.tgt, optimizer, gradient_accumulator, learning_rate, model, checkpoint_manager)
   elif args.run == "translate":
-    translate(args.src, model, args.output_file)
+    translate(args.src, model, args.output_file, int(args.domain))
   
 if __name__ == "__main__":
   main()
