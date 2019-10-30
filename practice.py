@@ -252,7 +252,7 @@ def main():
   parser.add_argument("--config", required=True , help="configuration file")
   args = parser.parse_args()
 
-  config_file = args.config_file
+  config_file = args.config
   with open(config_file, "r") as stream:
       config = yaml.load(stream)
 
