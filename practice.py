@@ -66,6 +66,7 @@ def merge_map_fn(*args):
       tgt_batch.update({feature: tf.concat([b[feature] for b in tgt_batches],0)})
     elif feature=="ids_out":
       print(feature, tgt_batches[0][feature])
+      len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in tgt_batches])
       tgt_batch.update({feature: tf.concat([tf.concat([batch["ids"][:,1:], tf.cast(tf.fill([tf.shape(batch["ids"])[0], 
                                               len_max-tf.shape(batch["ids"])[1]],0),tf.int64), tf.cast(tf.fill([tf.shape(batch["ids"])[0], 
                                               1],2),tf.int64)], 1) for batch in tgt_batches],0)})
