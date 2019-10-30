@@ -30,7 +30,7 @@ from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
 from utils.dataprocess import merge_map_fn
-
+from opennmt.utils import BLEUScorer
 
 devices = tf.config.experimental.list_logical_devices(device_type="GPU")
 print(devices)
@@ -154,6 +154,9 @@ def train(source_file,
   meta_train_data_flow = iter(_meta_train_forward())
   meta_test_data_flow = iter(_meta_test_forward())
   _loss = []
+
+  
+
   while True:
     #####Training batch
     loss = next(meta_train_data_flow)    
@@ -180,6 +183,7 @@ def train(source_file,
       break
   
 def translate(source_file,
+              reference,
               model,
               domain,
               output_file,
@@ -228,6 +232,7 @@ def translate(source_file,
     return target_tokens, target_lengths
 
   # Iterates on the dataset.
+  scorer = BLEUScorer()
   while True:
     with io.open(output_file, encoding="utf-8", mode="w") as stream:
       try:
@@ -235,10 +240,10 @@ def translate(source_file,
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
           sentence = b" ".join(tokens[0][:length[0]])
           print_bytes(sentence, stream=stream)
-          print_bytes(sentence)
+          #print_bytes(sentence)
       except tf.errors.OutOfRangeError:
         break
-
+  print("score: ", scorer(reference, output_file))
 
 def main():
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -250,6 +255,8 @@ def main():
   parser.add_argument("--tgt", nargs='+',
                       help="Path to the target file.")
   parser.add_argument("--output_file",
+                      help="Path to the output file.")
+  parser.add_argument("--reference",
                       help="Path to the output file.")
   parser.add_argument("--domain",
                       help="domain in which model translates")
@@ -327,7 +334,7 @@ def main():
   elif args.run == "translate":
     model.build(None)
     print(int(args.domain))
-    translate(args.src[0], model, int(args.domain), args.output_file)
+    translate(args.src[0], args.reference, model, int(args.domain), args.output_file)
   
 if __name__ == "__main__":
   main()
