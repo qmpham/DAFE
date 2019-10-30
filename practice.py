@@ -188,8 +188,6 @@ def train(source_file,
     if step // 2 > train_steps:
       break
   
-
-
 def translate(source_file,
               model,
               output_file,
@@ -295,12 +293,10 @@ def main():
   learning_rate = onmt.schedules.NoamDecay(scale=2.0, model_dim=512, warmup_steps=8000)
   optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
-  with strategy.scope():   
-                
+  with strategy.scope():                  
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     
   model.initialize(data_config)
-  model.build(None)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, args.model_dir, max_to_keep=5)
 
   if checkpoint_manager.latest_checkpoint is not None:
