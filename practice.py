@@ -248,6 +248,8 @@ def translate(source_file,
 def main():
   
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser.add_argument("run",choices=["train", "translate"],
+                      help="Run type.")
   parser.add_argument("--config_file", required=True , help="configuration file")
   args = parser.parse_args()
 
@@ -316,9 +318,9 @@ def main():
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
   
-  if config["mode"] == "train":
+  if args.run == "train":
     train(config["src"], config["tgt"], optimizer, gradient_accumulator, learning_rate, model, checkpoint_manager)
-  elif config["mode"] == "translate":
+  elif args.run == "translate":
     model.build(None)
     print(int(config["domain"]))
     translate(config["test"], config["reference"], model, int(config["domain"]), config["output_file"])

@@ -1,4 +1,3 @@
-mode: train #translate                      
 src: 
         - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.train.en 
         - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/JRC-Acquis.en-fr.train.en 
@@ -13,7 +12,7 @@ tgt:
         - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/TED2013.en-fr.train.fr 
         - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/Tanzil.en-fr.train.fr 
         - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/ECB.en-fr.train.fr
-        
+
 test: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.dev.en
 output_file: IT.en-fr.dev.en.trans
 reference: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.dev.fr
