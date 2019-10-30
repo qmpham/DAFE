@@ -36,8 +36,7 @@ strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
 import numpy as np
 
 def merge_map_fn(*args):
-  num = len(args)
-  print("args num: ", num)
+  
   src_batches = []
   tgt_batches = []
   for (src,tgt) in args:
@@ -49,10 +48,10 @@ def merge_map_fn(*args):
   print(src_batches[0].keys())
   for feature in list(src_batches[0].keys()):
     if feature!="ids" and feature!="tokens":
-      print(1,feature, tf.rank(src_batches[0][feature]))
+      print(feature, src_batches[0][feature])
       src_batch.get(feature, tf.concat([b[feature] for b in src_batches],0))
     else:
-      print(2,feature,tf.rank(src_batches[0][feature]))
+      print(feature, src_batches[0][feature])
       len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in src_batches])
       if src_batches[0][feature].dtype == tf.string:
         src_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],1) for batch in src_batches],0))
@@ -61,10 +60,10 @@ def merge_map_fn(*args):
     
   for feature in list(tgt_batches[0].keys()):
     if feature!="ids" and feature!="tokens":
-      print(feature)
+      print(feature, src_batches[0][feature])
       tgt_batch.get(feature, tf.concat([b[feature] for b in tgt_batches],0))
     else:
-      print(feature)
+      print(feature, src_batches[0][feature])
       len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in tgt_batches])
       if tgt_batches[0][feature].dtype == tf.string:
         tgt_batch.get(feature, tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], len_max-tf.shape(batch[feature])[1]],"")],1) for batch in tgt_batches],0))
@@ -161,12 +160,11 @@ def train(source_file,
   @dataset_util.function_on_next(meta_test_dataset)
   def _meta_test_iteration(next_fn):    
     with strategy.scope():
-      #per_replica_source, per_replica_target = next_fn()
-      return next_fn()#per_replica_source, per_replica_target
+      return next_fn()
 
   #meta_train_data_flow = iter(_meta_train_iteration())
-  meta_test_data_flow = iter(_meta_test_iteration())
   #print(next(meta_train_data_flow))
+  meta_test_data_flow = iter(_meta_test_iteration())
   print(next(meta_test_data_flow))
   """
   meta_test_data_flows = [] 
@@ -197,8 +195,8 @@ def train(source_file,
         strategy.extended.update(var, _set_weight, args=(snap, ))
   
   # Runs the training loop.
-  import time
-  start = time.time()  
+  #import time
+  #start = time.time()  
   #meta_train_data_flow = iter(_meta_train_forward())
   #meta_test_data_flow = iter(_meta_test_forward())
 
