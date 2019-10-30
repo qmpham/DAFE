@@ -228,12 +228,12 @@ def translate(source_file,
   # Iterates on the dataset.
   scorer = BLEUScorer()
   while True:
-    with open(output_file, "w") as stream:
+    with open(output_file, "w") as output_:
       try:
         batch_tokens, batch_length = predict_next()
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
           sentence = b" ".join(tokens[0][:length[0]])
-          print_bytes(sentence, stream=stream)
+          print_bytes(sentence, output_)
           #print_bytes(sentence)
       except tf.errors.OutOfRangeError:
         break
