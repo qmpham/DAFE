@@ -28,53 +28,13 @@ from utils.my_inputter import My_inputter
 from model import Multi_domain_SequenceToSequence
 from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
-# Define the model. For the purpose of this example, the model components
-# (encoder, decoder, etc.) will be called separately.
+import numpy as np
+from utils.dataprocess import merge_map_fn
+
+
 devices = tf.config.experimental.list_logical_devices(device_type="GPU")
 print(devices)
 strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
-import numpy as np
-
-def merge_map_fn(*args):
-  
-  src_batches = []
-  tgt_batches = []
-  for (src,tgt) in args:
-    src_batches.append(src)
-    tgt_batches.append(tgt)
-  print("element numb: ",len(src_batches))
-  src_batch = {}
-  tgt_batch = {}
-  print(src_batches[0].keys())
-  for feature in list(src_batches[0].keys()):
-    if feature!="ids" and feature!="tokens":
-      print(feature, src_batches[0][feature])
-      src_batch.update({feature: tf.concat([b[feature] for b in src_batches],0)})
-    else:
-      print(feature, src_batches[0][feature])
-      len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in src_batches])
-      if src_batches[0][feature].dtype == tf.string:
-        src_batch.update({feature: tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], 
-                                              len_max-tf.shape(batch[feature])[1]],"")],1) for batch in src_batches],0)})
-      else:
-        src_batch.update({feature: tf.concat([tf.concat([batch[feature], tf.cast(tf.fill([tf.shape(batch[feature])[0], 
-                                              len_max-tf.shape(batch[feature])[1]],0),tf.int64)],1) for batch in src_batches],0)})
-    
-  for feature in list(tgt_batches[0].keys()):
-    if feature!="ids" and feature!="tokens" and feature!="ids_out":
-      print(feature, tgt_batches[0][feature])
-      tgt_batch.update({feature: tf.concat([b[feature] for b in tgt_batches],0)})    
-    else:
-      print(feature, tgt_batches[0][feature])
-      len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in tgt_batches])
-      if tgt_batches[0][feature].dtype == tf.string:
-        tgt_batch.update({feature: tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], 
-                                              len_max-tf.shape(batch[feature])[1]],"")],1) for batch in tgt_batches],0)})
-      else:
-        tgt_batch.update({feature: tf.concat([tf.concat([batch[feature], tf.cast(tf.fill([tf.shape(batch[feature])[0], 
-                                              len_max-tf.shape(batch[feature])[1]],0),tf.int64)],1) for batch in tgt_batches],0)})
-  print(src_batch,tgt_batch)
-  return src_batch, tgt_batch
 
 def train(source_file,
           target_file,
@@ -88,7 +48,7 @@ def train(source_file,
           train_steps=300,
           save_every=100,
           report_every=100): 
-  batch_size = 1024
+  batch_size = 4096
   meta_train_datasets = [] 
   meta_test_datasets = [] 
   print("There are %d in-domain corpora"%len(source_file))
@@ -155,6 +115,16 @@ def train(source_file,
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
     return loss
 
+  @dataset_util.function_on_next(meta_test_dataset)
+  def _meta_test_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+    return loss
+
   @dataset_util.function_on_next(meta_train_dataset)
   def _meta_train_iteration(next_fn):    
     with strategy.scope():
@@ -168,22 +138,9 @@ def train(source_file,
 
   #meta_train_data_flow = iter(_meta_train_iteration())
   #print(next(meta_train_data_flow))
-  meta_test_data_flow = iter(_meta_test_iteration())
-  print(next(meta_test_data_flow))
-  """
-  meta_test_data_flows = [] 
-  for meta_test_dataset in meta_test_datasets:
-    @dataset_util.function_on_next(meta_test_dataset)
-    def _meta_test_forward(next_fn):    
-      with strategy.scope():
-        per_replica_source, per_replica_target = next_fn()
-        per_replica_loss = strategy.experimental_run_v2(
-            _accumulate_gradients, args=(per_replica_source, per_replica_target))
-        # TODO: these reductions could be delayed until _step is called.
-        loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-      return loss
-    meta_test_data_flows.append(iter(_meta_test_forward()))
-  """
+  #meta_test_data_flow = iter(_meta_test_iteration())
+  #print(next(meta_test_data_flow))
+  
   @tf.function
   def _step():
     with strategy.scope():
@@ -199,12 +156,12 @@ def train(source_file,
         strategy.extended.update(var, _set_weight, args=(snap, ))
   
   # Runs the training loop.
-  #import time
-  #start = time.time()  
-  #meta_train_data_flow = iter(_meta_train_forward())
-  #meta_test_data_flow = iter(_meta_test_forward())
+  import time
+  start = time.time()  
+  meta_train_data_flow = iter(_meta_train_forward())
+  meta_test_data_flow = iter(_meta_test_forward())
 
-  """
+  
   while True:
     #####Training batch
     loss = next(meta_train_data_flow)    
@@ -216,8 +173,7 @@ def train(source_file,
     # print("model: ", model.trainable_variables[3])
     # print("snapshot: ", snapshots[3])
     #####Testing batch
-    for meta_test_data_flow in meta_test_data_flows:
-      loss = next(meta_test_data_flow)
+    loss = next(meta_test_data_flow)
     weight_reset(snapshots)
     # print("model: ", model.trainable_variables[3])
     # print("snapshot: ", snapshots[3])
@@ -235,7 +191,7 @@ def train(source_file,
       checkpoint_manager.save(checkpoint_number=step)
     if step // 2 > train_steps:
       break
-  """
+  
 
 
 def translate(source_file,
