@@ -48,7 +48,7 @@ def train(source_file,
           train_steps=500,
           save_every=100,
           report_every=100): 
-  batch_size = 1024
+  batch_size = 3072
   meta_train_datasets = [] 
   meta_test_datasets = [] 
   print("There are %d in-domain corpora"%len(source_file))
@@ -271,6 +271,7 @@ def main():
       "target_vocabulary": args.tgt_vocab
   }
   
+  """
   model = onmt.models.SequenceToSequence(
     source_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
     target_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
@@ -290,7 +291,29 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1))
-    
+  """
+
+  model = Multi_domain_SequenceToSequence(
+    source_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
+    target_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
+    encoder=Multi_domain_SelfAttentionEncoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1),
+    decoder=Multi_domain_SelfAttentionDecoder(
+        num_layers=6,
+        num_domains=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1))
+
   learning_rate = onmt.schedules.NoamDecay(scale=2.0, model_dim=512, warmup_steps=8000)
   optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
