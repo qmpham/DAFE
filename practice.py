@@ -181,12 +181,13 @@ def train(source_file,
   
 def translate(source_file,
               model,
+              domain,
               output_file,
               batch_size=32,
               beam_size=5):
   
   # Create the inference dataset.
-  dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size)
+  dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
   iterator = iter(dataset)
 
   # Create the mapping for target ids to tokens.
