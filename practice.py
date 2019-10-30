@@ -43,9 +43,9 @@ def train(source_file,
           learning_rate,
           model,    
           checkpoint_manager,
-          maximum_length=10,
+          maximum_length=80,
           shuffle_buffer_size=-1,  # Uniform shuffle.
-          train_steps=300,
+          train_steps=500,
           save_every=100,
           report_every=100): 
   batch_size = 4096
