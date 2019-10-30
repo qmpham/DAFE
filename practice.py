@@ -260,7 +260,7 @@ def main():
   if args.run == "train":
     strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   else:
-    strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices[0]])
+    strategy = tf.distribute.MirroredStrategy(devices=[devices[0].name])
   
   """
   model = onmt.models.SequenceToSequence(
