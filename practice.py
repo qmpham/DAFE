@@ -48,7 +48,7 @@ def train(source_file,
           train_steps=500,
           save_every=100,
           report_every=100): 
-  batch_size = 4096
+  batch_size = 1024
   meta_train_datasets = [] 
   meta_test_datasets = [] 
   print("There are %d in-domain corpora"%len(source_file))
@@ -272,31 +272,7 @@ def main():
       "source_vocabulary": args.src_vocab,
       "target_vocabulary": args.tgt_vocab
   }
-
-  with strategy.scope():
-    """
-    model = Multi_domain_SequenceToSequence(
-      source_inputter=My_inputter(embedding_size=512, domain=1),
-      target_inputter=My_inputter(embedding_size=512, domain=1),
-      encoder= Multi_domain_SelfAttentionEncoder(
-          num_layers=6,
-          num_units=512,
-          num_heads=8,
-          ffn_inner_dim=2048,
-          dropout=0.1,
-          attention_dropout=0.1,
-          ffn_dropout=0.1),
-      decoder= Multi_domain_SelfAttentionDecoder(
-          num_layers=6,
-          num_domains=6,
-          num_units=512,
-          num_heads=8,
-          ffn_inner_dim=2048,
-          dropout=0.1,
-          attention_dropout=0.1,
-          ffn_dropout=0.1))
-    """
-    model = onmt.models.SequenceToSequence(
+  model = onmt.models.SequenceToSequence(
     source_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
     target_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
     encoder=onmt.encoders.SelfAttentionEncoder(
@@ -316,13 +292,17 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1))
     
-    learning_rate = onmt.schedules.NoamDecay(scale=2.0, model_dim=512, warmup_steps=8000)
-    optimizer = tfa.optimizers.LazyAdam(learning_rate)            
+  learning_rate = onmt.schedules.NoamDecay(scale=2.0, model_dim=512, warmup_steps=8000)
+  optimizer = tfa.optimizers.LazyAdam(learning_rate)
+  checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
+  with strategy.scope():   
+                
     gradient_accumulator = optimizer_util.GradientAccumulator()  
-    checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
-    model.initialize(data_config)
-    model.build(None)
-    checkpoint_manager = tf.train.CheckpointManager(checkpoint, args.model_dir, max_to_keep=5)
+    
+  model.initialize(data_config)
+  model.build(None)
+  checkpoint_manager = tf.train.CheckpointManager(checkpoint, args.model_dir, max_to_keep=5)
+
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
