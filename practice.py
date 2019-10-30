@@ -320,7 +320,7 @@ def main():
   }
 
   with strategy.scope():
-    
+    """
     model = Multi_domain_SequenceToSequence(
       source_inputter=My_inputter(embedding_size=512, domain=1),
       target_inputter=My_inputter(embedding_size=512, domain=1),
@@ -361,7 +361,7 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1))
-    """
+    
     learning_rate = onmt.schedules.NoamDecay(scale=2.0, model_dim=512, warmup_steps=8000)
     optimizer = tfa.optimizers.LazyAdam(learning_rate)            
     gradient_accumulator = optimizer_util.GradientAccumulator()  
