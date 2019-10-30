@@ -327,7 +327,7 @@ def main():
   elif args.run == "translate":
     model.build(None)
     print(int(args.domain))
-    translate(args.src[0], model, args.output_file, int(args.domain))
+    translate(args.src[0], model, int(args.domain), args.output_file)
   
 if __name__ == "__main__":
   main()
