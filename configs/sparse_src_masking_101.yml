@@ -14,7 +14,7 @@ tgt:
         - /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/ECB.en-fr.train.fr
 
 test: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.dev.en
-output_file: IT.en-fr.dev.en.trans
+output_file: /mnt/beegfs/home/pham/multi-domain-nmt/meta_learning/IT.en-fr.dev.en.trans
 reference: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/IT.en-fr.dev.fr
 domain: 0
 src_vocab: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/vocab.en_fr

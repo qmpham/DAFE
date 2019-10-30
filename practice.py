@@ -234,7 +234,7 @@ def translate(source_file,
   # Iterates on the dataset.
   scorer = BLEUScorer()
   while True:
-    with open(output_file, mode="w") as stream:
+    with io.open(output_file, encoding="utf-8", mode="w") as stream:
       try:
         batch_tokens, batch_length = predict_next()
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
