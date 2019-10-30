@@ -32,6 +32,10 @@ import numpy as np
 from utils.dataprocess import merge_map_fn
 from opennmt.utils import BLEUScorer
 
+devices = tf.config.experimental.list_logical_devices(device_type="GPU")
+print(devices)
+strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
+
 def train(source_file,
           target_file,
           optimizer,
@@ -213,7 +217,6 @@ def translate(source_file,
     decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
         memory_sequence_length=source_length)
-    print("domain",domain)
     decoded = model.decoder.dynamic_decode(
         lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)],
         tf.fill([batch_size], START_OF_SENTENCE_ID),
@@ -227,6 +230,7 @@ def translate(source_file,
 
   # Iterates on the dataset.
   scorer = BLEUScorer()
+  print(output_file)
   while True:
     with open(output_file, "w") as output_:
       try:
@@ -255,13 +259,6 @@ def main():
       "target_vocabulary": config["tgt_vocab"]
   }
 
-  devices = tf.config.experimental.list_logical_devices(device_type="GPU")
-  print(devices)
-  if args.run == "train":
-    strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
-  else:
-    strategy = tf.distribute.MirroredStrategy(devices=[devices[0].name])
-  
   """
   model = onmt.models.SequenceToSequence(
     source_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
