@@ -390,7 +390,8 @@ def main():
   config_file = args.config
   with open(config_file, "r") as stream:
       config = yaml.load(stream)
-
+  if not os.path.exists(os.path.join(config["model_dir"],"eval")):
+    os.makedirs(os.path.join(config["model_dir"],"eval"))
   data_config = {
       "source_vocabulary": config["src_vocab"],
       "target_vocabulary": config["tgt_vocab"]
