@@ -18,6 +18,7 @@ import tensorflow_addons as tfa
 
 import opennmt as onmt
 import io
+import os
 from opennmt import START_OF_SENTENCE_ID
 from opennmt import END_OF_SENTENCE_ID
 from opennmt.utils.misc import print_bytes
@@ -29,17 +30,14 @@ from model import Multi_domain_SequenceToSequence
 from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
-from utils.dataprocess import merge_map_fn
+from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset
 from opennmt.utils import BLEUScorer
-
-devices = tf.config.experimental.list_logical_devices(device_type="GPU")
-print(devices)
-strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
 
 def debug(source_file,
           target_file,
           domain,
-          optimizer,          
+          optimizer,
+          strategy,          
           learning_rate,
           model,    
           checkpoint_manager,
@@ -163,47 +161,38 @@ def debug(source_file,
   print("meta test: ", next(meta_test_data_flow))
 
 
-def train(source_file,
-          target_file,
-          domain,
+def train(config,
           optimizer,          
           learning_rate,
-          model,    
+          model,  
+          strategy,  
           checkpoint_manager,
+          checkpoint,
           maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=200000,
-          save_every=5000,
+          save_every=100,
+          eval_every=100,
           report_every=100): 
-  batch_size = 2048
-  meta_train_datasets = [] 
-  meta_test_datasets = [] 
-  print("There are %d in-domain corpora"%len(source_file))
-  for i, src,tgt in zip(domain,source_file,target_file):
-    meta_train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size=batch_size,
-              batch_type="tokens",
-              domain=i,
-              shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
-              maximum_features_length=maximum_length,
-              maximum_labels_length=maximum_length))
-
-    meta_test_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size= batch_size//len(source_file),
-              batch_type="tokens",
-              domain=i,
-              shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
-              maximum_features_length=maximum_length,
-              maximum_labels_length=maximum_length))
+  #####
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  #####
+  batch_size = batch_size
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config["domain"]
   
-  meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets)
-  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
+  print("There are %d in-domain corpora"%len(source_file))
 
+  meta_train_dataset, meta_test_dataset = create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
+                                                                        batch_size, batch_type, shuffle_buffer_size, maximum_length)
+  #####
   with strategy.scope():
-    meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
-    meta_test_dataset = strategy.experimental_distribute_dataset(meta_test_dataset)
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
@@ -300,7 +289,7 @@ def train(source_file,
     _step()
     ####
     _loss.append(loss)
-    step = optimizer.iterations.numpy()
+    step = optimizer.iterations.numpy()//2
     if step % report_every == 0:
       elapsed = time.time() - start
       tf.get_logger().info(
@@ -308,21 +297,32 @@ def train(source_file,
           step, learning_rate(step), np.mean(_loss), elapsed)
       _loss = []
       start = time.time()
-    if step % save_every == 0:
+    if step % save_every == 0 and optimizer.iterations.numpy()%2==0:
       tf.get_logger().info("Saving checkpoint for step %d", step)
       checkpoint_manager.save(checkpoint_number=step)
-    if step // 2 > train_steps:
+    if step % eval_every == 0 and optimizer.iterations.numpy()%2==0:
+      checkpoint_path = checkpoint_manager.latest_checkpoint
+      tf.summary.experimental.set_step(step)
+      for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+        output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+        score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file)
+        tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %f"%src)
+    if step > train_steps:
       break
   
 def translate(source_file,
               reference,
               model,
+              checkpoint_manager,
+              checkpoint,
               domain,
               output_file,
               batch_size=32,
               beam_size=5):
   
   # Create the inference dataset.
+  checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  tf.get_logger().info("Evaluating model %s", checkpoint_manager.latest_checkpoint)
   dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
   iterator = iter(dataset)
 
@@ -376,9 +376,12 @@ def translate(source_file,
       except tf.errors.OutOfRangeError:
         break
   print("score: ", scorer(reference, output_file))
+  return scorer(reference, output_file)
 
 def main():
-  
+  devices = tf.config.experimental.list_logical_devices(device_type="GPU")
+  print(devices)
+  strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("run", choices=["train", "translate", "debug"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
@@ -419,19 +422,16 @@ def main():
   checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)   
   model.initialize(data_config)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
-
-  if checkpoint_manager.latest_checkpoint is not None:
-    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-    checkpoint.restore(checkpoint_manager.latest_checkpoint)
-  
+ 
   if args.run == "train":
-    train(config["src"], config["tgt"], config["domain"], optimizer, learning_rate, model, checkpoint_manager)
+    train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint)
   elif args.run == "translate":
     model.build(None)
     print(int(config["src_domain"]))
-    translate(config["src_test"], config["reference"], model, int(config["src_domain"]), config["output_file"])
+    translate(config["src_test"], config["reference"], model, checkpoint_manager,
+              checkpoint, int(config["src_domain"]), config["output_file"])
   elif args.run == "debug":
-    debug(config["src"], config["tgt"], config["domain"], optimizer, learning_rate, model, checkpoint_manager)  
+    debug(config["src"], config["tgt"], config["domain"], optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint)  
   
 if __name__ == "__main__":
   main()
