@@ -181,6 +181,8 @@ def train(config,
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
   #####
+  _summary_writer = tf.summary.create_file_writer(checkpoint.model_dir)
+  #####
   batch_size = batch_size
   batch_type = batch_type
   source_file = config["src"]
@@ -277,39 +279,39 @@ def train(config,
   meta_train_data_flow = iter(_meta_train_forward())
   meta_test_data_flow = iter(_meta_test_forward())
   _loss = []  
-
-  while True:
-    #####Training batch
-    loss = next(meta_train_data_flow)    
-    snapshots = [v.value() for v in model.trainable_variables]
-    _step()
-    #####Testing batch
-    loss = next(meta_test_data_flow)
-    weight_reset(snapshots)
-    _step()
-    ####
-    _loss.append(loss)
-    step = optimizer.iterations.numpy()//2
-    if step % report_every == 0:
-      elapsed = time.time() - start
-      tf.get_logger().info(
-          "Step = %d ; Learning rate = %f ; Loss = %f; after %f seconds",
-          step, learning_rate(step), np.mean(_loss), elapsed)
-      _loss = []
-      start = time.time()
-    if step % save_every == 0 and optimizer.iterations.numpy()%2==0:
-      tf.get_logger().info("Saving checkpoint for step %d", step)
-      checkpoint_manager.save(checkpoint_number=step)
-    if step % eval_every == 0 and optimizer.iterations.numpy()%2==0:
-      checkpoint_path = checkpoint_manager.latest_checkpoint
-      tf.summary.experimental.set_step(step)
-      for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-        output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-        score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file)
-        tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %s"%src)
-    if step > train_steps:
-      break
-  
+  with self._summary_writer.as_default():
+    while True:
+      #####Training batch
+      loss = next(meta_train_data_flow)    
+      snapshots = [v.value() for v in model.trainable_variables]
+      _step()
+      #####Testing batch
+      loss = next(meta_test_data_flow)
+      weight_reset(snapshots)
+      _step()
+      ####
+      _loss.append(loss)
+      step = optimizer.iterations.numpy()//2
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; after %f seconds",
+            step, learning_rate(step), np.mean(_loss), elapsed)
+        _loss = []
+        start = time.time()
+      if step % save_every == 0 and optimizer.iterations.numpy()%2==0:
+        tf.get_logger().info("Saving checkpoint for step %d", step)
+        checkpoint_manager.save(checkpoint_number=step)
+      if step % eval_every == 0 and optimizer.iterations.numpy()%2==0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file)
+          tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %s"%src)
+      if step > train_steps:
+        break
+    
 def translate(source_file,
               reference,
               model,
