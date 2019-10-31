@@ -414,7 +414,7 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1))
 
-  learning_rate = onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=4000, step_duration= 16)
+  learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=4000), step_duration= 16)
   optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)   
   model.initialize(data_config)

@@ -22,7 +22,8 @@ class Multi_domain_FeedForwardNetwork(tf.keras.layers.Layer):
 
   def call(self, inputs, mask, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
-    inputs = self.layer_norm(inputs)
+    inputs = self.layer_nor
+    m(inputs)
     inner = self.inner(inputs)
     #print("inner: ", inner)
     inner = inner * tf.broadcast_to(tf.expand_dims(mask,1), tf.shape(inner))
