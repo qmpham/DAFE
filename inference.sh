@@ -6,9 +6,9 @@
 #SBATCH --output=decode.log.out
 #SBATCH --error=decode.log.err
 
-source ~/miniconda3/bin/activate nmt_env_standard
+source ~/miniconda3/bin/activate tf2
 export LD_LIBRARY_PATH=/usr/local/cuda-10.0/lib64/:/users/limsi_nmt/minhquang/cuDNNv6/lib64
 
 which python
 python -c 'import tensorflow; print("tensorflow OK"); import opennmt; print("opennmt OK")'
-python -u inference.py --config_file /mnt/beegfs/home/pham/multi-domain-nmt/LDR_7/configs/sparse_src_masking_71.yml --eval_step 195000
+python -u practice.py translate --config configs/sparse_src_masking_101.yml
