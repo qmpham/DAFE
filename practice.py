@@ -48,7 +48,7 @@ def debug(source_file,
           train_steps=200000,
           save_every=5000,
           report_every=100):
-  batch_size = 2048
+  batch_size = 100
   meta_train_datasets = [] 
   meta_test_datasets = [] 
   print("There are %d in-domain corpora"%len(source_file))
