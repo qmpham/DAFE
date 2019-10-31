@@ -45,7 +45,7 @@ def train(source_file,
           checkpoint_manager,
           maximum_length=80,
           shuffle_buffer_size=-1,  # Uniform shuffle.
-          train_steps=100000,
+          train_steps=200000,
           save_every=5000,
           report_every=100): 
   batch_size = 2048
