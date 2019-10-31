@@ -306,7 +306,7 @@ def train(config,
       for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
         output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
         score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file)
-        tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %f"%src)
+        tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %s"%src)
     if step > train_steps:
       break
   
@@ -375,7 +375,7 @@ def translate(source_file,
           #print_bytes(sentence)
       except tf.errors.OutOfRangeError:
         break
-  print("score: ", scorer(reference, output_file))
+  print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
   return scorer(reference, output_file)
 
 def main():
