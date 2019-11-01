@@ -377,16 +377,22 @@ def translate(source_file,
           #print_bytes(sentence)
       except tf.errors.OutOfRangeError:
         break
-  print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
-  return scorer(reference, output_file)
+  if reference!=None:
+    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
+    return scorer(reference, output_file)
+  
 
 def main():
   devices = tf.config.experimental.list_logical_devices(device_type="GPU")
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "translate", "debug"], help="Run type.")
+  parser.add_argument("run", choices=["train", "translate", "debug"], required=True , help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
+  parser.add_argument("--test")
+  parser.add_argument("--output")
+  parser.add_argument("--domain")
+  parser.add_argument("--ref", default=None)
   args = parser.parse_args()
 
   config_file = args.config
@@ -430,9 +436,9 @@ def main():
     train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint)
   elif args.run == "translate":
     model.build(None)
-    print(int(config["src_domain"]))
-    translate(config["src_test"], config["reference"], model, checkpoint_manager,
-              checkpoint, int(config["src_domain"]), config["output_file"])
+    print(int(args.output))
+    translate(args.src, args.ref, model, checkpoint_manager,
+              checkpoint, int(args.domain), args.output)
   elif args.run == "debug":
     debug(config["src"], config["tgt"], config["domain"], optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint)  
   
