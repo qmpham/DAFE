@@ -388,7 +388,7 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "translate", "debug"], required=True , help="Run type.")
+  parser.add_argument("run", choices=["train", "translate", "debug"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--test")
   parser.add_argument("--output")
