@@ -9,11 +9,11 @@ print("#SBATCH --cpus-per-task=5",file=f)
 print("#SBATCH --output=sparse_src_masking_%s.log.out"%index,file=f)
 print("#SBATCH --error=sparse_src_masking_%s.log.err"%index,file=f)
 print("#SBATCH --partition=all",file=f)
-print("source ~/miniconda3/bin/activate nmt_env_standard",file=f)
+print("source ~/miniconda3/bin/activate tf2",file=f)
 print("export LD_LIBRARY_PATH=/usr/local/cuda-10.0/lib64/",file=f)
 
 print("which python",file=f)
 print("python -c 'import tensorflow; print(\"tensorflow OK\"); import opennmt; print(\"opennmt OK\")'",file=f)
-print("python -u runner.py --config_file configs/sparse_src_masking_%s.yml"%index,file=f)
+print("python -u practice.py run train --config configs/sparse_src_masking_%s.yml"%index,file=f)
 
 f.close()
