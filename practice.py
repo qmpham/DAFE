@@ -390,7 +390,7 @@ def main():
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("run", choices=["train", "translate", "debug"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
-  parser.add_argument("--test")
+  parser.add_argument("--src")
   parser.add_argument("--output")
   parser.add_argument("--domain")
   parser.add_argument("--ref", default=None)
