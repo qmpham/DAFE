@@ -183,7 +183,8 @@ def train(config,
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
-  batch_size = batch_size
+  batch_meta_train_size = config["batch_meta_train_size"]
+  batch_meta_test_size = config["batch_meta_test_size"]
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
@@ -192,7 +193,7 @@ def train(config,
   print("There are %d in-domain corpora"%len(source_file))
 
   meta_train_dataset, meta_test_dataset = create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
-                                                                        batch_size, batch_type, shuffle_buffer_size, maximum_length)
+                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)

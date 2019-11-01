@@ -44,12 +44,12 @@ def merge_map_fn(*args):
   print(src_batch,tgt_batch)
   return src_batch, tgt_batch
 
-def create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_size, batch_type, shuffle_buffer_size, maximum_length):
+def create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length):
   meta_train_datasets = [] 
   meta_test_datasets = [] 
   for i, src,tgt in zip(domain,source_file,target_file):
     meta_train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size=batch_size,
+              batch_size=batch_meta_train_size,
               batch_type=batch_type,
               domain=i,
               shuffle_buffer_size=shuffle_buffer_size,
@@ -58,7 +58,7 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
               maximum_labels_length=maximum_length))
 
     meta_test_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size= batch_size//len(source_file),
+              batch_size= batch_meta_test_size//len(source_file),
               batch_type=batch_type,
               domain=i,
               shuffle_buffer_size=shuffle_buffer_size,
