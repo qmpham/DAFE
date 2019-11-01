@@ -173,8 +173,8 @@ def train(config,
           batch_type = "tokens",
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=200000,
-          save_every=100,
-          eval_every=100,
+          save_every=5000,
+          eval_every=15000,
           report_every=100): 
   #####
   if checkpoint_manager.latest_checkpoint is not None:
