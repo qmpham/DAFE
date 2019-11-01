@@ -95,7 +95,7 @@ def debug(source_file,
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
-    tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
+    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss
 
   def _apply_gradients():
@@ -215,7 +215,7 @@ def train(config,
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
-    tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
+    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss
 
   def _apply_gradients():
