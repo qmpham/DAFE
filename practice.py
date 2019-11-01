@@ -181,7 +181,7 @@ def train(config,
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
   #####
-  _summary_writer = tf.summary.create_file_writer(checkpoint.model_dir)
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
   batch_size = batch_size
   batch_type = batch_type
@@ -279,7 +279,7 @@ def train(config,
   meta_train_data_flow = iter(_meta_train_forward())
   meta_test_data_flow = iter(_meta_test_forward())
   _loss = []  
-  with self._summary_writer.as_default():
+  with _summary_writer.as_default():
     while True:
       #####Training batch
       loss = next(meta_train_data_flow)    
