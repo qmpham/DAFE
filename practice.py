@@ -437,7 +437,7 @@ def main():
     train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint)
   elif args.run == "translate":
     model.build(None)
-    print(int(args.output))
+    print"translate in domain %d"%(int(args.domain))
     translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output)
   elif args.run == "debug":
