@@ -405,8 +405,8 @@ def main():
       "source_vocabulary": config["src_vocab"],
       "target_vocabulary": config["tgt_vocab"]
   }
-
-  model = Multi_domain_SequenceToSequence(
+  if config.get("experiment","residual")=="residual":
+    model = Multi_domain_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
     encoder=Multi_domain_SelfAttentionEncoder(
@@ -426,7 +426,26 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1))
-
+  elif config.get("experiment","residual")=="ldr":
+    model = Multi_domain_SequenceToSequence(
+    source_inputter=My_inputter(embedding_size=512),
+    target_inputter=My_inputter(embedding_size=512),
+    encoder=onmt.encoders.self_attention_encoder.SelfAttentionEncoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1),
+    decoder=onmt.decoders.self_attention_decoder.SelfAttentionDecoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1))
   learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=4000), step_duration= 16)
   optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)   
