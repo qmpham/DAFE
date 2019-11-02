@@ -59,13 +59,11 @@ class LDR_inputter(WordEmbedder):
         self.embedding_size = embedding_size
         self.embedding_file = None
         self.dropout = dropout
-        self.ldr_embed = self.add_weight(
-                                "ldr_embedding",
-                                [vocabulary_size, num_domain_units * num_domains],
-                                initializer=None,
-                                trainable=True)
         self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)
         self.domain_mask = make_domain_mask(num_domains, num_domain_units=num_domain_units)
+        self.vocabulary_size = vocabulary_size
+        self.num_domain_units = num_domain_units
+        self.num_domains = num_domains
 
     def initialize(self, data_config, asset_prefix=""):
         super(LDR_inputter, self).initialize(data_config, asset_prefix=asset_prefix)
@@ -94,6 +92,14 @@ class LDR_inputter(WordEmbedder):
         ldr_inputs = ldr_inputs * tf.broadcast_to(tf.expand_dims(domain_mask,1),tf.shape(ldr_inputs))
         outputs = tf.concat([outputs, ldr_inputs],2)
         return self.fusion_layer(outputs)
+    
+    def build(self, input_shape):
+        self.ldr_embed = self.add_weight(
+                                "ldr_embedding",
+                                [self.vocabulary_size, self.num_domain_units * self.num_domains],
+                                initializer=None,
+                                trainable=True)
+        super(LDR_inputter, self).build(input_shape)
     
     def make_inference_dataset(self,
                              feature_file,
