@@ -347,7 +347,7 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
     self.share_embeddings = share_embeddings
 
   def auto_config(self, num_replicas=1):
-    config = super(SequenceToSequence, self).auto_config(num_replicas=num_replicas)
+    config = super(LDR_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
         "params": {
             "beam_width": 4
@@ -363,7 +363,7 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
     })
 
   def initialize(self, data_config, params=None):
-    super(SequenceToSequence, self).initialize(data_config, params=params)
+    super(LDR_SequenceToSequence, self).initialize(data_config, params=params)
     if self.params.get("contrastive_learning"):
       # Use the simplest and most effective CL_one from the paper.
       # https://www.aclweb.org/anthology/P19-1623
@@ -374,7 +374,7 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
       self.labels_inputter.set_noise(noiser, in_place=False)
 
   def build(self, input_shape):
-    super(SequenceToSequence, self).build(input_shape)
+    super(LDR_SequenceToSequence, self).build(input_shape)
     output_layer = None
     if EmbeddingsSharingLevel.share_target_embeddings(self.share_embeddings):
       output_layer = layers.Dense(
@@ -637,7 +637,7 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
             model.decoder.output_layer.kernel,
             model.decoder.output_layer.bias], [0, 1, 0]))
 
-    return super(SequenceToSequence, self).transfer_weights(
+    return super(LDR_SequenceToSequence, self).transfer_weights(
         new_model,
         new_optimizer=new_optimizer,
         optimizer=optimizer,
