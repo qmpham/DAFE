@@ -26,7 +26,7 @@ from opennmt.data import dataset as dataset_util
 from opennmt.optimizers import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter
-from model import Multi_domain_SequenceToSequence
+from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
 from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
@@ -427,7 +427,7 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1))
   elif config.get("experiment","residual")=="ldr":
-    model = Multi_domain_SequenceToSequence(
+    model = LDR_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
     encoder=onmt.encoders.self_attention_encoder.SelfAttentionEncoder(
