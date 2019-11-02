@@ -315,3 +315,31 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           alignment_type=alignment_type)
       print_bytes(tf.compat.as_bytes(sentence), stream=stream)
 
+class LDR_SequenceToSequence(SequenceToSequence):
+  def __init__(self,
+               source_inputter,
+               target_inputter,
+               encoder,
+               decoder,
+               share_embeddings=EmbeddingsSharingLevel.NONE):
+    
+    if not isinstance(target_inputter, inputters.WordEmbedder):
+      raise TypeError("Target inputter must be a WordEmbedder")
+    if EmbeddingsSharingLevel.share_input_embeddings(share_embeddings):
+      if isinstance(source_inputter, inputters.ParallelInputter):
+        source_inputters = source_inputter.inputters
+      else:
+        source_inputters = [source_inputter]
+      for inputter in source_inputters:
+        if not isinstance(inputter, inputters.WordEmbedder):
+          raise TypeError("Sharing embeddings requires all inputters to be a "
+                          "WordEmbedder")
+
+    examples_inputter = Multi_domain_SequenceToSequenceInputter(
+        source_inputter,
+        target_inputter,
+        share_parameters=EmbeddingsSharingLevel.share_input_embeddings(share_embeddings))
+    super(LDR_SequenceToSequence, self).__init__(examples_inputter)
+    self.encoder = encoder
+    self.decoder = decoder
+    self.share_embeddings = share_embeddings

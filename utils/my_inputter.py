@@ -54,14 +54,14 @@ class My_inputter(WordEmbedder):
 
 
 class LDR_inputter(WordEmbedder):
-    def __init__(self, embedding_size=None, num_units=512 , num_domains=6, vocab_size=31266, num_domain_units=8, dropout=0.0, **kwargs):        
+    def __init__(self, embedding_size=None, num_units=512 , num_domains=6, vocabulary_size=31266, num_domain_units=8, dropout=0.0, **kwargs):        
         super(LDR_inputter, self).__init__(**kwargs)
         self.embedding_size = embedding_size
         self.embedding_file = None
         self.dropout = dropout
         self.ldr_embed = self.add_weight(
                                 "ldr_embedding",
-                                [self.vocabulary_size, self.embedding_size],
+                                [vocabulary_size, num_domain_units * num_domains],
                                 initializer=None,
                                 trainable=True)
         self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)

@@ -428,8 +428,8 @@ def main():
         ffn_dropout=0.1))
   elif config.get("experiment","residual")=="ldr":
     model = onmt.models.sequence_to_sequence.SequenceToSequence(
-    source_inputter=LDR_inputter(embedding_size=512),
-    target_inputter=LDR_inputter(embedding_size=512),
+    source_inputter=LDR_inputter(embedding_size=464),
+    target_inputter=LDR_inputter(embedding_size=464),
     encoder=onmt.encoders.self_attention_encoder.SelfAttentionEncoder(
         num_layers=6,
         num_units=512,
