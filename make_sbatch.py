@@ -14,6 +14,6 @@ print("export LD_LIBRARY_PATH=/usr/local/cuda-10.0/lib64/",file=f)
 
 print("which python",file=f)
 print("python -c 'import tensorflow; print(\"tensorflow OK\"); import opennmt; print(\"opennmt OK\")'",file=f)
-print("python -u practice.py train --config configs/sparse_src_masking_%s.yml"%index,file=f)
+print("python -u practice.py train --config configs/config_%s.yml"%index,file=f)
 
 f.close()
