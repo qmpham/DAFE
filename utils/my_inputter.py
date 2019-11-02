@@ -5,6 +5,8 @@ from opennmt.models.sequence_to_sequence import _shift_target_sequence
 from opennmt.data import text
 from opennmt.data import dataset as dataset_util
 from opennmt.utils import misc
+from utils.utils_ import make_domain_mask
+from opennmt.layers import common
 class My_inputter(WordEmbedder):
     def __init__(self, embedding_size=None, dropout=0.0, **kwargs):        
         super(My_inputter, self).__init__(**kwargs)
@@ -49,6 +51,69 @@ class My_inputter(WordEmbedder):
             num_threads=num_threads,
             prefetch_buffer_size=prefetch_buffer_size))
         return dataset
+
+
+class LDR_inputter(WordEmbedder):
+    def __init__(self, embedding_size=None, num_units=512 , num_domains=6, vocab_size=31266, num_domain_units=8, dropout=0.0, **kwargs):        
+        super(LDR_inputter, self).__init__(**kwargs)
+        self.embedding_size = embedding_size
+        self.embedding_file = None
+        self.dropout = dropout
+        self.ldr_embed = self.add_weight(
+                                "ldr_embedding",
+                                [self.vocabulary_size, self.embedding_size],
+                                initializer=None,
+                                trainable=True)
+        self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)
+        self.domain_mask = make_domain_mask(num_domains, num_domain_units=num_domain_units)
+
+    def initialize(self, data_config, asset_prefix=""):
+        super(LDR_inputter, self).initialize(data_config, asset_prefix=asset_prefix)
+        embedding = _get_field(data_config, "embedding", prefix=asset_prefix)
+        if embedding is None and self.embedding_size is None:
+            raise ValueError("embedding_size must be set")
+        if embedding is not None:
+            self.embedding_file = embedding["path"]
+            self.trainable = embedding.get("trainable", True)
+            self.embedding_file_with_header = embedding.get("with_header", True)
+            self.case_insensitive_embeddings = embedding.get("case_insensitive", True)
+    def make_features(self, element=None, features=None, domain=1, training=None):
+        features = super(LDR_inputter, self).make_features(
+            element=element, features=features, training=training)
+        if "domain" in features:
+            return features
+        features["domain"] = tf.constant(domain)
+
+        return features
+    
+    def call(self, features, training=None):
+        outputs = tf.nn.embedding_lookup(self.embedding, features["ids"])
+        outputs = common.dropout(outputs, self.dropout, training=training)
+        ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
+        domain_mask = tf.nn.embedding_lookup(self.domain_mask, features["domain"])
+        ldr_inputs = ldr_inputs * tf.broadcast_to(tf.expand_dims(domain_mask,1),tf.shape(ldr_inputs))
+        outputs = tf.concat([outputs, ldr_inputs],2)
+        return self.fusion_layer(outputs)
+    
+    def make_inference_dataset(self,
+                             feature_file,
+                             batch_size,
+                             domain=1,
+                             length_bucket_width=None,
+                             num_threads=1,
+                             prefetch_buffer_size=None):
+    
+        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), domain=domain, training=False)
+        dataset = self.make_dataset(feature_file, training=False)
+        dataset = dataset.apply(dataset_util.inference_pipeline(
+            batch_size,
+            process_fn=map_func,
+            length_bucket_width=length_bucket_width,
+            length_fn=self.get_length,
+            num_threads=num_threads,
+            prefetch_buffer_size=prefetch_buffer_size))
+        return dataset
+
 
 class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
     def __init__(self,
