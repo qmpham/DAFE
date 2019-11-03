@@ -284,15 +284,15 @@ def meta_train(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss = next(meta_train_data_flow)    
+      loss = next(meta_train_data_flow)  
+      _loss.append(loss)  
       snapshots = [v.value() for v in model.trainable_variables]
       _step()
       #####Testing batch
       loss = next(meta_test_data_flow)
       weight_reset(snapshots)
       _step()
-      ####
-      _loss.append(loss)
+      ####      
       step = optimizer.iterations.numpy()//2
       if step % report_every == 0:
         elapsed = time.time() - start
@@ -581,7 +581,7 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1))
   elif experiment=="baseline":
-    model = onmt.models.SequenceToSequence(
+    model = LDR_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
     encoder=onmt.encoders.SelfAttentionEncoder(
