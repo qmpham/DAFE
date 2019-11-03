@@ -171,6 +171,7 @@ def train(config,
           maximum_length=80,
           batch_size = 2048,
           batch_type = "tokens",
+          experiment="residual",
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=200000,
           save_every=5000,
@@ -308,7 +309,7 @@ def train(config,
         tf.summary.experimental.set_step(step)
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file)
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, experiment=experiment)
           tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %s"%src)
       if step > train_steps:
         break
@@ -320,6 +321,7 @@ def translate(source_file,
               checkpoint,
               domain,
               output_file,
+              experiment="ldr",
               batch_size=32,
               beam_size=5):
   
@@ -340,7 +342,10 @@ def translate(source_file,
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
-    encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length)
+    if experiment=="residual":
+      encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length)
+    else:
+      encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
 
     # Prepare the decoding strategy.
     if beam_size > 1:
@@ -354,8 +359,12 @@ def translate(source_file,
     decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
         memory_sequence_length=source_length)
+    if experiment=="residual":
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
+    else:
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
     decoded = model.decoder.dynamic_decode(
-        lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)],
+        map_input_fn,
         tf.fill([batch_size], START_OF_SENTENCE_ID),
         end_id=END_OF_SENTENCE_ID,
         initial_state=decoder_state,
@@ -405,7 +414,8 @@ def main():
       "source_vocabulary": config["src_vocab"],
       "target_vocabulary": config["tgt_vocab"]
   }
-  if config.get("experiment","residual")=="residual":
+  experiment = config.get("experiment","residual")
+  if experiment=="residual":
     model = Multi_domain_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
@@ -426,7 +436,7 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1))
-  elif config.get("experiment","residual")=="ldr":
+  elif experiment=="ldr":
     model = LDR_SequenceToSequence(
     source_inputter=LDR_inputter(embedding_size=464),
     target_inputter=LDR_inputter(embedding_size=464),
@@ -453,12 +463,12 @@ def main():
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
  
   if args.run == "train":
-    train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint)
+    train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "translate":
     model.build(None)
     print("translate in domain %d"%(int(args.domain)))
     translate(args.src, args.ref, model, checkpoint_manager,
-              checkpoint, int(args.domain), args.output)
+              checkpoint, int(args.domain), args.output, experiment=experiment)
   elif args.run == "debug":
     debug(config["src"], config["tgt"], config["domain"], optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint)  
   
