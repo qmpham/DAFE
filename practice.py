@@ -485,6 +485,8 @@ def translate(source_file,
         memory_sequence_length=source_length)
     if experiment=="residual":
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
+    elif experiment=="ldr":
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
     else:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
     decoded = model.decoder.dynamic_decode(
