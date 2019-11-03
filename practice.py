@@ -528,7 +528,7 @@ def main():
   parser.add_argument("--domain")
   parser.add_argument("--ref", default=None)
   args = parser.parse_args()
-
+  print("Running mode: ", args.run)
   config_file = args.config
   with open(config_file, "r") as stream:
       config = yaml.load(stream)
@@ -539,6 +539,7 @@ def main():
       "target_vocabulary": config["tgt_vocab"]
   }
   experiment = config.get("experiment","residual")
+  print("running experiment: ", experiment)
   if experiment=="residual":
     model = Multi_domain_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
