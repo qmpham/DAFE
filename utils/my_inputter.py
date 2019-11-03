@@ -94,7 +94,7 @@ class LDR_inputter(WordEmbedder):
         else:
             domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
             domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,0),tf.shape(ldr_inputs))
-        ldr_inputs = ldr_inputs * tf.broadcast_to(tf.expand_dims(domain_mask,1),tf.shape(ldr_inputs))
+        ldr_inputs = ldr_inputs * domain_mask
         outputs = tf.concat([outputs, ldr_inputs],2)
         return self.fusion_layer(outputs)
     
