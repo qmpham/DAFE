@@ -606,7 +606,7 @@ def main():
   model.initialize(data_config)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
  
-  if args.run == "meta_train":
+  if args.run == "metatrain":
     meta_train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run =="train":
     train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
