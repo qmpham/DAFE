@@ -161,7 +161,7 @@ def debug(source_file,
   print("meta test: ", next(meta_test_data_flow))
 
 
-def train(config,
+def meta_train(config,
           optimizer,          
           learning_rate,
           model,  
@@ -292,6 +292,130 @@ def train(config,
       weight_reset(snapshots)
       _step()
       ####
+      _loss.append(loss)
+      step = optimizer.iterations.numpy()//2
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; after %f seconds",
+            step, learning_rate(step), np.mean(_loss), elapsed)
+        _loss = []
+        start = time.time()
+      if step % save_every == 0 and optimizer.iterations.numpy()%2==0:
+        tf.get_logger().info("Saving checkpoint for step %d", step)
+        checkpoint_manager.save(checkpoint_number=step)
+      if step % eval_every == 0 and optimizer.iterations.numpy()%2==0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, experiment=experiment)
+          tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %s"%src)
+      if step > train_steps:
+        break
+
+def train(config,
+          optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
+  #####
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_meta_train_size = config["batch_meta_train_size"]
+  batch_meta_test_size = config["batch_meta_test_size"]
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config["domain"]
+  
+  print("There are %d in-domain corpora"%len(source_file))
+
+  meta_train_dataset, _ = create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
+                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
+  #####
+  with strategy.scope():
+    model.create_variables(optimizer=optimizer)
+    gradient_accumulator = optimizer_util.GradientAccumulator()  
+
+  def _accumulate_gradients(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    variables = model.trainable_variables
+    print("var numb: ", len(variables))
+    training_loss = model.regularize_loss(training_loss, variables=variables)
+    gradients = optimizer.get_gradients(training_loss, variables)
+    gradient_accumulator(gradients)
+    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
+    return reported_loss
+
+  def _apply_gradients():
+    variables = model.trainable_variables
+    grads_and_vars = []
+    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync)
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    gradient_accumulator.reset()
+ 
+  @dataset_util.function_on_next(meta_train_dataset)
+  def _meta_train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+    return loss
+
+  @dataset_util.function_on_next(meta_train_dataset)
+  def _meta_train_iteration(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      return per_replica_source, per_replica_target
+  
+  @tf.function
+  def _step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_gradients)
+
+  
+  # Runs the training loop.
+  import time
+  start = time.time()  
+  meta_train_data_flow = iter(_meta_train_forward())
+
+  _loss = []  
+  with _summary_writer.as_default():
+    while True:
+      #####Training batch
+      loss = next(meta_train_data_flow)    
+      _step()
       _loss.append(loss)
       step = optimizer.iterations.numpy()//2
       if step % report_every == 0:
@@ -456,13 +580,35 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1))
+  elif experiment=="baseline":
+    model = onmt.models.SequenceToSequence(
+    source_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
+    target_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
+    encoder=onmt.encoders.SelfAttentionEncoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1),
+    decoder=onmt.decoders.SelfAttentionDecoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1))
   learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=4000), step_duration= 16)
   optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)   
   model.initialize(data_config)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
  
-  if args.run == "train":
+  if args.run == "meta_train":
+    meta_train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
+  elif args.run =="train":
     train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "translate":
     model.build(None)
