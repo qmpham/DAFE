@@ -498,7 +498,7 @@ def translate(source_file,
         end_id=END_OF_SENTENCE_ID,
         initial_state=decoder_state,
         decoding_strategy=decoding_strategy,
-        maximum_iterations=200)
+        maximum_iterations=250)
     target_lengths = decoded.lengths
     target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64))
     return target_tokens, target_lengths
@@ -617,7 +617,7 @@ def main():
   ######
   model.params.update({"label_smoothing": 0.1})
   model.params.update({"average_loss_in_time": True})
-  model.params.update({"beam_width": 1})
+  model.params.update({"beam_width": 5})
   ######
   if args.run == "metatrain":
     meta_train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
