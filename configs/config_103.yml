@@ -51,3 +51,4 @@ batch_meta_train_size: 4096
 batch_meta_test_size: 4096
 experiment: ldr
 train_steps: 250000
+step_duration: 16

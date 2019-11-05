@@ -76,7 +76,6 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
   def initialize(self, data_config, params=None):
     super(Multi_domain_SequenceToSequence, self).initialize(data_config, params=params)
     if self.params.get("contrastive_learning"):
-
       noiser = noise.WordNoiser(
           noises=[noise.WordOmission(1)],
           subword_token=self.params.get("decoding_subword_token", "￭"),
@@ -656,11 +655,6 @@ class Masked_LM(model.Model):
 
   def auto_config(self, num_replicas=1):
     config = super(Masked_LM, self).auto_config(num_replicas=num_replicas)
-    return merge_dict(config, {
-        "infer": {
-            "length_bucket_width": 1  # To ensure fixed length in each batch.
-        }
-    })
 
   def build(self, input_shape):
     super(Masked_LM, self).build(input_shape)

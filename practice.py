@@ -454,6 +454,7 @@ def translate(source_file,
   # Create the inference dataset.
   checkpoint.restore(checkpoint_manager.latest_checkpoint)
   tf.get_logger().info("Evaluating model %s", checkpoint_manager.latest_checkpoint)
+  print("In domain %d"%domain)
   dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
   iterator = iter(dataset)
 
