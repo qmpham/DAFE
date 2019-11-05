@@ -435,7 +435,7 @@ def train(config,
         tf.summary.experimental.set_step(step)
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, experiment=experiment)
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %s"%src)
       if step > train_steps:
         break
@@ -447,6 +447,7 @@ def translate(source_file,
               checkpoint,
               domain,
               output_file,
+              length_penalty,
               experiment="ldr",
               batch_size=32,
               beam_size=5):
@@ -477,7 +478,7 @@ def translate(source_file,
     if beam_size > 1:
       encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
       source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
-      decoding_strategy = onmt.utils.BeamSearch(beam_size)
+      decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
     else:
       decoding_strategy = onmt.utils.GreedySearch()
 
@@ -610,7 +611,9 @@ def main():
   checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)   
   model.initialize(data_config)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
- 
+  ######
+  model.params.update({"label_smoothing": 0.1})
+  ######
   if args.run == "metatrain":
     meta_train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run =="train":
