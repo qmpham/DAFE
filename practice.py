@@ -616,7 +616,7 @@ def main():
   ######
   model.params.update({"label_smoothing": 0.1})
   model.params.update({"average_loss_in_time": True})
-  model.params.update({"beam_width", 1})
+  model.params.update({"beam_width": 1})
   ######
   if args.run == "metatrain":
     meta_train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
