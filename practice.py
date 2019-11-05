@@ -160,7 +160,6 @@ def debug(source_file,
   print("meta train: ", next(meta_train_data_flow))
   print("meta test: ", next(meta_test_data_flow))
 
-
 def meta_train(config,
           optimizer,          
           learning_rate,
@@ -309,7 +308,7 @@ def meta_train(config,
         tf.summary.experimental.set_step(step)
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, experiment=experiment)
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %s"%src)
       if step > train_steps:
         break
@@ -606,6 +605,9 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1))
+  elif experiment=="pretrain":
+    return
+    
   learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=4000), step_duration= config.get("step_duration",16))
   optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)   

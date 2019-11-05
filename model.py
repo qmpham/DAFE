@@ -22,8 +22,9 @@ from opennmt.utils.misc import print_bytes, format_translation_output, merge_dic
 from opennmt.decoders import decoder as decoder_util
 from opennmt.models.sequence_to_sequence import EmbeddingsSharingLevel, SequenceToSequence, SequenceToSequenceInputter, replace_unknown_target, _add_noise
 from utils.my_inputter import My_inputter, Multi_domain_SequenceToSequenceInputter
-from utils.utils_ import make_domain_mask
+from utils.utils_ import make_domain_mask, masking
 from opennmt.layers import common
+from opennmt.utils.losses import _softmax_cross_entropy
 class Multi_domain_SequenceToSequence(model.SequenceGenerator):
 
   """A sequence to sequence model."""
@@ -558,6 +559,8 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
           labels["noisy_length"],
           eta=params.get("max_margin_eta", 0.1))
     labels_lengths = self.labels_inputter.get_length(labels)
+    print("label_smoothing: ",params.get("label_smoothing", 0.0))
+    print("average_loss_in_time: ", params.get("average_loss_in_time", False))
     loss, loss_normalizer, loss_token_normalizer = losses.cross_entropy_sequence_loss(
         logits,
         labels["ids_out"],
@@ -643,3 +646,63 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
         optimizer=optimizer,
         ignore_weights=updated_variables)
 
+class Masked_LM(model.Model):
+  def __init__(self,
+               source_inputter,
+               encoder):
+
+    super(Masked_LM, self).__init__(source_inputter)
+    self.encoder = encoder
+
+  def auto_config(self, num_replicas=1):
+    config = super(Masked_LM, self).auto_config(num_replicas=num_replicas)
+    return merge_dict(config, {
+        "infer": {
+            "length_bucket_width": 1  # To ensure fixed length in each batch.
+        }
+    })
+
+  def build(self, input_shape):
+    super(Masked_LM, self).build(input_shape)
+    vocab_size = self.examples_inputter.vocabulary_size
+    output_layer = None
+    if self.reuse_embedding:
+      output_layer = layers.Dense(
+          vocab_size,
+          weight=self.examples_inputter.embedding,
+          transpose=True)
+    self.decoder.initialize(vocab_size=vocab_size, output_layer=output_layer)
+
+  def call(self, features, training=None, step=None):
+    
+    ids, length = features["ids"], features["length"]
+    #ids = masking(ids, noise_percentage=0.15)
+    logits, _ = self.encoder(ids, length, training=training)
+    outputs = dict(logits=logits)
+    
+    return outputs
+
+  def compute_loss(self, outputs, features, training=True):
+    ids_out = None
+    length = None
+    logits = outputs["logits"]
+    labels = features["ids"]
+    sequence_length = features["length"]
+    label_smoothing = 0.1
+    average_in_time = True
+    batch_size = tf.shape(logits)[0]
+    max_time = tf.shape(logits)[1]
+
+    cross_entropy = _softmax_cross_entropy(logits, labels, label_smoothing, training)
+    weights = tf.sequence_mask(
+        sequence_length, maxlen=max_time, dtype=cross_entropy.dtype)
+    loss = tf.reduce_sum(cross_entropy * weights)
+    loss_token_normalizer = tf.reduce_sum(weights)
+
+    if average_in_time or not training:
+      loss_normalizer = loss_token_normalizer
+    else:
+      loss_normalizer = tf.cast(batch_size, loss.dtype)
+
+    return loss, loss_normalizer, loss_token_normalizer
+  

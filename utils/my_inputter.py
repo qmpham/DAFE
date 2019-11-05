@@ -51,17 +51,74 @@ class My_inputter(WordEmbedder):
             num_threads=num_threads,
             prefetch_buffer_size=prefetch_buffer_size))
         return dataset
+    
+    def make_training_dataset(self,
+                            features_file,
+                            labels_file,
+                            batch_size,
+                            domain=1,
+                            batch_type="examples",
+                            batch_multiplier=1,
+                            batch_size_multiple=1,
+                            shuffle_buffer_size=None,
+                            length_bucket_width=None,
+                            maximum_features_length=None,
+                            maximum_labels_length=None,
+                            single_pass=False,
+                            num_shards=1,
+                            shard_index=0,
+                            num_threads=4,
+                            prefetch_buffer_size=None):
+        """See :meth:`opennmt.inputters.ExampleInputter.make_training_dataset`."""
+        _ = labels_file
+        dataset = self.make_dataset(features_file, training=True)
+        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), domain=domain, training=True)
+        dataset = dataset.apply(dataset_util.training_pipeline(
+            batch_size,
+            batch_type=batch_type,
+            batch_multiplier=batch_multiplier,
+            length_bucket_width=length_bucket_width,
+            single_pass=single_pass,
+            process_fn=map_func,
+            num_threads=num_threads,
+            shuffle_buffer_size=shuffle_buffer_size,
+            prefetch_buffer_size=prefetch_buffer_size,
+            maximum_features_length=maximum_features_length,
+            maximum_labels_length=maximum_labels_length,
+            features_length_fn=self.get_length,
+            batch_size_multiple=batch_size_multiple,
+            num_shards=num_shards,
+            shard_index=shard_index))
+        return dataset
+    def make_evaluation_dataset(self,
+                              features_file,
+                              labels_file,
+                              batch_size,
+                              domain,
+                              num_threads=1,
+                              prefetch_buffer_size=None):
+        """See :meth:`opennmt.inputters.ExampleInputter.make_evaluation_dataset`."""
+        _ = labels_file
+        dataset = self.make_dataset(features_file, training=False)
+        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), domain=domain, training=False)
+        dataset = dataset.apply(dataset_util.inference_pipeline(
+            batch_size,
+            process_fn=map_func,
+            num_threads=num_threads,
+            prefetch_buffer_size=prefetch_buffer_size))
+        return dataset
+
+
 
 
 class LDR_inputter(WordEmbedder):
-    def __init__(self, embedding_size=None, num_units=512 , num_domains=6, vocabulary_size=31266, num_domain_units=8, dropout=0.0, **kwargs):        
+    def __init__(self, embedding_size=None, num_units=512 , num_domains=6, num_domain_units=8, dropout=0.0, **kwargs):        
         super(LDR_inputter, self).__init__(**kwargs)
         self.embedding_size = embedding_size
         self.embedding_file = None
         self.dropout = dropout
         self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)
         self.domain_mask = make_domain_mask(num_domains, num_domain_units=num_domain_units)
-        self.vocabulary_size = vocabulary_size
         self.num_domain_units = num_domain_units
         self.num_domains = num_domains
 
@@ -235,3 +292,4 @@ class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
             shuffle_buffer_size=shuffle_buffer_size,
             prefetch_buffer_size=prefetch_buffer_size))
         return dataset
+
