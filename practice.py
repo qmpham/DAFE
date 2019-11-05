@@ -614,8 +614,9 @@ def main():
   model.initialize(data_config)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
   ######
-  model.params.update({"label_smoothing": 0.3})
-  model.params.update({"average_loss_in_time": False})
+  model.params.update({"label_smoothing": 0.1})
+  model.params.update({"average_loss_in_time": True})
+  model.params.update({"beam_width", 1})
   ######
   if args.run == "metatrain":
     meta_train(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
