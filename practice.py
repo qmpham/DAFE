@@ -156,9 +156,9 @@ def debug(source_file,
   # Runs the training loop.
 
   meta_train_data_flow = iter(_meta_train_iteration())
-  meta_test_data_flow = iter(_meta_test_iteration())
+  #meta_test_data_flow = iter(_meta_test_iteration())
   print("meta train: ", next(meta_train_data_flow))
-  print("meta test: ", next(meta_test_data_flow))
+  #print("meta test: ", next(meta_test_data_flow))
 
 def meta_train(config,
           optimizer,          
