@@ -281,6 +281,7 @@ def meta_train(config,
   meta_test_data_flow = iter(_meta_test_forward())
   _loss = []  
   with _summary_writer.as_default():
+    step = optimizer.iterations.numpy()//2
     checkpoint_path = checkpoint_manager.latest_checkpoint
     tf.summary.experimental.set_step(step)
     for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
