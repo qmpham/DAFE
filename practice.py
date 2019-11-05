@@ -281,6 +281,13 @@ def meta_train(config,
   meta_test_data_flow = iter(_meta_test_forward())
   _loss = []  
   with _summary_writer.as_default():
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+    tf.summary.experimental.set_step(step)
+    for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+      score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+      tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %s"%src)
+    """
     while True:
       #####Training batch
       loss = next(meta_train_data_flow)  
@@ -312,7 +319,7 @@ def meta_train(config,
           tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %s"%src)
       if step > train_steps:
         break
-
+    """
 def train(config,
           optimizer,          
           learning_rate,
