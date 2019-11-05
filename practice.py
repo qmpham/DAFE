@@ -330,6 +330,8 @@ def train(config,
           save_every=5000,
           eval_every=15000,
           report_every=100): 
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
   #####
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
@@ -603,7 +605,7 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1))
-  learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=4000), step_duration= 16)
+  learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=4000), step_duration= config.get("step_duration",16))
   optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)   
   model.initialize(data_config)
