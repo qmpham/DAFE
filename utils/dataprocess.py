@@ -68,9 +68,13 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
   
   meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets)
   meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
-
+  def meta_train_fn(input_context):
+    #batch_size = input_context.get_per_replica_batch_size(batch_meta_train_size)
+    return meta_train_dataset.shard(
+        input_context.num_input_pipelines, input_context.input_pipeline_id)
   with strategy.scope():
-    meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
+    #meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
+    meta_test_dataset = strategy.experimental_distribute_datasets_from_function(meta_train_fn)
     meta_test_dataset = strategy.experimental_distribute_dataset(meta_test_dataset)
 
   return meta_train_dataset, meta_test_dataset
