@@ -34,6 +34,6 @@ model_dir: /mnt/beegfs/home/pham/multi-domain-nmt/meta_learning/DAFE/models/conf
 
 batch_train_size: 600
 batch_test_size: 30
-batch_type: example s
+batch_type: examples #tokens
 experiment: baseline
 step_duration: 8
