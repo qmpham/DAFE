@@ -41,6 +41,7 @@ def debug(source_file,
           learning_rate,
           model,    
           checkpoint_manager,
+          checkpoint,
           maximum_length=80,
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=200000,
@@ -629,7 +630,6 @@ def main():
     translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
   elif args.run == "debug":
-    debug(config["src"], config["tgt"], config["domain"], optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint)  
-  
+    debug(config["src"], config["tgt"], config["domain"], optimizer, strategy, learning_rate, model, checkpoint_manager, checkpoint)  
 if __name__ == "__main__":
   main()
