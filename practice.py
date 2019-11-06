@@ -30,7 +30,7 @@ from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
 from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
-from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset
+from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset
 from opennmt.utils import BLEUScorer
 
 def debug(source_file,
@@ -339,8 +339,7 @@ def train(config,
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
-  batch_meta_train_size = config["batch_meta_train_size"]
-  batch_meta_test_size = config["batch_meta_test_size"]
+  batch_train_size = config["batch_meta_train_size"]  
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
@@ -348,8 +347,8 @@ def train(config,
   
   print("There are %d in-domain corpora"%len(source_file))
 
-  meta_train_dataset, _ = create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
-                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
+  train_dataset, _ = create_trainining_dataset(strategy, model, domain, source_file, target_file, 
+                                                                        batch_train_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -385,8 +384,8 @@ def train(config,
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
  
-  @dataset_util.function_on_next(meta_train_dataset)
-  def _meta_train_forward(next_fn):    
+  @dataset_util.function_on_next(train_dataset)
+  def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
       per_replica_loss = strategy.experimental_run_v2(
@@ -395,7 +394,7 @@ def train(config,
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
     return loss
 
-  @dataset_util.function_on_next(meta_train_dataset)
+  @dataset_util.function_on_next(train_dataset)
   def _meta_train_iteration(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
@@ -410,13 +409,13 @@ def train(config,
   # Runs the training loop.
   import time
   start = time.time()  
-  meta_train_data_flow = iter(_meta_train_forward())
+  train_data_flow = iter(_train_forward())
 
   _loss = []  
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss = next(meta_train_data_flow)    
+      loss = next(train_data_flow)    
       _step()
       _loss.append(loss)
       step = optimizer.iterations.numpy()
