@@ -70,7 +70,6 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
   meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
   with strategy.scope():
     meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
-    #meta_test_dataset = strategy.experimental_distribute_datasets_from_function(meta_train_fn)
     meta_test_dataset = strategy.experimental_distribute_dataset(meta_test_dataset)
 
   return meta_train_dataset, meta_test_dataset
