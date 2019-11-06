@@ -414,12 +414,12 @@ def train(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-
+  print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss = next(train_data_flow)    
+      loss, num_examples = next(train_data_flow)    
       print("number_examples_in_an_iteration: %d"%num_examples)
       _step()
       _loss.append(loss)
