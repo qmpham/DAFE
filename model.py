@@ -350,11 +350,11 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
     config = super(LDR_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
         "params": {
-            "beam_width": 4
+            "beam_width": 5
         },
         "train": {
             "sample_buffer_size": -1,
-            "max_step": 500000
+            "max_step": 200000
         },
         "infer": {
             "batch_size": 32,
