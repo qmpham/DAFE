@@ -373,8 +373,9 @@ def train(config,
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
+    num_examples = tf.shape(source["length"])[0]
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss
+    return reported_loss, num_examples
 
   def _apply_gradients():
     variables = model.trainable_variables
@@ -390,11 +391,12 @@ def train(config,
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-    return loss
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, num_examples
 
   @dataset_util.function_on_next(train_dataset)
   def _train_iteration(next_fn):    
@@ -417,7 +419,8 @@ def train(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss = next(train_data_flow)    
+      loss, num_examples = next(train_data_flow)    
+      print("number_examples_in_an_iteration: %d"%num_examples)
       _step()
       _loss.append(loss)
       step = optimizer.iterations.numpy()
