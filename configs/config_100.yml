@@ -32,8 +32,9 @@ src_vocab: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/vocab.en_fr
 tgt_vocab: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/vocab.en_fr
 model_dir: /mnt/beegfs/home/pham/multi-domain-nmt/meta_learning/DAFE/models/config_100
 
-batch_train_size: 600
+batch_train_size: 360
 batch_test_size: 30
 batch_type: examples #tokens
 experiment: baseline
+train_steps: 200000
 step_duration: 8

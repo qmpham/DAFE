@@ -653,9 +653,6 @@ class Masked_LM(model.Model):
     super(Masked_LM, self).__init__(source_inputter)
     self.encoder = encoder
 
-  def auto_config(self, num_replicas=1):
-    config = super(Masked_LM, self).auto_config(num_replicas=num_replicas)
-
   def build(self, input_shape):
     super(Masked_LM, self).build(input_shape)
     vocab_size = self.examples_inputter.vocabulary_size
