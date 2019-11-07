@@ -109,8 +109,6 @@ class My_inputter(WordEmbedder):
         return dataset
 
 
-
-
 class LDR_inputter(WordEmbedder):
     def __init__(self, embedding_size=None, num_units=512 , num_domains=6, num_domain_units=8, dropout=0.0, **kwargs):        
         super(LDR_inputter, self).__init__(**kwargs)
