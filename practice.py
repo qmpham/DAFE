@@ -177,6 +177,10 @@ def meta_train(config,
           save_every=5000,
           eval_every=15000,
           report_every=100): 
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
   #####
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
@@ -217,8 +221,9 @@ def meta_train(config,
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
+    num_examples = tf.shape(source["length"])[0]
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss
+    return reported_loss, num_examples
 
   def _apply_gradients():
     variables = model.trainable_variables
@@ -234,11 +239,12 @@ def meta_train(config,
   def _meta_train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-    return loss
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_num_examples, None)    
+    return loss, num_examples
 
   @dataset_util.function_on_next(meta_test_dataset)
   def _meta_test_forward(next_fn):    
@@ -284,7 +290,8 @@ def meta_train(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss = next(meta_train_data_flow)  
+      loss, num_examples = next(meta_train_data_flow)  
+      print("number_examples_per_replica: ", num_examples)
       _loss.append(loss)  
       snapshots = [v.value() for v in model.trainable_variables]
       _step()
