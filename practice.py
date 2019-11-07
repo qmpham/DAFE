@@ -15,7 +15,7 @@ import logging
 import yaml
 import tensorflow as tf
 import tensorflow_addons as tfa
-
+import sys
 import opennmt as onmt
 import io
 import os
@@ -33,49 +33,47 @@ import numpy as np
 from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset
 from opennmt.utils import BLEUScorer
 
-def debug(source_file,
-          target_file,
-          domain,
-          optimizer,
-          strategy,          
+
+def debug(config,
+          optimizer,          
           learning_rate,
-          model,    
+          model,  
+          strategy,  
           checkpoint_manager,
           checkpoint,
           maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=200000,
           save_every=5000,
-          report_every=100):
-  batch_size = 100
-  meta_train_datasets = [] 
-  meta_test_datasets = [] 
-  print("There are %d in-domain corpora"%len(source_file))
-  for i, src,tgt in zip(domain,source_file,target_file):
-    meta_train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size=batch_size,
-              batch_type="tokens",
-              domain=i,
-              shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
-              maximum_features_length=maximum_length,
-              maximum_labels_length=maximum_length))
-
-    meta_test_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size= batch_size//len(source_file),
-              batch_type="tokens",
-              domain=i,
-              shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
-              maximum_features_length=maximum_length,
-              maximum_labels_length=maximum_length))
+          eval_every=15000,
+          report_every=100): 
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
+  #####
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_meta_train_size = config["batch_meta_train_size"]
+  batch_meta_test_size = config["batch_meta_test_size"]
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config["domain"]
   
-  meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets)
-  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
+  print("There are %d in-domain corpora"%len(source_file))
 
+  meta_train_dataset, meta_test_dataset = create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
+                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
+  #####
   with strategy.scope():
-    meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
-    meta_test_dataset = strategy.experimental_distribute_dataset(meta_test_dataset)
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
@@ -86,6 +84,7 @@ def debug(source_file,
         training=True,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, target, training=True)
+    tf.print(source["domain"], output_stream=sys.stdout)
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
@@ -96,8 +95,9 @@ def debug(source_file,
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
+    num_examples = tf.shape(source["length"])[0]
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss
+    return reported_loss, num_examples
 
   def _apply_gradients():
     variables = model.trainable_variables
@@ -113,11 +113,12 @@ def debug(source_file,
   def _meta_train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-    return loss
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_num_examples, None)    
+    return loss, num_examples
 
   @dataset_util.function_on_next(meta_test_dataset)
   def _meta_test_forward(next_fn):    
@@ -155,11 +156,17 @@ def debug(source_file,
         strategy.extended.update(var, _set_weight, args=(snap, ))
   
   # Runs the training loop.
-
-  meta_train_data_flow = iter(_meta_train_iteration())
-  meta_test_data_flow = iter(_meta_test_iteration())
-  print("meta train: ", next(meta_train_data_flow))
-  #print("meta test: ", next(meta_test_data_flow))
+  import time
+  start = time.time()  
+  print("number of replicas: %d"%strategy.num_replicas_in_sync)
+  meta_train_data_flow = iter(_meta_train_forward())
+  meta_test_data_flow = iter(_meta_test_forward())
+  _loss = []  
+  with _summary_writer.as_default():
+    while True:
+      #####Training batch
+      loss, num_examples = next(meta_train_data_flow)  
+      print("number_examples_per_replica: ", num_examples)
 
 def meta_train(config,
           optimizer,          
@@ -284,6 +291,7 @@ def meta_train(config,
   # Runs the training loop.
   import time
   start = time.time()  
+  print("number of replicas: %d"%strategy.num_replicas_in_sync)
   meta_train_data_flow = iter(_meta_train_forward())
   meta_test_data_flow = iter(_meta_test_forward())
   _loss = []  
@@ -641,6 +649,6 @@ def main():
     translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
   elif args.run == "debug":
-    debug(config["src"], config["tgt"], config["domain"], optimizer, strategy, learning_rate, model, checkpoint_manager, checkpoint)  
+    debug(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
 if __name__ == "__main__":
   main()
