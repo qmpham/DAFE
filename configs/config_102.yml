@@ -47,6 +47,9 @@ src_vocab: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/vocab.en_fr
 tgt_vocab: /mnt/beegfs/home/pham/multi-domain-nmt/clean_data/vocab.en_fr
 model_dir: /mnt/beegfs/home/pham/multi-domain-nmt/meta_learning/DAFE/models/config_12
 
-batch_meta_train_size: 3072
-batch_meta_test_size: 3072
+batch_meta_train_size: 360
+batch_meta_test_size: 360
+batch_type: examples
 experiment: residual
+train_steps: 200000
+step_duration: 16
