@@ -32,7 +32,7 @@ from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
 from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset
 from opennmt.utils import BLEUScorer
-
+from utils.utils_ import variance_scaling_initialier, _set_weight, _step, weight_reset
 
 def debug(config,
           optimizer,          
@@ -273,20 +273,6 @@ def meta_train(config,
   def _meta_test_iteration(next_fn):    
     with strategy.scope():
       return next_fn()
- 
-  @tf.function
-  def _step():
-    with strategy.scope():
-      strategy.experimental_run_v2(_apply_gradients)
-
-  def _set_weight(v, w):
-    v.assign(w)
-
-  @tf.function
-  def weight_reset(snapshots):
-    with strategy.scope():
-      for snap, var in zip(snapshots, model.trainable_variables):
-        strategy.extended.update(var, _set_weight, args=(snap, ))
   
   # Runs the training loop.
   import time
@@ -429,8 +415,23 @@ def train(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
+  _, _ = next(train_data_flow)
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
+  step = optimizer.iterations.numpy()
+  if step <= 1:
+    initializer = config.get("initializer","default")
+    if initializer == "default":
+      print("Initializing variables by tensorflow default")      
+    elif initializer == "variance_scaling":
+      print("Initializing variables by tf.variance_scaling")
+      initial_value = []
+      for v in model.trainable_variables:
+        shape = tf.shape(v).numpy()
+        initial_value.append(variance_scaling_initialier(shape, scale=1.0, mode="fan_avg", distribution="uniform"))
+      weight_reset(initial_value)       
+
+        
   with _summary_writer.as_default():
     while True:
       #####Training batch
