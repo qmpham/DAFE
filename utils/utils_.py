@@ -11,15 +11,35 @@ def make_domain_mask(num_domains, num_domain_units=8, dtype=tf.float32):
 def masking(ids, mask_id, noise_percentage=0.15):
   return 
 
+def _compute_fans(shape):
+  
+  if len(shape) < 1:  
+    fan_in = fan_out = 1
+  elif len(shape) == 1:
+    fan_in = fan_out = shape[0]
+  elif len(shape) == 2:
+    fan_in = shape[0]
+    fan_out = shape[1]
+  else:
+    receptive_field_size = 1
+    for dim in shape[:-2]:
+      receptive_field_size *= dim
+    fan_in = shape[-2] * receptive_field_size
+    fan_out = shape[-1] * receptive_field_size
+  return int(fan_in), int(fan_out)
+
+
 def variance_scaling_initialier(shape, scale=1.0, mode="fan_in", distribution="uniform"):
   assert mode in ["fan_in","fan_out","fan_avg"]
   assert distribution in ["uniform","truncated_normal","untruncated_normal"]
+
+  fan_in, fan_out = _compute_fans(shape)
   if mode == "fan_in":
-    n = shape[0]
+    n = fan_in
   elif mode == "fan_out":
-    n = shape[-1]
+    n = fan_out
   else:
-    n = np.mean(shape)
+    n = (fan_in + fan_out)/2
   
   if distribution == "uniform":
     limit = np.sqrt(3 * scale / n)
