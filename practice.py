@@ -31,7 +31,7 @@ from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
 from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset
-from opennmt.utils import BLEUScorer
+from opennmt.utils import BLEUScorer, MultiBLEUScorer
 from utils.utils_ import variance_scaling_initialier
 
 def debug(config,
@@ -492,6 +492,7 @@ def translate(source_file,
               output_file,
               length_penalty,
               experiment="ldr",
+              score_type="MultiBLEU",
               batch_size=32,
               beam_size=5):
   
@@ -548,8 +549,13 @@ def translate(source_file,
     return target_tokens, target_lengths
 
   # Iterates on the dataset.
-  scorer = BLEUScorer()
-  print(output_file)
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  print("output file: ", output_file)
   with open(output_file, "w") as output_:
     while True:    
       try:

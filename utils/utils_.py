@@ -1,6 +1,9 @@
 import tensorflow as tf
 import numpy as np
-
+import subprocess
+import io
+import re
+import os
 def make_domain_mask(num_domains, num_domain_units=8, dtype=tf.float32):
   M = np.zeros((num_domains, num_domains * num_domain_units))
   for i in range(num_domains):
@@ -52,6 +55,27 @@ def variance_scaling_initialier(shape, scale=1.0, mode="fan_in", distribution="u
     return tf.random.normal(shape, mean=0.0, stddev=stddev)
 
 
+class MultiBLEUScorer(object):
+
+  def __init__(self, bleu_script="multi-bleu.perl"):
+    
+    self._bleu_script = bleu_script
+
+  def __call__(self, labels_file, predictions_path):
+    utils_dir = os.path.dirname(__file__)
+    project_dir = os.path.dirname(utils_dir)
+    script_path = os.path.join(project_dir, "scripts")
+    try:
+      with io.open(predictions_path, encoding="utf-8", mode="r") as predictions_file:
+        bleu_out = subprocess.check_output(
+            [os.path.join(script_path, self._bleu_script), labels_file],
+            stdin=predictions_file,
+            stderr=subprocess.STDOUT)
+        bleu_out = bleu_out.decode("utf-8")
+        bleu_score = re.search(r"BLEU = (.+?),", bleu_out).group(1)
+        return float(bleu_score)
+    except subprocess.CalledProcessError:      
+      return None
 
 
 
