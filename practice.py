@@ -32,7 +32,7 @@ from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
 from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset
 from opennmt.utils import BLEUScorer
-from utils.utils_ import variance_scaling_initialier, _set_weight, _step, weight_reset
+from utils.utils_ import variance_scaling_initialier
 
 def debug(config,
           optimizer,          
@@ -274,6 +274,20 @@ def meta_train(config,
     with strategy.scope():
       return next_fn()
   
+  @tf.function
+  def _step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_gradients)
+
+  def _set_weight(v, w):
+    v.assign(w)
+
+  @tf.function
+  def weight_reset(snapshots):
+    with strategy.scope():
+      for snap, var in zip(snapshots, model.trainable_variables):
+        strategy.extended.update(var, _set_weight, args=(snap, ))
+
   # Runs the training loop.
   import time
   start = time.time()  
@@ -409,6 +423,15 @@ def train(config,
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
+
+  def _set_weight(v, w):
+    v.assign(w)
+
+  @tf.function
+  def weight_reset(snapshots):
+    with strategy.scope():
+      for snap, var in zip(snapshots, model.trainable_variables):
+        strategy.extended.update(var, _set_weight, args=(snap, ))
 
   
   # Runs the training loop.

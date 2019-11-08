@@ -31,21 +31,8 @@ def variance_scaling_initialier(shape, scale=1.0, mode="fan_in", distribution="u
     stddev = np.sqrt(scale / n)
     return tf.random.normal(shape, mean=0.0, stddev=stddev)
 
-@tf.function
-  def _step():
-    with strategy.scope():
-      strategy.experimental_run_v2(_apply_gradients)
 
-  def _set_weight(v, w):
-    v.assign(w)
 
-  @tf.function
-  def weight_reset(snapshots):
-    with strategy.scope():
-      for snap, var in zip(snapshots, model.trainable_variables):
-        strategy.extended.update(var, _set_weight, args=(snap, ))
-  
-  
 
 
   
