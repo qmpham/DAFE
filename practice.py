@@ -570,7 +570,6 @@ def translate(source_file,
     print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
     return scorer(reference, output_file)
   
-
 def main():
   devices = tf.config.experimental.list_logical_devices(device_type="GPU")
   print(devices)
