@@ -31,8 +31,8 @@ from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
 from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset
-from opennmt.utils import BLEUScorer, MultiBLEUScorer
-from utils.utils_ import variance_scaling_initialier
+from opennmt.utils import BLEUScorer
+from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer
 
 def debug(config,
           optimizer,          
@@ -325,7 +325,7 @@ def meta_train(config,
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
           score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-          tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %s"%src)
+          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
       if step > train_steps:
         break
 
@@ -479,7 +479,7 @@ def train(config,
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
           score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-          tf.summary.scalar("BLEU_%d"%i, score, description="BLEU on test set %s"%src)
+          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
       if step > train_steps:
         break
     
