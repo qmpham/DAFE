@@ -437,7 +437,7 @@ def finetuning(config,
       loss, _ = next(finetuning_data_flow)
       _step()     
       _loss.append(loss)
-      step = optimizer.iterations.numpy()//2
+      step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
@@ -445,10 +445,10 @@ def finetuning(config,
             step, learning_rate(step), np.mean(_loss), elapsed)
         _loss = []
         start = time.time()
-      if step % save_every == 0 and optimizer.iterations.numpy()%2==0:
+      if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
-      if step % eval_every == 0 and optimizer.iterations.numpy()%2==0:
+      if step % eval_every == 0:
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
