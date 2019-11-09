@@ -806,6 +806,8 @@ def main():
     print("translate in domain %d"%(int(args.domain)))
     translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
+  elif args.run == "finetune":
+    finetuning(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "debug":
     debug(config, optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
 if __name__ == "__main__":
