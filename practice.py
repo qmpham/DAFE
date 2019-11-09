@@ -385,7 +385,7 @@ def finetuning(config,
       training_loss, reported_loss = loss, loss
     variables = []
     for var in model.trainable_variables:
-      if "ldr" in var.name:
+      if "ldr_embedding" in var.name or "ldr_inputter" in var.name:
         print(var.name)
         variables.append(var)
     print("var numb: ", len(variables))
