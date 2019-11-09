@@ -386,6 +386,7 @@ def finetuning(config,
     variables = []
     for var in model.trainable_variables:
       if "ldr" in var.name:
+        print(var.name)
         variables.append(var)
     print("var numb: ", len(variables))
     training_loss = model.regularize_loss(training_loss, variables=variables)
