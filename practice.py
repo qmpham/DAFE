@@ -238,7 +238,7 @@ def meta_train(config,
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * gradient_accumulator.step())
+      scaled_gradient = gradient / ( gradient_accumulator.step()) #strategy.num_replicas_in_sync *
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
