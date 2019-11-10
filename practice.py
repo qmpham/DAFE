@@ -208,7 +208,7 @@ def meta_train(config,
                                                                         batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
   with strategy.scope():
-    model.create_variables(optimizer=optimizer)
+    #model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
   def _accumulate_gradients(source, target):
@@ -237,7 +237,7 @@ def meta_train(config,
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync)
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * gradient_accumulator.step())
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
