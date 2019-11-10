@@ -212,6 +212,7 @@ def meta_train(config,
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
   def _accumulate_gradients(source, target):
+    print("source: ", source)
     outputs, _ = model(
         source,
         labels=target,
