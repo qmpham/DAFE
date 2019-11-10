@@ -208,7 +208,7 @@ def meta_train(config,
                                                                         batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
   with strategy.scope():
-    #model.create_variables(optimizer=optimizer)
+    model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
   def _accumulate_gradients(source, target):
