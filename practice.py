@@ -301,7 +301,7 @@ def meta_train(config,
     while True:
       #####Training batch
       loss, num_examples = next(meta_train_data_flow)  
-      print("number_examples_per_replica: ", num_examples)
+      #print("number_examples_per_replica: ", num_examples)
       _loss.append(loss)  
       snapshots = [v.value() for v in model.trainable_variables]
       _step()
