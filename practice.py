@@ -211,7 +211,7 @@ def meta_train(config,
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
-  def _accumulate_gradients(source, target):
+  def _accumulate_meta_train_gradients(source, target):
     print("source: ", source)
     outputs, _ = model(
         source,
@@ -224,7 +224,35 @@ def meta_train(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    variables = model.trainable_variables
+    variables = [] #model.trainable_variables
+    for variable in model.trainable_variables:
+      if "ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name:
+        variables.append(variable)
+    print("var numb: ", len(variables))
+    training_loss = model.regularize_loss(training_loss, variables=variables)
+    gradients = optimizer.get_gradients(training_loss, variables)
+    gradient_accumulator(gradients)
+    num_examples = tf.shape(source["length"])[0]
+    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
+    return reported_loss, num_examples
+
+  def _accumulate_meta_test_gradients(source, target):
+    print("source: ", source)
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    variables = [] #model.trainable_variables
+    for variable in model.trainable_variables:
+      if not("ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name):
+        variables.append(variable)
     print("var numb: ", len(variables))
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
@@ -262,7 +290,7 @@ def meta_train(config,
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
       per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+          _accumulate_meta_train_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
       num_examples = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_num_examples, None)    
@@ -273,7 +301,7 @@ def meta_train(config,
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
       per_replica_loss = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+          _accumulate_meta_test_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
     return loss
