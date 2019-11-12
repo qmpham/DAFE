@@ -321,11 +321,11 @@ def meta_train(config,
       loss, _ = next(meta_train_data_flow)  
       #print("number_examples_per_replica: ", num_examples)
       _loss.append(loss)  
-      snapshots = [v.value() for v in model.trainable_variables]
+      #snapshots = [v.value() for v in model.trainable_variables]
       _meta_train_step()
       #####Testing batch
       loss = next(meta_test_data_flow)
-      weight_reset(snapshots)
+      #weight_reset(snapshots)
       _meta_test_step()
       ####      
       step = optimizer.iterations.numpy()//2
