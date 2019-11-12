@@ -233,14 +233,27 @@ def meta_train(config,
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
-  def _apply_gradients():
+  def _apply_meta_train_gradients():
     variables = model.trainable_variables
     grads_and_vars = []
-    print(gradient_accumulator.step)
+    
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
-      grads_and_vars.append((scaled_gradient, variable))
+      if "ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name:
+        scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+        grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    gradient_accumulator.reset()
+
+  def _apply_meta_test_gradients():
+    variables = model.trainable_variables
+    grads_and_vars = []
+    
+    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      if not("ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name):
+        scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+        grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
  
@@ -277,9 +290,14 @@ def meta_train(config,
       return next_fn()
   
   @tf.function
-  def _step():
+  def _meta_train_step():
     with strategy.scope():
-      strategy.experimental_run_v2(_apply_gradients)
+      strategy.experimental_run_v2(_apply_meta_train_gradients)
+
+  @tf.function
+  def _meta_test_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_meta_test_gradients)
 
   def _set_weight(v, w):
     v.assign(w)
@@ -300,15 +318,15 @@ def meta_train(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss, num_examples = next(meta_train_data_flow)  
+      loss, _ = next(meta_train_data_flow)  
       #print("number_examples_per_replica: ", num_examples)
       _loss.append(loss)  
       snapshots = [v.value() for v in model.trainable_variables]
-      _step()
+      _meta_train_step()
       #####Testing batch
       loss = next(meta_test_data_flow)
       weight_reset(snapshots)
-      _step()
+      _meta_test_step()
       ####      
       step = optimizer.iterations.numpy()//2
       if step % report_every == 0:
@@ -330,7 +348,6 @@ def meta_train(config,
           tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
       if step > train_steps:
         break
-
 
 def finetuning(config,
           optimizer,          
