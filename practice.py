@@ -300,7 +300,7 @@ def meta_train(config,
   def _meta_test_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss = strategy.experimental_run_v2(
+      per_replica_loss, _ = strategy.experimental_run_v2(
           _accumulate_meta_test_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
