@@ -209,7 +209,8 @@ def meta_train(config,
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
-    gradient_accumulator = optimizer_util.GradientAccumulator()  
+    meta_train_gradient_accumulator = optimizer_util.GradientAccumulator()  
+    meta_test_gradient_accumulator = optimizer_util.GradientAccumulator()
 
   def _accumulate_meta_train_gradients(source, target):
     print("source: ", source)
@@ -231,7 +232,7 @@ def meta_train(config,
     print("var numb: ", len(variables))
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
-    gradient_accumulator(gradients)
+    meta_train_gradient_accumulator(gradients)
     num_examples = tf.shape(source["length"])[0]
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
@@ -256,7 +257,7 @@ def meta_train(config,
     print("var numb: ", len(variables))
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
-    gradient_accumulator(gradients)
+    meta_test_gradient_accumulator(gradients)
     num_examples = tf.shape(source["length"])[0]
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
@@ -269,13 +270,13 @@ def meta_train(config,
     print("var numb: ", len(variables))
     grads_and_vars = []
     
-    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+    for gradient, variable in zip(meta_train_gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
       #if "ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name:
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(meta_train_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
-    gradient_accumulator.reset()
+    meta_train_gradient_accumulator.reset()
 
   def _apply_meta_test_gradients():
     variables = [] #model.trainable_variables
@@ -285,13 +286,13 @@ def meta_train(config,
     print("var numb: ", len(variables))
     grads_and_vars = []
     
-    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+    for gradient, variable in zip(meta_test_gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
       #if not("ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name):
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(meta_test_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
-    gradient_accumulator.reset()
+    meta_test_gradient_accumulator.reset()
  
   @dataset_util.function_on_next(meta_train_dataset)
   def _meta_train_forward(next_fn):    
