@@ -49,7 +49,7 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
   meta_test_datasets = [] 
   for i, src,tgt in zip(domain,source_file,target_file):
     meta_train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size=batch_meta_train_size,
+              batch_size=batch_meta_train_size//len(source_file),
               batch_type=batch_type,
               domain=i,
               shuffle_buffer_size=shuffle_buffer_size,
