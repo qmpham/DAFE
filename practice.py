@@ -262,26 +262,34 @@ def meta_train(config,
     return reported_loss, num_examples
 
   def _apply_meta_train_gradients():
-    variables = model.trainable_variables
+    variables = [] #model.trainable_variables
+    for variable in model.trainable_variables:
+      if "ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name:
+        variables.append(variable)
+    print("var numb: ", len(variables))
     grads_and_vars = []
     
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      if "ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name:
-        scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
-        grads_and_vars.append((scaled_gradient, variable))
+      #if "ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name:
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
 
   def _apply_meta_test_gradients():
-    variables = model.trainable_variables
+    variables = [] #model.trainable_variables
+    for variable in model.trainable_variables:
+      if not("ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name):
+        variables.append(variable)
+    print("var numb: ", len(variables))
     grads_and_vars = []
     
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      if not("ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name):
-        scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
-        grads_and_vars.append((scaled_gradient, variable))
+      #if not("ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name):
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
  
