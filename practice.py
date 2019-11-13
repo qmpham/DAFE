@@ -215,28 +215,29 @@ def meta_train(config,
 
   def _accumulate_meta_train_gradients(source, target):
     print("source: ", source)
-    outputs, _ = model(
-        source,
-        labels=target,
-        training=True,
-        step=meta_train_optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
-    if isinstance(loss, tuple):
-      training_loss = loss[0] / loss[1]
-      reported_loss = loss[0] / loss[2]
-    else:
-      training_loss, reported_loss = loss, loss
-    variables = [] 
-    shared_variables = []
-    for variable in model.trainable_variables:
-      if "ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name:
-        variables.append(variable)
-      else:
-        shared_variables.append(variable)
-    print("meta train accumulate gradient var numb: ", len(variables))
-    training_loss = model.regularize_loss(training_loss, variables=variables)
     with tf.GradientTape(persistent=True) as tape:
-      gradients = meta_train_optimizer.get_gradients(training_loss, variables)
+      outputs, _ = model(
+          source,
+          labels=target,
+          training=True,
+          step=meta_train_optimizer.iterations)
+      loss = model.compute_loss(outputs, target, training=True)
+      if isinstance(loss, tuple):
+        training_loss = loss[0] / loss[1]
+        reported_loss = loss[0] / loss[2]
+      else:
+        training_loss, reported_loss = loss, loss
+      variables = [] 
+      shared_variables = []
+      for variable in model.trainable_variables:
+        if "ADAP_" in variable.name or "ldr_embedding" in variable.name or "ldr_inputter" in variable.name:
+          variables.append(variable)
+        else:
+          shared_variables.append(variable)
+      print("meta train accumulate gradient var numb: ", len(variables))
+      training_loss = model.regularize_loss(training_loss, variables=variables)
+      
+      gradients = tape.gradient(training_loss, variables)
     hessians = []
     for gradient, variable in zip(gradients, variables):
       hessians.extend(tape.jacobian(gradient, shared_variables))
