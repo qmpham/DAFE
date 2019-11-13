@@ -8,12 +8,14 @@ from opennmt.encoders.encoder import Encoder
 from opennmt.encoders.self_attention_encoder import SelfAttentionEncoder
 from opennmt.layers.position import SinusoidalPositionEncoder
 from opennmt.layers import common
-
-
+from utils.utils_ import make_domain_mask
+from layers.layers import Multi_domain_FeedForwardNetwork
 class Multi_domain_SelfAttentionEncoder(Encoder):
 
   def __init__(self,
                num_layers,
+               num_domains=6,
+               num_domain_units=128,
                num_units=512,
                num_heads=8,
                ffn_inner_dim=2048,
@@ -41,18 +43,24 @@ class Multi_domain_SelfAttentionEncoder(Encoder):
             ffn_dropout=ffn_dropout,
             ffn_activation=ffn_activation)
         for i in range(num_layers)]
+    self.mask = make_domain_mask(num_domains, num_domain_units=num_domain_units)
+    self.multi_domain_layers = [
+        Multi_domain_FeedForwardNetwork(num_domains*num_domain_units, num_units, name="ADAP_%d"%i)
+        for i in range(num_layers)]
 
   def call(self, inputs, sequence_length=None, training=None):
     domain = inputs[1]
+    domain_mask = tf.nn.embedding_lookup(self.mask, domain)
     inputs = inputs[0]
     inputs *= self.num_units**0.5
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs)
     inputs = common.dropout(inputs, self.dropout, training=training)
     mask = self.build_mask(inputs, sequence_length=sequence_length)
-    for layer in self.layers:
+    #for layer in self.layers:
+    for layer, multi_domain_layer in zip(self.layers,self.multi_domain_layers):
       inputs = layer(inputs, mask=mask, training=training)
-
+      inputs = multi_domain_layer(inputs, domain_mask) + inputs
     outputs = self.layer_norm(inputs)
     return outputs, None, sequence_length
 
