@@ -235,11 +235,11 @@ def meta_train(config,
         shared_variables.append(variable)
     print("meta train accumulate gradient var numb: ", len(variables))
     training_loss = model.regularize_loss(training_loss, variables=variables)
-    with tf.GradientTape() as tape:
+    with tf.GradientTape(persistent=True) as tape:
       gradients = meta_train_optimizer.get_gradients(training_loss, variables)
-      hessians = []
-      for gradient, variable in zip(gradients, variables):
-        hessians.extend(tape.jacobian(gradient, shared_variables))
+    hessians = []
+    for gradient, variable in zip(gradients, variables):
+      hessians.extend(tape.jacobian(gradient, shared_variables))
     meta_train_gradient_accumulator(gradients)
     meta_train_hessian_accumulator(hessians)
     num_examples = tf.shape(source["length"])[0]
@@ -322,7 +322,7 @@ def meta_train(config,
     for i in range(len(scaled_gradients)):
       scaled_gradients[i] = scaled_gradients[i] - shared_g_2[i]
       grads_and_vars.append((scaled_gradient[i], shared_variables[i]))
-      
+
     meta_test_optimizer.apply_gradients(grads_and_vars)
     meta_test_gradient_accumulator.reset()
     meta_train_hessian_accumulator.reset()
