@@ -235,8 +235,7 @@ def meta_train(config,
         else:
           shared_variables.append(variable)
       print("meta train accumulate gradient var numb: ", len(variables))
-      training_loss = model.regularize_loss(training_loss, variables=variables)
-      
+      training_loss = model.regularize_loss(training_loss, variables=variables)      
       gradients = tape.gradient(training_loss, variables)
     hessians = []
     for gradient, variable in zip(gradients, variables):
