@@ -240,7 +240,7 @@ def meta_train(config,
       gradients = tape.gradient(training_loss, variables)
     hessians = []
     for gradient, variable in zip(gradients, variables):
-      hessians.extend(tape.jacobian(gradient, shared_variables))
+      hessians.extend(tape.jacobian(gradient, shared_variables, experimental_use_pfor = False))
     meta_train_gradient_accumulator(gradients)
     meta_train_hessian_accumulator(hessians)
     num_examples = tf.shape(source["length"])[0]
