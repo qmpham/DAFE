@@ -169,6 +169,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
     return outputs, state, attention
     
   def _get_initial_state(self, batch_size, dtype, initial_state=None):
+
     # The decoder state contains the keys and values projections of the previous timesteps.
     _ = initial_state
     cache = []
@@ -180,3 +181,59 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
           for _ in range(self.num_sources)]
       cache.append(dict(self_kv=self_kv, memory_kv=memory_kv))
     return cache
+
+  def forward_fn(self,
+           inputs,
+           args_dict,
+           sequence_length=None,
+           cache=None,
+           memory=None,
+           memory_sequence_length=None,
+           step=None,
+           training=None):
+    domain = inputs[1]
+    domain_mask = tf.nn.embedding_lookup(self.mask, domain)
+    inputs = inputs[0]
+    inputs *= self.num_units**0.5
+    if self.position_encoder is not None:
+      inputs = self.position_encoder(inputs, position=step + 1 if step is not None else None)
+    inputs = common.dropout(inputs, self.dropout, training=training)
+
+    # Prepare query mask.
+    mask = None
+    if step is None:
+      maximum_length = tf.shape(inputs)[1]
+      if sequence_length is None:
+        batch_size = tf.shape(inputs)[0]
+        sequence_length = tf.fill([batch_size], maximum_length)
+      mask = transformer.future_mask(sequence_length, maximum_length=maximum_length)
+
+    # Prepare memory mask.
+    memory_mask = None
+    if memory is not None:
+      if not isinstance(memory, (list, tuple)):
+        memory = (memory,)
+    if memory_sequence_length is not None:
+      if not isinstance(memory_sequence_length, (list, tuple)):
+        memory_sequence_length = (memory_sequence_length,)
+      memory_mask = [
+          tf.sequence_mask(mem_length, maxlen=tf.shape(mem)[1])
+          for mem, mem_length in zip(memory, memory_sequence_length)]
+    
+    # Run each layer.
+    new_cache = []
+    for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
+
+      inputs, layer_cache, attention = layer(
+          inputs,
+          mask=mask,
+          memory=memory,
+          memory_mask=memory_mask,
+          cache=cache[i] if cache is not None else None,
+          training=training)
+      new_cache.append(layer_cache)
+      #print("inputs_%d"%i,inputs)
+      inputs = multi_domain_layer(inputs, domain_mask) + inputs
+
+    outputs = self.layer_norm(inputs)
+    return outputs, new_cache, attention
