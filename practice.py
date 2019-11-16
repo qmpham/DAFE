@@ -95,11 +95,10 @@ def debug(config,
     ##### Inner adaptation
     args_dict = dict()
     def update(v,g,lr=0.01):
-      print("gradient type: ",type(g),g,g.dtype)
-      if g.dtype==tf.IndexedSlices:
+      if "embedding" in v.name:
         return tf.tensor_scatter_nd_sub(v/lr,g.indices,g)*lr
       else:
-        return 
+        return v - lr* g
     for g, v in zip(gradients, variables):
       args_dict.update({v.name:update(v,g)})
     #### Meta_loss:
