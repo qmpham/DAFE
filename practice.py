@@ -82,25 +82,32 @@ def debug(config,
         source,
         labels=target,
         training=True,
-        step=optimizer.iterations)
-    
+        step=optimizer.iterations)    
     loss = model.compute_loss(outputs, target, training=True)
-    #tf.print(source["domain"], output_stream=sys.stdout)
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    variables = model.trainable_variables
+    variables = model.trainable_variables   
+    training_loss = model.regularize_loss(training_loss, variables=variables)
+    gradients = optimizer.get_gradients(training_loss, variables)
+    ##### Inner adaptation
     args_dict = dict()
-    for v in variables:
-      args_dict.update({v.name:v})
-    _, _ = model.forward_fn(source,
+    for g, v in zip(gradients, variables):
+      args_dict.update({v.name:v - 0.01*g})
+    #### Meta_loss:
+    outputs, _ = model.forward_fn(source,
         args_dict,
         labels=target,
         training=True,
         step=optimizer.iterations)
-    #print("var numb: ", len(variables))
+    loss = model.compute_loss(outputs, target, training=True)
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
