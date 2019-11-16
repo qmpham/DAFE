@@ -2,7 +2,7 @@
 
 import tensorflow as tf
 
-from opennmt.layers import transformer
+from layers import transformer
 
 from opennmt.encoders.encoder import Encoder
 from opennmt.encoders.self_attention_encoder import SelfAttentionEncoder
