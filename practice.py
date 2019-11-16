@@ -176,12 +176,21 @@ def debug(config,
   start = time.time()  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   meta_train_data_flow = iter(_meta_train_forward())
-  meta_test_data_flow = iter(_meta_test_forward())
+  #meta_test_data_flow = iter(_meta_test_forward())
   _loss = []  
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss, num_examples = next(meta_train_data_flow)  
+      loss, _ = next(meta_train_data_flow)  
+      _loss.append(loss)
+      step = optimizer.iterations.numpy()
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; after %f seconds",
+            step, learning_rate(step), np.mean(_loss), elapsed)
+        _loss = []
+        start = time.time()
       #print("number_examples_per_replica: ", num_examples)
 
 def meta_train_v1(config,
