@@ -71,6 +71,12 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
     inner = common.dropout(inner, self.dropout, training=training)
     return self.outer(inner)
 
+  def forward_fn(self, inputs, args_dict, training=None):  # pylint: disable=arguments-differ
+    """Runs the layer."""
+    inner = self.inner.forward_fn(inputs, args_dict)
+    inner = common.dropout(inner, self.dropout, training=training)
+    return self.outer.forward_fn(inner, args_dict)
+
   def map_v1_weights(self, weights):
     # V1 used conv1d layers that have a leading dimensions.
     weights = tf.nest.map_structure(np.squeeze, weights)
@@ -174,6 +180,55 @@ class MultiHeadAttention(tf.keras.layers.Layer):
       return outputs, cache, attn
     return outputs, cache
 
+  def forward_fn(self, inputs, args_dict, memory=None, mask=None, cache=None, training=None):  # pylint: disable=arguments-differ
+    def _compute_kv(x):
+      keys = self.linear_keys.forward_fn(x, args_dict)
+      keys = split_heads(keys, self.num_heads)
+      values = self.linear_values.forward_fn(x, args_dict)
+      values = split_heads(values, self.num_heads)
+      return keys, values
+
+    # Compute queries.
+    queries = self.linear_queries.forward_fn(inputs, args_dict)
+    queries = split_heads(queries, self.num_heads)
+    queries *= (self.num_units // self.num_heads)**-0.5
+
+    # Compute keys and values.
+    if memory is None:
+      keys, values = _compute_kv(inputs)
+      if cache:
+        keys = tf.concat([cache[0], keys], axis=2)
+        values = tf.concat([cache[1], values], axis=2)
+    else:
+      if cache:
+        keys, values = tf.cond(
+            tf.equal(tf.shape(cache[0])[2], 0),
+            true_fn=lambda: _compute_kv(memory),
+            false_fn=lambda: cache)
+      else:
+        keys, values = _compute_kv(memory)
+
+    cache = (keys, values)
+
+    # Dot product attention.
+    dot = tf.matmul(queries, keys, transpose_b=True)
+    if mask is not None:
+      mask = tf.cast(mask, tf.float32)
+      if mask.shape.rank == 2:
+        mask = tf.expand_dims(mask, 1)  # Broadcast on time dimension.
+      mask = tf.expand_dims(mask, 1)  # Broadcast on head dimension.
+      dot = tf.cast(tf.cast(dot, tf.float32) * mask + ((1.0 - mask) * tf.float32.min), dot.dtype)
+    attn = tf.cast(tf.nn.softmax(tf.cast(dot, tf.float32)), dot.dtype)
+    drop_attn = common.dropout(attn, self.dropout, training=training)
+    heads = tf.matmul(drop_attn, values)
+
+    # Concatenate all heads output.
+    combined = combine_heads(heads)
+    outputs = self.linear_output.forward_fn(combined, args_dict)
+    if self.return_attention:
+      return outputs, cache, attn
+    return outputs, cache
+
 
 class TransformerLayerWrapper(common.LayerWrapper):
   
@@ -223,6 +278,12 @@ class SelfAttentionEncoderLayer(tf.keras.layers.Layer):
     """Runs the encoder layer."""
     y, _ = self.self_attention(x, mask=mask, training=training)
     y = self.ffn(y, training=training)
+    return y
+
+  def forward_fn(self, x, args_dict, mask=None, training=None):  # pylint: disable=arguments-differ
+    """Runs the encoder layer."""
+    y, _ = self.self_attention.forward_fn(x, args_dict, mask=mask, training=training)
+    y = self.ffn.forward_fn(y, args_dict, training=training)
     return y
 
   def map_v1_weights(self, weights):
@@ -320,8 +381,10 @@ class SelfAttentionDecoderLayer(tf.keras.layers.Layer):
     outputs = self.ffn(outputs, training=training)
     cache = dict(self_kv=self_kv, memory_kv=memory_kv)
     return outputs, cache, attention
+
   def forward_fn(self,
            inputs,
+           args_dict,
            mask=None,
            memory=None,
            memory_mask=None,
@@ -331,8 +394,9 @@ class SelfAttentionDecoderLayer(tf.keras.layers.Layer):
     if cache is None:
       cache = {}
 
-    outputs, self_kv = self.self_attention(
+    outputs, self_kv = self.self_attention.forward_fn(
         inputs,
+        args_dict,
         mask=mask,
         cache=cache.get("self_kv"),
         training=training)
@@ -345,8 +409,9 @@ class SelfAttentionDecoderLayer(tf.keras.layers.Layer):
         memory_cache = [None] * len(self.attention)
       for layer, mem, mem_mask, mem_cache in zip(
           self.attention, memory, memory_mask, memory_cache):
-        result = layer(
+        result = layer.forward_fn(
             outputs,
+            args_dict,
             memory=mem,
             mask=mem_mask,
             cache=mem_cache,
@@ -358,7 +423,7 @@ class SelfAttentionDecoderLayer(tf.keras.layers.Layer):
           outputs, memory_kv_i = result
         memory_kv.append(memory_kv_i)
 
-    outputs = self.ffn(outputs, training=training)
+    outputs = self.ffn.forward_fn(outputs, args_dict, training=training)
     cache = dict(self_kv=self_kv, memory_kv=memory_kv)
     return outputs, cache, attention
 

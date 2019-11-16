@@ -83,6 +83,7 @@ def debug(config,
         labels=target,
         training=True,
         step=optimizer.iterations)
+    
     loss = model.compute_loss(outputs, target, training=True)
     #tf.print(source["domain"], output_stream=sys.stdout)
     if isinstance(loss, tuple):
@@ -91,6 +92,14 @@ def debug(config,
     else:
       training_loss, reported_loss = loss, loss
     variables = model.trainable_variables
+    args_dict = dict()
+    for v in variables:
+      args_dict.update({v.name:v})
+    _, _ = model.forward_fn(source,
+        args_dict,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
     #print("var numb: ", len(variables))
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)

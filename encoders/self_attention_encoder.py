@@ -64,6 +64,22 @@ class Multi_domain_SelfAttentionEncoder(Encoder):
     outputs = self.layer_norm(inputs)
     return outputs, None, sequence_length
 
+  def forward_fn(self, inputs, args_dict, sequence_length=None, training=None):
+    domain = inputs[1]
+    domain_mask = tf.nn.embedding_lookup(self.mask, domain)
+    inputs = inputs[0]
+    inputs *= self.num_units**0.5
+    if self.position_encoder is not None:
+      inputs = self.position_encoder(inputs)
+    inputs = common.dropout(inputs, self.dropout, training=training)
+    mask = self.build_mask(inputs, sequence_length=sequence_length)
+    #for layer in self.layers:
+    for layer, multi_domain_layer in zip(self.layers,self.multi_domain_layers):
+      inputs = layer.forward_fn(inputs, args_dict, mask=mask, training=training)
+      inputs = multi_domain_layer.forward_fn(inputs, args_dict, domain_mask) + inputs
+    outputs = self.layer_norm(inputs)
+    return outputs, None, sequence_length
+    
   def map_v1_weights(self, weights):
     m = []
     m += self.layer_norm.map_v1_weights(weights["LayerNorm"])

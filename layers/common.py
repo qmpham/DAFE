@@ -33,7 +33,7 @@ class Dense(tf.keras.layers.Dense):
     return super(Dense, self).add_weight(name, *args, **kwargs)
 
   def call(self, inputs):
-    print("where we are? ______________", self.name_scope(), self.kernel.name, self.bias.name)
+    #print("where we are? ______________", self.name_scope(), self.kernel.name, self.bias.name)
     shape = shape_list(inputs)
     rank = len(shape)
     if rank > 2:
@@ -48,19 +48,16 @@ class Dense(tf.keras.layers.Dense):
     return outputs
 
   def forward_fn(self, inputs, args_dict):
-    print("where we are? ______________", self.name_scope())
-    for key in list(args_dict.keys()):
-      if self.name_scope in key.name:
-        if "kernel":
-          pass
-
+    #print("where we are? ______________", self.name_scope())
     shape = shape_list(inputs)
     rank = len(shape)
     if rank > 2:
       inputs = tf.reshape(inputs, [-1, shape[-1]])
-    outputs = tf.matmul(inputs, self.kernel, transpose_b=self.transpose)
+    kernel = args_dict[self.kernel.name]
+    outputs = tf.matmul(inputs, kernel, transpose_b=self.transpose)
     if self.use_bias:
-      outputs = tf.nn.bias_add(outputs, self.bias)
+      bias = args_dict[self.bias.name]
+      outputs = tf.nn.bias_add(outputs, bias)
     if self.activation is not None:
       outputs = self.activation(outputs)  # pylint: disable=not-callable
     if rank > 2:
@@ -91,6 +88,13 @@ class LayerNorm(tf.keras.layers.Layer):
     super(LayerNorm, self).build(input_shape)
 
   def call(self, x):  # pylint: disable=arguments-differ
+    """Normalizes :obj:`x`."""
+    mean = tf.reduce_mean(x, axis=[-1], keepdims=True)
+    variance = tf.reduce_mean(tf.square(x - mean), axis=[-1], keepdims=True)
+    norm_x = (x - mean) * tf.math.rsqrt(variance + self.epsilon)
+    return norm_x * self.gamma + self.beta
+
+  def forward_fn(self, x, args_dict):  # pylint: disable=arguments-differ
     """Normalizes :obj:`x`."""
     mean = tf.reduce_mean(x, axis=[-1], keepdims=True)
     variance = tf.reduce_mean(tf.square(x - mean), axis=[-1], keepdims=True)
