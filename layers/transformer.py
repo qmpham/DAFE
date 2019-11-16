@@ -320,22 +320,19 @@ class SelfAttentionDecoderLayer(tf.keras.layers.Layer):
     outputs = self.ffn(outputs, training=training)
     cache = dict(self_kv=self_kv, memory_kv=memory_kv)
     return outputs, cache, attention
-
   def forward_fn(self,
-          inputs,
-          args_dict,
-          mask=None,
-          memory=None,
-          memory_mask=None,
-          cache=None,
-          training=None):
-  """Runs the decoder layer."""
+           inputs,
+           mask=None,
+           memory=None,
+           memory_mask=None,
+           cache=None,
+           training=None):
+    """Runs the decoder layer."""
     if cache is None:
-        cache = {}
+      cache = {}
 
-    outputs, self_kv = self.self_attention.forward_fn(
+    outputs, self_kv = self.self_attention(
         inputs,
-        args_dict,
         mask=mask,
         cache=cache.get("self_kv"),
         training=training)
@@ -343,26 +340,26 @@ class SelfAttentionDecoderLayer(tf.keras.layers.Layer):
     attention = None
     memory_kv = []
     if memory is not None:
-        memory_cache = cache.get("memory_kv")
-        if memory_cache is None:
+      memory_cache = cache.get("memory_kv")
+      if memory_cache is None:
         memory_cache = [None] * len(self.attention)
-        for layer, mem, mem_mask, mem_cache in zip(
-            self.attention, memory, memory_mask, memory_cache):
-        result = layer.forward_fn(
+      for layer, mem, mem_mask, mem_cache in zip(
+          self.attention, memory, memory_mask, memory_cache):
+        result = layer(
             outputs,
-            args_dict,
             memory=mem,
             mask=mem_mask,
             cache=mem_cache,
             training=training)
         if len(result) == 3:
-            outputs, memory_kv_i, attention = result
-            attention = attention[:, 0]  # Use the first head for the attention vector.
+          outputs, memory_kv_i, attention = result
+          attention = attention[:, 0]  # Use the first head for the attention vector.
         else:
-            outputs, memory_kv_i = result
+          outputs, memory_kv_i = result
         memory_kv.append(memory_kv_i)
 
-    outputs = self.ffn.forward_fn(outputs, args_dict, training=training)
+    outputs = self.ffn(outputs, training=training)
     cache = dict(self_kv=self_kv, memory_kv=memory_kv)
     return outputs, cache, attention
 
+  
