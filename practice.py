@@ -91,7 +91,7 @@ def debug(config,
       training_loss, reported_loss = loss, loss
     variables = model.trainable_variables   
     training_loss = model.regularize_loss(training_loss, variables=variables)
-    gradients = optimizer.get_gradients(training_loss, variables)
+    gradients = tf.gradients(training_loss, variables)
     ##### Inner adaptation
     args_dict = dict()
     for g, v in zip(gradients, variables):
