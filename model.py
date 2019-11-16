@@ -229,7 +229,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         [target_inputs, labels["domain"]],
         args_dict,
         self.labels_inputter.get_length(labels),
-        state=initial_state,
+        initial_state=initial_state,
         input_fn=input_fn,
         sampling_probability=sampling_probability,
         training=training)
