@@ -13,13 +13,13 @@ def merge_map_fn(*args):
   print("element numb: ",len(src_batches))
   src_batch = {}
   tgt_batch = {}
-  print(src_batches[0].keys())
+  #print(src_batches[0].keys())
   for feature in list(src_batches[0].keys()):
     if feature!="ids" and feature!="tokens":
-      print(feature, src_batches[0][feature])
+      #print(feature, src_batches[0][feature])
       src_batch.update({feature: tf.concat([b[feature] for b in src_batches],0)})
     else:
-      print(feature, src_batches[0][feature])
+      #print(feature, src_batches[0][feature])
       len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in src_batches])
       if src_batches[0][feature].dtype == tf.string:
         src_batch.update({feature: tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], 
@@ -30,10 +30,10 @@ def merge_map_fn(*args):
     
   for feature in list(tgt_batches[0].keys()):
     if feature!="ids" and feature!="tokens" and feature!="ids_out":
-      print(feature, tgt_batches[0][feature])
+      #print(feature, tgt_batches[0][feature])
       tgt_batch.update({feature: tf.concat([b[feature] for b in tgt_batches],0)})    
     else:
-      print(feature, tgt_batches[0][feature])
+      #print(feature, tgt_batches[0][feature])
       len_max = tf.reduce_max([tf.shape(batch[feature])[1] for batch in tgt_batches])
       if tgt_batches[0][feature].dtype == tf.string:
         tgt_batch.update({feature: tf.concat([tf.concat([batch[feature], tf.fill([tf.shape(batch[feature])[0], 
@@ -41,7 +41,7 @@ def merge_map_fn(*args):
       else:
         tgt_batch.update({feature: tf.concat([tf.concat([batch[feature], tf.cast(tf.fill([tf.shape(batch[feature])[0], 
                                               len_max-tf.shape(batch[feature])[1]],0),tf.int64)],1) for batch in tgt_batches],0)})
-  print(src_batch,tgt_batch)
+  #print(src_batch,tgt_batch)
   return src_batch, tgt_batch
 
 def create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length):
