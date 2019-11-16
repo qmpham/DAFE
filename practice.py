@@ -84,14 +84,14 @@ def debug(config,
         training=True,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, target, training=True)
-    tf.print(source["domain"], output_stream=sys.stdout)
+    #tf.print(source["domain"], output_stream=sys.stdout)
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
     variables = model.trainable_variables
-    print("var numb: ", len(variables))
+    #print("var numb: ", len(variables))
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
@@ -166,7 +166,7 @@ def debug(config,
     while True:
       #####Training batch
       loss, num_examples = next(meta_train_data_flow)  
-      print("number_examples_per_replica: ", num_examples)
+      #print("number_examples_per_replica: ", num_examples)
 
 def meta_train_v1(config,
           optimizer,          

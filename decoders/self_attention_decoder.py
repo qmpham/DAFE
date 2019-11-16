@@ -78,6 +78,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
            step=None,
            training=None):
     # Process inputs.
+    print("where we are? ___________________",self.name_scope.name)
     domain = inputs[1]
     domain_mask = tf.nn.embedding_lookup(self.mask, domain)
     inputs = inputs[0]
