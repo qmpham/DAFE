@@ -224,6 +224,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         memory=encoder_outputs,
         memory_sequence_length=encoder_sequence_length,
         initial_state=encoder_state)
+        
     logits, _, attention = self.decoder.forward_fn(
         [target_inputs, labels["domain"]],
         args_dict,

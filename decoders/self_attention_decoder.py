@@ -146,6 +146,30 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
         training=training)
     logits = self.output_layer(outputs)
     return logits, state, attention
+    
+  def forward_fn(self,
+              inputs,
+              args_dict,
+              sequence_length=None,
+              initial_state=None,
+              memory=None,
+              memory_sequence_length=None,
+              input_fn=None,
+              sampling_probability=None,
+              training=None):
+    _ = initial_state
+    _ = input_fn
+    if sampling_probability is not None:
+      raise ValueError("Scheduled sampling is not supported by this decoder")
+    outputs, state, attention = self._run_forward_fn(
+        inputs,
+        args_dict,
+        sequence_length=sequence_length,
+        memory=memory,
+        memory_sequence_length=memory_sequence_length,
+        training=training)
+    logits = self.output_layer(outputs)
+    return logits, state, attention
 
   def step(self,
            inputs,
@@ -182,7 +206,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
       cache.append(dict(self_kv=self_kv, memory_kv=memory_kv))
     return cache
 
-  def forward_fn(self,
+  def _run_forward_fn(self,
            inputs,
            args_dict,
            sequence_length=None,
