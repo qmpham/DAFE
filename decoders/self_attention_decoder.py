@@ -226,8 +226,8 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
 
       inputs, layer_cache, attention = layer.forward_fn(
           inputs,
-          mask=mask,
           args_dict,
+          mask=mask,          
           memory=memory,
           memory_mask=memory_mask,
           cache=cache[i] if cache is not None else None,
