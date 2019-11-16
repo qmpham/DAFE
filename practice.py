@@ -94,8 +94,14 @@ def debug(config,
     gradients = tf.gradients(training_loss, variables)
     ##### Inner adaptation
     args_dict = dict()
+    def update(v,g,lr=0.01):
+      print("gradient type: ",type(g),g,g.dtype)
+      if g.dtype==tf.IndexedSlices:
+        return tf.tensor_scatter_nd_sub(v/lr,g.indices,g)*lr
+      else:
+        return 
     for g, v in zip(gradients, variables):
-      args_dict.update({v.name:v - 0.01*g})
+      args_dict.update({v.name:update(v,g)})
     #### Meta_loss:
     outputs, _ = model.forward_fn(source,
         args_dict,
