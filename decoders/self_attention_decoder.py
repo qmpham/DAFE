@@ -4,7 +4,7 @@ import tensorflow as tf
 
 from opennmt.decoders.decoder import Decoder
 from opennmt.decoders.self_attention_decoder import SelfAttentionDecoder
-from opennmt.layers import common, transformer
+from layers import common, transformer
 from opennmt.layers.position import SinusoidalPositionEncoder
 from layers.layers import Multi_domain_FeedForwardNetwork
 from utils.utils_ import make_domain_mask

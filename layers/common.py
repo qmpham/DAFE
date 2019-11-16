@@ -33,6 +33,7 @@ class Dense(tf.keras.layers.Dense):
     return super(Dense, self).add_weight(name, *args, **kwargs)
 
   def call(self, inputs):
+    print("where we are? ______________", self.name_scope())
     shape = shape_list(inputs)
     rank = len(shape)
     if rank > 2:
