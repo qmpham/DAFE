@@ -33,7 +33,27 @@ class Dense(tf.keras.layers.Dense):
     return super(Dense, self).add_weight(name, *args, **kwargs)
 
   def call(self, inputs):
+    print("where we are? ______________", self.name_scope(), self.kernel.name, self.bias.name)
+    shape = shape_list(inputs)
+    rank = len(shape)
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    outputs = tf.matmul(inputs, self.kernel, transpose_b=self.transpose)
+    if self.use_bias:
+      outputs = tf.nn.bias_add(outputs, self.bias)
+    if self.activation is not None:
+      outputs = self.activation(outputs)  # pylint: disable=not-callable
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.units])
+    return outputs
+
+  def forward_fn(self, inputs, args_dict):
     print("where we are? ______________", self.name_scope())
+    for key in list(args_dict.keys()):
+      if self.name_scope in key.name:
+        if "kernel":
+          pass
+
     shape = shape_list(inputs)
     rank = len(shape)
     if rank > 2:
@@ -112,6 +132,32 @@ class LayerWrapper(tf.keras.layers.Layer):
     x = dropout(x, self.input_dropout, training=training)
 
     all_outputs = self.layer(x, *args, **kwargs)
+    if isinstance(all_outputs, tuple):
+      outputs = all_outputs[0]
+      extra_outputs = list(all_outputs)[1:]
+    else:
+      outputs = all_outputs
+      extra_outputs = None
+
+    outputs = dropout(outputs, self.output_dropout, training=training)
+    if self.residual_connection and outputs.shape[-1] == inputs.shape[-1]:
+      outputs += inputs
+    if self.output_layer_norm is not None:
+      outputs = self.output_layer_norm(outputs)  # pylint: disable=not-callable
+
+    if extra_outputs:
+      return tuple([outputs] + extra_outputs)
+    return outputs
+
+  def forward_fn(self, inputs, args_dict, *args, **kwargs):  # pylint: disable=arguments-differ
+    
+    training = kwargs.get("training")
+    x = inputs
+    if self.input_layer_norm is not None:
+      x = self.input_layer_norm(x)  # pylint: disable=not-callable
+    x = dropout(x, self.input_dropout, training=training)
+
+    all_outputs = self.layer.forward_fn(x, args_dict, *args, **kwargs)
     if isinstance(all_outputs, tuple):
       outputs = all_outputs[0]
       extra_outputs = list(all_outputs)[1:]
