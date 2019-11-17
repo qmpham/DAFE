@@ -476,7 +476,7 @@ def meta_train_v2(config,
         return v - lr*g
     for g, v in zip(gradients, variables):
       args_dict.update({v.name: v}) #update(v,g)})
-      print(g,v)
+      #print(g,v)
     
     #### Meta_loss:
     print("number variables: ", len(list(args_dict.keys())))  
@@ -499,7 +499,10 @@ def meta_train_v2(config,
       """
     #training_loss = model.regularize_loss(training_loss, variables=variables)
       
-      gradients = optimizer.get_gradients(meta_training_loss, variables)
+      gradients = tape.gradient(meta_training_loss, variables)
+      for g,v in zip(gradients, variables):
+        if g==None:
+          print(v)
     gradient_accumulator(gradients)
     num_examples = tf.shape(meta_test_target["length"])[0]
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
