@@ -495,7 +495,7 @@ def meta_train_v2(config,
       else:
         meta_training_loss, meta_reported_loss = loss, loss
     #training_loss = model.regularize_loss(training_loss, variables=variables)
-      gradients = optimizer.get_gradients(meta_training_loss, variables)
+      gradients = optimizer.get_gradients(meta_training_loss, [v for v in variables if not("embedding" in v)])
     gradient_accumulator(gradients)
     num_examples = tf.shape(meta_test_target["length"])[0]
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
