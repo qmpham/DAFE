@@ -492,7 +492,7 @@ def meta_train_v2(config,
         training=True,
         step=optimizer.iterations)
     """
-    
+    print("number variables: ", len(model.trainable_variables))
     loss = model.compute_loss(outputs, meta_test_target, training=True)
     if isinstance(loss, tuple):
       meta_training_loss = loss[0] / loss[1]
