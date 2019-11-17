@@ -151,7 +151,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           step=step,
           training=training)
 
-    return outputs, predictions
+    return tf.reduce_sum(encoder_outputs)#outputs, predictions
 
   def _decode_target(self,
                      labels,

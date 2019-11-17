@@ -480,8 +480,9 @@ def meta_train_v2(config,
     
     #### Meta_loss:
     print("number variables: ", len(list(args_dict.keys())))  
-    with tf.GradientTape(persistent=True) as tape:  
-      outputs, _ = model.forward_fn(meta_test_source,
+    with tf.GradientTape(persistent=True) as tape: 
+       
+      outputs = model.forward_fn(meta_test_source,
           args_dict,
           labels=meta_test_target,
           training=True,
