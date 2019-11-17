@@ -463,7 +463,7 @@ def meta_train_v2(config,
     args_dict = dict()
     for v in variables:
       args_dict.update({v.name:v})
-      print(args_dict[v.name])
+      #print(args_dict[v.name])
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     ##### Inner adaptation
@@ -501,7 +501,7 @@ def meta_train_v2(config,
       
       gradients = tape.gradient(meta_training_loss, variables)
       for g,v in zip(gradients, variables):
-        if g==None:
+        if g.value==None:
           print(v)
     gradient_accumulator(gradients)
     num_examples = tf.shape(meta_test_target["length"])[0]
