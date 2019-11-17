@@ -96,10 +96,12 @@ class LayerNorm(tf.keras.layers.Layer):
 
   def forward_fn(self, x, args_dict):  # pylint: disable=arguments-differ
     """Normalizes :obj:`x`."""
+    gamma = args_dict[self.gamma.name]
+    beta = args_dict[self.beta.name]
     mean = tf.reduce_mean(x, axis=[-1], keepdims=True)
     variance = tf.reduce_mean(tf.square(x - mean), axis=[-1], keepdims=True)
     norm_x = (x - mean) * tf.math.rsqrt(variance + self.epsilon)
-    return norm_x * self.gamma + self.beta
+    return norm_x * gamma + beta
 
   def map_v1_weights(self, weights):
     return [

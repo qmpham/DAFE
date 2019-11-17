@@ -484,14 +484,7 @@ def meta_train_v2(config,
         labels=meta_test_target,
         training=True,
         step=optimizer.iterations)
-
-    """
-    outputs, _ = model(
-        meta_test_source,
-        labels=meta_test_target,
-        training=True,
-        step=optimizer.iterations)
-    """
+        
     print("number variables: ", len(model.trainable_variables))
     loss = model.compute_loss(outputs, meta_test_target, training=True)
     if isinstance(loss, tuple):
