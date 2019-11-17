@@ -464,11 +464,12 @@ def meta_train_v2(config,
         args_dict.update({v.name:v})
       else:
         args_dict.update({v.name: v.device_map.select_for_current_replica(v.values, replica_context)})
+        print(args_dict[v.name])
 
-    """
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     ##### Inner adaptation
+    """
     args_dict = dict()
     def update(v,g,lr=1.0):
       if "embedding" in v.name:
@@ -479,6 +480,7 @@ def meta_train_v2(config,
       args_dict.update({v.name: v}) #update(v,g)})
     for k in list(args_dict.keys()):
       print(args_dict[k])
+    """
     #### Meta_loss:
     print("number variables: ", len(list(args_dict.keys())))
     outputs, _ = model.forward_fn(meta_test_source,
