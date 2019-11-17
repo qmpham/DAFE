@@ -457,16 +457,16 @@ def meta_train_v2(config,
     else:
       training_loss, reported_loss = loss, loss
     variables = model.trainable_variables   
-
+    """
     args_dict = dict()
     for v in variables:
       args_dict.update({v.name:v})
       print(args_dict[v.name])
-      
+    """  
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     ##### Inner adaptation
-    """
+    
     args_dict = dict()
     def update(v,g,lr=1.0):
       if "embedding" in v.name:
@@ -475,9 +475,8 @@ def meta_train_v2(config,
         return v - lr*g
     for g, v in zip(gradients, variables):
       args_dict.update({v.name: v}) #update(v,g)})
-    for k in list(args_dict.keys()):
-      print(args_dict[k])
-    """
+      print(g)
+    
     #### Meta_loss:
     print("number variables: ", len(list(args_dict.keys())))
     outputs, _ = model.forward_fn(meta_test_source,
