@@ -34,25 +34,6 @@ class My_inputter(WordEmbedder):
 
         return features
     
-    def build(self, input_shape):
-      if self.embedding_file:
-        pretrained = load_pretrained_embeddings(
-            self.embedding_file,
-            self.vocabulary_file,
-            num_oov_buckets=self.num_oov_buckets,
-            with_header=self.embedding_file_with_header,
-            case_insensitive_embeddings=self.case_insensitive_embeddings)
-        self.embedding_size = pretrained.shape[-1]
-        initializer = tf.constant_initializer(value=pretrained.astype(self.dtype))
-      else:
-        initializer = None
-      self.embedding = self.add_weight(
-          "embedding",
-          [self.vocabulary_size, self.embedding_size],
-          initializer=initializer,
-          trainable=self.trainable)
-      super(WordEmbedder, self).build(input_shape)
-    
     def make_inference_dataset(self,
                              feature_file,
                              batch_size,
