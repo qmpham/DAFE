@@ -482,26 +482,28 @@ def meta_train_v2(config,
     print("number variables: ", len(list(args_dict.keys())))  
     with tf.GradientTape(persistent=True) as tape: 
        
-      outputs = model.forward_fn(meta_test_source,
+      meta_training_loss = model.forward_fn(meta_test_source,
           args_dict,
           labels=meta_test_target,
           training=True,
           step=optimizer.iterations)
 
       print("number variables: ", len(model.trainable_variables))
+      """
       loss = model.compute_loss(outputs, meta_test_target, training=True)
       if isinstance(loss, tuple):
         meta_training_loss = loss[0] / loss[1]
         meta_reported_loss = loss[0] / loss[2]
       else:
         meta_training_loss, meta_reported_loss = loss, loss
+      """
     #training_loss = model.regularize_loss(training_loss, variables=variables)
       
       gradients = tape.gradient(meta_training_loss, [v for v in variables if not("embedding" in v.name or "layer_norm" in v.name)])
     gradient_accumulator(gradients)
     num_examples = tf.shape(meta_test_target["length"])[0]
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return meta_reported_loss, num_examples
+    return meta_training_loss, num_examples
 
   def _apply_gradients():
     variables = model.trainable_variables
