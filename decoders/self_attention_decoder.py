@@ -168,7 +168,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
         memory=memory,
         memory_sequence_length=memory_sequence_length,
         training=training)
-    logits = self.output_layer(outputs)
+    logits = self.output_layer.forward_fn(outputs, args_dict)
     return logits, state, attention
 
   def step(self,
@@ -258,7 +258,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
           training=training)
       new_cache.append(layer_cache)
       #print("inputs_%d"%i,inputs)
-      inputs = multi_domain_layer(inputs, domain_mask) + inputs
+      inputs = multi_domain_layer.forward_fn(inputs, args_dict, domain_mask) + inputs
 
-    outputs = self.layer_norm(inputs)
+    outputs = self.layer_norm.forward_fn(inputs, args_dict)
     return outputs, new_cache, attention

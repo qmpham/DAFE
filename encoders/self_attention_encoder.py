@@ -77,7 +77,7 @@ class Multi_domain_SelfAttentionEncoder(Encoder):
     for layer, multi_domain_layer in zip(self.layers,self.multi_domain_layers):
       inputs = layer.forward_fn(inputs, args_dict, mask=mask, training=training)
       inputs = multi_domain_layer.forward_fn(inputs, args_dict, domain_mask) + inputs
-    outputs = self.layer_norm(inputs)
+    outputs = self.layer_norm.forward_fn(inputs, args_dict)
     return outputs, None, sequence_length
     
   def map_v1_weights(self, weights):
