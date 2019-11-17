@@ -460,6 +460,7 @@ def meta_train_v2(config,
     args_dict = dict()
     for v in variables:
       args_dict.update({v.name:v})
+      print(v)
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     ##### Inner adaptation
