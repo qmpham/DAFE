@@ -457,15 +457,18 @@ def meta_train_v2(config,
     else:
       training_loss, reported_loss = loss, loss
     variables = model.trainable_variables   
-    replica_context = tf.distribute.get_replica_context()
+    #replica_context = tf.distribute.get_replica_context()
     args_dict = dict()
     for v in variables:
+      args_dict.update({v.name:v})
+      print(args_dict[v.name])
+      """
       if replica_context is None:
         args_dict.update({v.name:v})
       else:
         args_dict.update({v.name: v.device_map.select_for_current_replica(v.values, replica_context)})
         print(args_dict[v.name])
-
+      """
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     ##### Inner adaptation
