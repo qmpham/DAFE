@@ -235,6 +235,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         input_fn=input_fn,
         sampling_probability=sampling_probability,
         training=training)
+        
     outputs = dict(logits=logits, attention=attention)
     """
     noisy_ids = labels.get("noisy_ids")
