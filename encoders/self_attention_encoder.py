@@ -8,6 +8,7 @@ from opennmt.encoders.encoder import Encoder
 from opennmt.encoders.self_attention_encoder import SelfAttentionEncoder
 from opennmt.layers.position import SinusoidalPositionEncoder
 from opennmt.layers import common
+from layers.common import LayerNorm
 from utils.utils_ import make_domain_mask
 from layers.layers import Multi_domain_FeedForwardNetwork
 class Multi_domain_SelfAttentionEncoder(Encoder):
@@ -32,7 +33,7 @@ class Multi_domain_SelfAttentionEncoder(Encoder):
     self.position_encoder = None
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
-    self.layer_norm = common.LayerNorm()
+    self.layer_norm = LayerNorm()
     self.layers = [
         transformer.SelfAttentionEncoderLayer(
             num_units,
