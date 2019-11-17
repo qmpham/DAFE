@@ -151,7 +151,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           step=step,
           training=training)
 
-    return tf.reduce_sum(encoder_outputs)#outputs, predictions
+    return outputs, predictions
 
   def _decode_target(self,
                      labels,
@@ -224,17 +224,19 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         memory=encoder_outputs,
         memory_sequence_length=encoder_sequence_length,
         initial_state=encoder_state)
-        
+    
     logits, _, attention = self.decoder.forward_fn(
         [target_inputs, labels["domain"]],
         args_dict,
         self.labels_inputter.get_length(labels),
         initial_state=initial_state,
+        memory=encoder_outputs,
+        memory_sequence_length=encoder_sequence_length,
         input_fn=input_fn,
         sampling_probability=sampling_probability,
         training=training)
     outputs = dict(logits=logits, attention=attention)
-
+    """
     noisy_ids = labels.get("noisy_ids")
     if noisy_ids is not None and params.get("contrastive_learning"):
       # In case of contrastive learning, also forward the erroneous
@@ -249,6 +251,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           sampling_probability=sampling_probability,
           training=training)
       outputs["noisy_logits"] = noisy_logits
+      """
     return outputs
  
   def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length):
