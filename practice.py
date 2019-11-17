@@ -166,15 +166,6 @@ def debug(config,
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
-
-  def _set_weight(v, w):
-    v.assign(w)
-
-  @tf.function
-  def weight_reset(snapshots):
-    with strategy.scope():
-      for snap, var in zip(snapshots, model.trainable_variables):
-        strategy.extended.update(var, _set_weight, args=(snap, ))
   
   # Runs the training loop.
   import time
@@ -188,6 +179,7 @@ def debug(config,
       #####Training batch
       loss, _ = next(meta_train_data_flow)  
       _loss.append(loss)
+      _step()
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
