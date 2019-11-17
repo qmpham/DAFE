@@ -19,6 +19,7 @@ import sys
 import opennmt as onmt
 import io
 import os
+import utils
 from opennmt import START_OF_SENTENCE_ID
 from opennmt import END_OF_SENTENCE_ID
 from opennmt.utils.misc import print_bytes
@@ -77,13 +78,13 @@ def debug(config,
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
-  def _accumulate_gradients(source, target):
+  def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
     outputs, _ = model(
-        source,
-        labels=target,
+        meta_train_source,
+        labels=meta_train_target,
         training=True,
         step=optimizer.iterations)    
-    loss = model.compute_loss(outputs, target, training=True)
+    loss = model.compute_loss(outputs, meta_train_target, training=True)
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
@@ -102,12 +103,12 @@ def debug(config,
     for g, v in zip(gradients, variables):
       args_dict.update({v.name:update(v,g)})
     #### Meta_loss:
-    outputs, _ = model.forward_fn(source,
+    outputs, _ = model.forward_fn(meta_test_source,
         args_dict,
-        labels=target,
+        labels=meta_test_target,
         training=True,
         step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
+    loss = model.compute_loss(outputs, meta_test_target, training=True)
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
@@ -116,7 +117,7 @@ def debug(config,
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
-    num_examples = tf.shape(source["length"])[0]
+    num_examples = tf.shape(meta_test_target["length"])[0]
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
@@ -130,27 +131,18 @@ def debug(config,
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
  
-  @dataset_util.function_on_next(meta_train_dataset)
+  @utils.dataprocess.meta_learning_function_on_next(meta_train_dataset, meta_test_dataset)
   def _meta_train_forward(next_fn):    
     with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
+      meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target = next_fn()
       per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+          _accumulate_gradients, args=(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
       num_examples = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_num_examples, None)    
     return loss, num_examples
 
-  @dataset_util.function_on_next(meta_test_dataset)
-  def _meta_test_forward(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      per_replica_loss = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
-      # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-    return loss
-
+  
   @dataset_util.function_on_next(meta_train_dataset)
   def _meta_train_iteration(next_fn):    
     with strategy.scope():

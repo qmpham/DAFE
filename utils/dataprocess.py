@@ -76,6 +76,7 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
 
 
 def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length):
+
   train_datasets = [] 
   for i,src,tgt in zip(domain,source_file,target_file):
     train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
@@ -92,3 +93,27 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
     train_dataset = strategy.experimental_distribute_dataset(train_dataset)    
 
   return train_dataset
+
+
+def meta_learning_function_on_next(metatrain_dataset, metatest_dataset, as_numpy=False):
+  
+  def decorator(func):
+    def _fun():
+      metatrain_iterator = iter(metatrain_dataset)
+      metatest_iterator = iter(metatest_dataset)
+      @tf.function
+      def _tf_fun():
+        return func(lambda: next(metatrain_iterator)+next(metatest_iterator))
+
+      while True:
+        try:
+          outputs = _tf_fun()
+          if as_numpy:
+            outputs = tf.nest.map_structure(lambda x: x.numpy(), outputs)
+          yield outputs
+        except tf.errors.OutOfRangeError:
+          break
+
+    return _fun
+
+  return decorator
