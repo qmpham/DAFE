@@ -32,7 +32,7 @@ from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
 from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
-from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset
+from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset
 from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer
@@ -439,7 +439,7 @@ def meta_train_v2(config,
   
   print("There are %d in-domain corpora"%len(source_file))
 
-  meta_train_dataset, meta_test_dataset = create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
+  meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
                                                                         batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
   with strategy.scope():
@@ -481,8 +481,15 @@ def meta_train_v2(config,
     
     #### Meta_loss:
     print("number variables: ", len(list(args_dict.keys())))
+    """
     outputs, _ = model.forward_fn(meta_test_source,
         args_dict,
+        labels=meta_test_target,
+        training=True,
+        step=optimizer.iterations)
+    """
+    outputs, _ = model(
+        meta_test_source,
         labels=meta_test_target,
         training=True,
         step=optimizer.iterations)
