@@ -447,26 +447,27 @@ def meta_train_v2(config,
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
-    outputs, _ = model(
-        meta_train_source,
-        labels=meta_train_target,
-        training=True,
-        step=optimizer.iterations)    
-    loss = model.compute_loss(outputs, meta_train_target, training=True)
-    if isinstance(loss, tuple):
-      training_loss = loss[0] / loss[1]
-      reported_loss = loss[0] / loss[2]
-    else:
-      training_loss, reported_loss = loss, loss
-    variables = model.trainable_variables       
-    args_dict = dict()
-    for v in variables:
-      args_dict.update({v.name:v})
-      print(args_dict[v.name])
-    training_loss = model.regularize_loss(training_loss, variables=variables)
-    gradients = optimizer.get_gradients(training_loss, variables)
+    with tf.GradientTape(persistent=True) as tape:
+      outputs, _ = model(
+          meta_train_source,
+          labels=meta_train_target,
+          training=True,
+          step=optimizer.iterations)    
+      loss = model.compute_loss(outputs, meta_train_target, training=True)
+      if isinstance(loss, tuple):
+        training_loss = loss[0] / loss[1]
+        reported_loss = loss[0] / loss[2]
+      else:
+        training_loss, reported_loss = loss, loss
+      variables = model.trainable_variables       
+      args_dict = dict()
+      for v in variables:
+        args_dict.update({v.name:v})
+        print(args_dict[v.name])
+      training_loss = model.regularize_loss(training_loss, variables=variables)
+      gradients = tape.get_gradients(training_loss, variables)
     ##### Inner adaptation
-    
+
     args_dict = dict()
     def update(v,g,lr=1.0):
       if "embedding" in v.name:
@@ -484,7 +485,7 @@ def meta_train_v2(config,
         labels=meta_test_target,
         training=True,
         step=optimizer.iterations)
-        
+
     print("number variables: ", len(model.trainable_variables))
     loss = model.compute_loss(outputs, meta_test_target, training=True)
     if isinstance(loss, tuple):
