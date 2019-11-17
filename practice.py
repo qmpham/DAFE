@@ -473,7 +473,7 @@ def meta_train_v2(config,
       else:
         return v - lr*g
     for g, v in zip(gradients, variables):
-      args_dict.update({v.name:update(v,g)})
+      args_dict.update({v.name: v}) #update(v,g)})
     for k in list(args_dict.keys()):
       print(args_dict[k])
     #### Meta_loss:
