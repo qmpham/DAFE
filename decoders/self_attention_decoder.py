@@ -49,6 +49,15 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
         Multi_domain_FeedForwardNetwork(num_domains*num_domain_units, num_units, name="ADAP_%d"%i)
         for i in range(num_layers)]
 
+  def initialize(self, vocab_size=None, output_layer=None):
+    
+    if output_layer is not None:
+      self.output_layer = output_layer
+    else:
+      if vocab_size is None:
+        raise ValueError("One of vocab_size and output_layer must be set")
+      self.output_layer = common.Dense(vocab_size)
+
   @property
   def minimum_sources(self):
     return 0
