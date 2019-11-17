@@ -465,7 +465,7 @@ def meta_train_v2(config,
         args_dict.update({v.name:v})
         print(args_dict[v.name])
       training_loss = model.regularize_loss(training_loss, variables=variables)
-      gradients = tape.get_gradients(training_loss, variables)
+      gradients = tape.gradient(training_loss, variables)
     ##### Inner adaptation
 
     args_dict = dict()
