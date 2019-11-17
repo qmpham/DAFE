@@ -133,7 +133,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     assert isinstance(self.features_inputter, My_inputter)
     assert isinstance(self.labels_inputter, My_inputter)
     source_length = self.features_inputter.get_length(features)
-    source_inputs = self.features_inputter(features, training=training)
+    source_inputs = self.features_inputter.forward_fn(features, args_dict, training=training)
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder.forward_fn(
         [source_inputs, features["domain"]], args_dict, sequence_length=source_length, training=training)
 
@@ -209,8 +209,8 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
                      step=None,
                      training=None):
     params = self.params
-    target_inputs = self.labels_inputter(labels, training=training)
-    input_fn = lambda ids: [self.labels_inputter({"ids": ids}, training=training), labels["domain"]]
+    target_inputs = self.labels_inputter.forward_fn(labels, args_dict, training=training)
+    input_fn = lambda ids: [self.labels_inputter({"ids": ids}, args_dict, training=training), labels["domain"]]
 
     sampling_probability = None
     if training:

@@ -15,6 +15,12 @@ class My_inputter(WordEmbedder):
         self.embedding_file = None
         self.dropout = dropout
 
+    def forward_fn(self, features, args_dict, training=None):
+        embedding = args_dict[self.embedding.name]
+        outputs = tf.nn.embedding_lookup(embedding, features["ids"])
+        outputs = common.dropout(outputs, self.dropout, training=training)
+        return outputs
+
     def initialize(self, data_config, asset_prefix=""):
         super(My_inputter, self).initialize(data_config, asset_prefix=asset_prefix)
         embedding = _get_field(data_config, "embedding", prefix=asset_prefix)
@@ -25,6 +31,7 @@ class My_inputter(WordEmbedder):
             self.trainable = embedding.get("trainable", True)
             self.embedding_file_with_header = embedding.get("with_header", True)
             self.case_insensitive_embeddings = embedding.get("case_insensitive", True)
+            
     def make_features(self, element=None, features=None, domain=1, training=None):
         features = super(My_inputter, self).make_features(
             element=element, features=features, training=training)
