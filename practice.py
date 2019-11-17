@@ -499,7 +499,7 @@ def meta_train_v2(config,
       
     #training_loss = model.regularize_loss(training_loss, variables=variables)
       
-      gradients = tape.gradient(tf.reduce_sum(tf.add_n(outputs)), variables)
+      gradients = tape.gradient(tf.reduce_sum(outputs[0]), variables)
       for g,v in zip(gradients, variables):
         if g is None:
           print(v)
