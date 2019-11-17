@@ -457,17 +457,21 @@ def meta_train_v2(config,
     else:
       training_loss, reported_loss = loss, loss
     variables = model.trainable_variables   
+    args_dict = dict()
+    for v in variables:
+      args_dict.update({v.name:v})
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = tf.gradients(training_loss, variables)
     ##### Inner adaptation
-    args_dict = dict()
+    """
     def update(v,g,lr=1.0):
       if "embedding" in v.name:
         return tf.tensor_scatter_nd_sub(v/lr,g.indices,g)*lr
       else:
-        return v - lr* g
+        return v - lr*g
     for g, v in zip(gradients, variables):
       args_dict.update({v.name:update(v,g)})
+    """
     #### Meta_loss:
     outputs, _ = model.forward_fn(meta_test_source,
         args_dict,
