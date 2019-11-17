@@ -210,7 +210,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
                      training=None):
     params = self.params
     target_inputs = self.labels_inputter.forward_fn(labels, args_dict, training=training)
-    input_fn = lambda ids: [self.labels_inputter({"ids": ids}, args_dict, training=training), labels["domain"]]
+    input_fn = lambda ids: [self.labels_inputter.forward_fn({"ids": ids}, args_dict, training=training), labels["domain"]]
 
     sampling_probability = None
     if training:
