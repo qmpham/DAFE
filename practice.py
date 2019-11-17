@@ -447,25 +447,25 @@ def meta_train_v2(config,
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
-    with tf.GradientTape(persistent=True) as tape:
-      outputs, _ = model(
-          meta_train_source,
-          labels=meta_train_target,
-          training=True,
-          step=optimizer.iterations)    
-      loss = model.compute_loss(outputs, meta_train_target, training=True)
-      if isinstance(loss, tuple):
-        training_loss = loss[0] / loss[1]
-        reported_loss = loss[0] / loss[2]
-      else:
-        training_loss, reported_loss = loss, loss
-      variables = model.trainable_variables       
-      args_dict = dict()
-      for v in variables:
-        args_dict.update({v.name:v})
-        print(args_dict[v.name])
-      training_loss = model.regularize_loss(training_loss, variables=variables)
-      gradients = tape.gradient(training_loss, variables)
+    
+    outputs, _ = model(
+        meta_train_source,
+        labels=meta_train_target,
+        training=True,
+        step=optimizer.iterations)    
+    loss = model.compute_loss(outputs, meta_train_target, training=True)
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    variables = model.trainable_variables       
+    args_dict = dict()
+    for v in variables:
+      args_dict.update({v.name:v})
+      print(args_dict[v.name])
+    training_loss = model.regularize_loss(training_loss, variables=variables)
+    gradients = optimizer.get_gradients(training_loss, variables)
     ##### Inner adaptation
 
     args_dict = dict()
@@ -479,22 +479,23 @@ def meta_train_v2(config,
       print(g,v)
     
     #### Meta_loss:
-    print("number variables: ", len(list(args_dict.keys())))    
-    outputs, _ = model.forward_fn(meta_test_source,
-        args_dict,
-        labels=meta_test_target,
-        training=True,
-        step=optimizer.iterations)
+    print("number variables: ", len(list(args_dict.keys())))  
+    with tf.GradientTape(persistent=True) as tape:  
+      outputs, _ = model.forward_fn(meta_test_source,
+          args_dict,
+          labels=meta_test_target,
+          training=True,
+          step=optimizer.iterations)
 
-    print("number variables: ", len(model.trainable_variables))
-    loss = model.compute_loss(outputs, meta_test_target, training=True)
-    if isinstance(loss, tuple):
-      meta_training_loss = loss[0] / loss[1]
-      meta_reported_loss = loss[0] / loss[2]
-    else:
-      meta_training_loss, meta_reported_loss = loss, loss
+      print("number variables: ", len(model.trainable_variables))
+      loss = model.compute_loss(outputs, meta_test_target, training=True)
+      if isinstance(loss, tuple):
+        meta_training_loss = loss[0] / loss[1]
+        meta_reported_loss = loss[0] / loss[2]
+      else:
+        meta_training_loss, meta_reported_loss = loss, loss
     #training_loss = model.regularize_loss(training_loss, variables=variables)
-    gradients = optimizer.get_gradients(meta_training_loss, variables)
+      gradients = optimizer.get_gradients(meta_training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.shape(meta_test_target["length"])[0]
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
