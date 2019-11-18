@@ -448,7 +448,7 @@ def meta_train_v2(config,
 
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
     print(meta_train_source, meta_train_target, meta_test_source, meta_test_target)
-    with tf.GradientTape() as tape:
+    with tf.GradientTape(persistent=True) as tape:
       outputs, _ = model(
           meta_train_source,
           labels=meta_train_target,
