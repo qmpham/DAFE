@@ -478,7 +478,7 @@ def meta_train_v2(config,
     if config.get("stopping_gradient",True):
       print("apply stopping_gradient")
       for g, v in zip(gradients, variables):      
-        args_dict.update({v.name: update(v,tf.stop_gradient(g))})
+        args_dict.update({v.name: v-g})
     else:
       print("passing gradient")
       for g, v in zip(gradients, variables):
