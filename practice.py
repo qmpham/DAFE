@@ -471,7 +471,10 @@ def meta_train_v2(config,
       else:
         return v - lr*g
     for g, v in zip(gradients, variables):
-      args_dict.update({v.name: update(v,g)})
+      if config.get("stopping_gradient",True):
+        args_dict.update({v.name: update(v,tf.stop_gradient(g))})
+      else:
+        args_dict.update({v.name: update(v,g)})
     
     #### Meta_loss:
     print("number variables: ", len(list(args_dict.keys())))  
@@ -524,7 +527,6 @@ def meta_train_v2(config,
   start = time.time()  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   meta_train_data_flow = iter(_meta_train_forward())
-  
   _loss = []  
   with _summary_writer.as_default():
     while True:
