@@ -476,7 +476,7 @@ def meta_train_v2(config,
         args_dict.update({v.name: update(v,g)})
     
     #### Meta_loss:
-    print("number variables: ", len(list(args_dict.keys())))  
+    #print("number variables: ", len(list(args_dict.keys())))  
     outputs, _ = model.forward_fn(meta_test_source,
         args_dict,
         labels=meta_test_target,
