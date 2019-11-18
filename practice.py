@@ -482,16 +482,16 @@ def meta_train_v2(config,
     print("number variables: ", len(list(args_dict.keys())))  
     with tf.GradientTape(persistent=True) as tape: 
        
-      outputs, _ = model.forward_fn(meta_train_source,
+      outputs, _ = model.forward_fn(meta_test_source,
           args_dict,
-          labels=meta_train_target,
+          labels=meta_test_target,
           training=True,
           step=optimizer.iterations)
 
       print("number variables: ", len(model.trainable_variables))
       print("outputs: ",  outputs)
       
-      loss = model.compute_loss(outputs, meta_train_target, training=True)
+      loss = model.compute_loss(outputs, meta_test_target, training=True)
       if isinstance(loss, tuple):
         meta_training_loss = loss[0] / loss[1]
         meta_reported_loss = loss[0] / loss[2]
