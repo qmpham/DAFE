@@ -448,26 +448,25 @@ def meta_train_v2(config,
 
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
     #print(meta_train_source, meta_train_target, meta_test_source, meta_test_target)
-    with tf.GradientTape(persistent=True) as tape:
-      outputs, _ = model(
-          meta_train_source,
-          labels=meta_train_target,
-          training=True,
-          step=optimizer.iterations)    
-      loss = model.compute_loss(outputs, meta_train_target, training=True)
-      training_loss = loss[0] / loss[1]
-      reported_loss = loss[0] / loss[2]
-      variables = model.trainable_variables       
-      args_dict = dict()
-      for v in variables:
-        args_dict.update({v.name:v})
-      training_loss = model.regularize_loss(training_loss, variables=variables)
-      gradients = tape.gradient(training_loss, variables)
+    outputs, _ = model(
+        meta_train_source,
+        labels=meta_train_target,
+        training=True,
+        step=optimizer.iterations)    
+    loss = model.compute_loss(outputs, meta_train_target, training=True)
+    training_loss = loss[0] / loss[1]
+    reported_loss = loss[0] / loss[2]
+    variables = model.trainable_variables       
+    args_dict = dict()
+    for v in variables:
+      args_dict.update({v.name:v})
+    training_loss = model.regularize_loss(training_loss, variables=variables)
+    gradients = tf.gradient(training_loss, variables)
     ##### Inner adaptation
     def update(v,g,lr=1.0):
       if "embedding" in v.name:
-        print("embedding gradient's values: __________", g.values)
-        print("embedding gradient's indices: _________", g.indices)
+        # print("embedding gradient's values: __________", g.values)
+        # print("embedding gradient's indices: _________", g.indices)
         return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
       else:
         return v - lr*g
