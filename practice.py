@@ -461,7 +461,7 @@ def meta_train_v2(config,
     for v in variables:
       args_dict.update({v.name:v})
     training_loss = model.regularize_loss(training_loss, variables=variables)
-    gradients = tf.gradient(training_loss, variables)
+    gradients = tf.gradients(training_loss, variables)
     ##### Inner adaptation
     def update(v,g,lr=1.0):
       if "embedding" in v.name:
