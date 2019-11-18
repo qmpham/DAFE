@@ -470,7 +470,7 @@ def meta_train_v2(config,
     ##### Inner adaptation
     def update(v,g,lr=1.0):
       if "embedding" in v.name:
-        return tf.tensor_scatter_nd_sub(v/lr,g.indices,g)*lr
+        return tf.tensor_scatter_nd_sub(v/lr,g.indices,g.values)*lr
       else:
         return v - lr*g
     for g, v in zip(gradients, variables):
