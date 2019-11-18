@@ -468,15 +468,16 @@ def meta_train_v2(config,
         # print("embedding gradient's indices: _________", g.indices)
         return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
       else:
-        return v - lr*g
-    for g, v in zip(gradients, variables):
-      if config.get("stopping_gradient",True):
+        return v-lr*g
+    if config.get("stopping_gradient",True):
+      print("apply stopping_gradient")
+      for g, v in zip(gradients, variables):      
         args_dict.update({v.name: update(v,tf.stop_gradient(g))})
-      else:
+    else:
+      print("passing gradient")
+      for g, v in zip(gradients, variables):
         args_dict.update({v.name: update(v,g)})
-    
     #### Meta_loss:
-    #print("number variables: ", len(list(args_dict.keys())))  
     outputs, _ = model.forward_fn(meta_test_source,
         args_dict,
         labels=meta_test_target,
