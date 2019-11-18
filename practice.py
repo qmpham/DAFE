@@ -487,8 +487,6 @@ def meta_train_v2(config,
     meta_reported_loss = loss[0] / loss[2]
     meta_training_loss = model.regularize_loss(meta_training_loss, variables=variables)
     gradients = optimizer.get_gradients(meta_training_loss, variables)
-    #for g in gradients:
-    #  print(g)
     gradient_accumulator(gradients)
     num_examples = tf.shape(meta_test_target["length"])[0]
     return meta_reported_loss, num_examples
