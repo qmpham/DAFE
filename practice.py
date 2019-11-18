@@ -460,7 +460,6 @@ def meta_train_v2(config,
     for v in variables:
       args_dict.update({v.name:v})
     training_loss = model.regularize_loss(training_loss, variables=variables)
-    """
     gradients = tf.gradients(training_loss, variables)
     ##### Inner adaptation
     def update(v,g,lr=1.0):
@@ -487,11 +486,12 @@ def meta_train_v2(config,
     meta_training_loss = loss[0] / loss[1]
     meta_reported_loss = loss[0] / loss[2]
     meta_training_loss = model.regularize_loss(meta_training_loss, variables=variables)
-    """
-    gradients = optimizer.get_gradients(training_loss, variables)
+    gradients = optimizer.get_gradients(meta_training_loss, variables)
+    for g in gradients:
+      print(g)
     gradient_accumulator(gradients)
     num_examples = tf.shape(meta_test_target["length"])[0]
-    return reported_loss, num_examples
+    return meta_reported_loss, num_examples
 
   def _apply_gradients():
     variables = model.trainable_variables
