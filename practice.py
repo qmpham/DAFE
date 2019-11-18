@@ -919,7 +919,11 @@ def translate(source_file,
         break
   if reference!=None:
     print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
-    return scorer(reference, output_file)
+    score = scorer(reference, output_file)
+    if score is None:
+      return 0.0
+    else:
+      return score
   
 def main():
   devices = tf.config.experimental.list_logical_devices(device_type="GPU")
