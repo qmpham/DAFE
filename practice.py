@@ -470,6 +470,8 @@ def meta_train_v2(config,
       if "embedding" in v.name:
         # print("embedding gradient's values: __________", g.values)
         # print("embedding gradient's indices: _________", g.indices)
+        print(v)
+        print(g)
         return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
       else:
         return v-lr*g
