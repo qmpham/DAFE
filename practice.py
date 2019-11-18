@@ -447,7 +447,7 @@ def meta_train_v2(config,
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
-    
+    print(meta_train_source, meta_train_target, meta_test_source, meta_test_target)
     outputs, _ = model(
         meta_train_source,
         labels=meta_train_target,
