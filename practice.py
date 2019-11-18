@@ -447,6 +447,10 @@ def meta_train_v2(config,
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
+    tf.print("meta_train_source: ",meta_train_source, output_stream=sys.stderr)
+    tf.print("meta_train_target: ",meta_train_target, output_stream=sys.stderr)
+    tf.print("meta_test_source: ",meta_test_source, output_stream=sys.stderr)
+    tf.print("meta_test_target: ",meta_test_target, output_stream=sys.stderr)
     outputs, _ = model(
         meta_train_source,
         labels=meta_train_target,
@@ -490,7 +494,7 @@ def meta_train_v2(config,
     gradients = optimizer.get_gradients(meta_training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.shape(meta_test_target["length"])[0]
-    return meta_reported_loss, num_examples
+    return reported_loss, num_examples
 
   def _apply_gradients():
     variables = model.trainable_variables
