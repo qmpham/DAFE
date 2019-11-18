@@ -551,6 +551,167 @@ def meta_train_v2(config,
       if step > train_steps:
         break
 
+def meta_train_v3(config,
+          optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
+  
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
+  #####
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_meta_train_size = config["batch_meta_train_size"]
+  batch_meta_test_size = config["batch_meta_test_size"]
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config["domain"]
+  
+  print("There are %d in-domain corpora"%len(source_file))
+
+  meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
+                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
+  #####
+  with strategy.scope():
+    #model.create_variables(optimizer=optimizer)
+    gradient_accumulator = optimizer_util.GradientAccumulator()  
+
+  def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
+    outputs, _ = model(
+        meta_train_source,
+        labels=meta_train_target,
+        training=True,
+        step=optimizer.iterations)    
+    loss = model.compute_loss(outputs, meta_train_target, training=True)
+    training_loss = loss[0] / loss[1]
+    variables = model.trainable_variables       
+    args_dict = dict()
+    for v in variables:
+      args_dict.update({v.name:v})
+    adap_variables = []
+    shared_variables = []
+    for v in variables:
+      if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
+        adap_variables.append(v)
+      else:
+        shared_variables.append(v)
+    ##### Inner adaptation
+    training_loss = model.regularize_loss(training_loss, variables=adap_variables)
+    gradients = tf.gradients(training_loss, adap_variables)    
+    def update(v,g,lr=1.0):
+      if "embedding" in v.name:
+        # print("embedding gradient's values: __________", g.values)
+        # print("embedding gradient's indices: _________", g.indices)
+        return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
+      else:
+        return v-lr*g
+    if config.get("stopping_gradient",True):
+      print("apply stopping_gradient")
+      for g, v in zip(gradients, adap_variables):      
+        args_dict.update({v.name: update(v,tf.stop_gradient(g))})
+    else:
+      print("passing gradient")
+      for g, v in zip(gradients, adap_variables):
+        args_dict.update({v.name: update(v,g)})
+    #### Meta_loss:
+    outputs, _ = model.forward_fn(meta_test_source,
+        args_dict,
+        labels=meta_test_target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, meta_test_target, training=True)
+    meta_training_loss = loss[0] / loss[1]
+    meta_training_loss = model.regularize_loss(meta_training_loss, variables=shared_variables)
+    gradients = optimizer.get_gradients(meta_training_loss, shared_variables)
+    gradient_accumulator(gradients)
+    num_examples = tf.shape(meta_test_target["length"])[0]
+    return meta_training_loss, num_examples
+
+  def _apply_gradients():
+    adap_variables = []
+    shared_variables = []
+    for v in model.trainable_variables:
+      if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
+        adap_variables.append(v)
+      else:
+        shared_variables.append(v)
+    grads_and_vars = []
+    for gradient, variable in zip(gradient_accumulator.gradients, shared_variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync)
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    gradient_accumulator.reset()
+ 
+  @utils.dataprocess.meta_learning_function_on_next(meta_train_dataset, meta_test_dataset)
+  def _meta_train_forward(next_fn):    
+    with strategy.scope():
+      meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_num_examples, None)    
+    return loss, num_examples
+    
+  @tf.function
+  def _step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_gradients)
+  
+  # Runs the training loop.
+  import time
+  start = time.time()  
+  print("number of replicas: %d"%strategy.num_replicas_in_sync)
+  meta_train_data_flow = iter(_meta_train_forward())
+  _loss = []  
+  with _summary_writer.as_default():
+    while True:
+      #####Training batch
+      loss, _ = next(meta_train_data_flow)  
+      _loss.append(loss)
+      _step()
+      step = optimizer.iterations.numpy()
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; after %f seconds",
+            step, learning_rate(step), np.mean(_loss), elapsed)
+        _loss = []
+        start = time.time()
+      if step % save_every == 0:
+        tf.get_logger().info("Saving checkpoint for step %d", step)
+        checkpoint_manager.save(checkpoint_number=step)
+      if step % eval_every == 0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+      if step > train_steps:
+        break
+
+
 def finetuning(config,
           optimizer,          
           learning_rate,
