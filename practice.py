@@ -654,7 +654,7 @@ def meta_train_v3(config,
       loss = model.compute_loss(outputs, meta_test_target, training=True)
       meta_training_loss = loss[0] / loss[1]
       meta_training_loss = model.regularize_loss(meta_training_loss, variables=shared_variables)
-      gradients = optimizer.get_gradients(meta_training_loss, shared_variables)
+      gradients = tape.gradient(meta_training_loss, shared_variables)
       gradient_accumulator(gradients)
       num_word_examples = tf.reduce_sum(meta_test_target["length"])
     return meta_training_loss, training_loss, num_word_examples
