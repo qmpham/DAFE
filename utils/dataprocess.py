@@ -13,20 +13,20 @@ def make_batch_per_replica_(num_replicas_in_sync):
       dim = batch.shape.ndims
       if dim==1:
         batch = tf.expand_dims(batch,0)
-        new_batch = tf.reshape(batch,[num_replicas_in_sync,-1])
+        new_batch = tf.expand_dims(tf.reshape(batch,[num_replicas_in_sync,-1]),0)
       elif dim==2:
         batch = tf.expand_dims(batch,0)
-        new_batch = tf.reshape(batch,[num_replicas_in_sync,-1,tf.shape(batch)[-1]])
+        new_batch = tf.expand_dims(tf.reshape(batch,[num_replicas_in_sync,-1,tf.shape(batch)[-1]]),0)
       new_src.update({feature:new_batch})
     for feature in list(tgt.keys()):
       batch = tgt[feature]
       dim = batch.shape.ndims
       if dim==1:
         batch = tf.expand_dims(batch,0)
-        new_batch = tf.reshape(batch,[num_replicas_in_sync,-1])
+        new_batch = tf.expand_dims(tf.reshape(batch,[num_replicas_in_sync,-1]),0)
       elif dim==2:
         batch = tf.expand_dims(batch,0)
-        new_batch = tf.reshape(batch,[num_replicas_in_sync,-1,tf.shape(batch)[-1]])
+        new_batch = tf.expand_dims(tf.reshape(batch,[num_replicas_in_sync,-1,tf.shape(batch)[-1]]),0)
       new_src.update({feature:new_batch})
       new_tgt.update({feature:new_batch})
     return new_src, new_tgt
