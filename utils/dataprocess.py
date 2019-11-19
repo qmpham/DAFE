@@ -14,14 +14,14 @@ def make_batch_per_replica_1_(num_replicas_in_sync):
       if dim==2:
         batch = tf.expand_dims(batch,0)
         new_batch = tf.reshape(batch,[-1,tf.shape(batch)[0]//num_replicas_in_sync,tf.shape(batch)[-1]])
-      new_src.update({feature:new_batch})
+        new_src.update({feature:new_batch})
     for feature in list(tgt.keys()):
       batch = tgt[feature]
       dim = batch.shape.ndims
       if dim==2:
         batch = tf.expand_dims(batch,0)
         new_batch = tf.reshape(batch,[-1,tf.shape(batch)[0]//num_replicas_in_sync,tf.shape(batch)[-1]])
-      new_tgt.update({feature:new_batch})
+        new_tgt.update({feature:new_batch})
     return new_src, new_tgt
   return fixing_shape
 
