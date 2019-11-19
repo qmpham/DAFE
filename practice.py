@@ -670,7 +670,7 @@ def meta_train_v3(config,
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, shared_variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync)
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(meta_train_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
@@ -707,13 +707,17 @@ def meta_train_v3(config,
       _loss.append(loss)
       _meta_loss.append(meta_loss)
       _num_word_examples.append(num_word_examples)
+      meta_loss, loss, num_word_examples = next(meta_train_data_flow) 
+      _loss.append(loss)
+      _meta_loss.append(meta_loss)
+      _num_word_examples.append(num_word_examples)
       _step()
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; num_word_examples = %d, after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.sum(_num_word_examples), elapsed)
+            "Step = %d ; Learning rate = %f ; Loss = %f; Meta_loss = %f; num_word_examples = %d; after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.mean(_meta_loss), np.sum(_num_word_examples), elapsed)
         _loss = []
         start = time.time()
       if step % save_every == 0:
