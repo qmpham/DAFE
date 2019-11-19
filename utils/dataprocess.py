@@ -9,7 +9,8 @@ def fixing_shape(*args):
   new_tgt = {}
   for feature in list(src.keys()):
     batch = src[feature]
-    batch_size = tf.shape(batch)[0].numpy()
+    batch_size = tf.shape(batch)[0]
+    print(batch_size)
     dim = batch.shape.ndims
     if dim==1:
       new_batch = tf.reshape(batch,[batch_size])
