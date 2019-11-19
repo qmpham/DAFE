@@ -608,27 +608,28 @@ def meta_train_v3(config,
                                                                         batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
-    outputs, _ = model(
-        meta_train_source,
-        labels=meta_train_target,
-        training=True,
-        step=optimizer.iterations)    
-    loss = model.compute_loss(outputs, meta_train_target, training=True)
-    training_loss = loss[0] / loss[1]
-    variables = model.trainable_variables       
-    args_dict = dict()
-    for v in variables:
-      args_dict.update({v.name:v})
-    adap_variables = []
-    shared_variables = []
-    for v in variables:
-      if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
-        adap_variables.append(v)
-      else:
-        shared_variables.append(v)
-    ##### Inner adaptation
-    training_loss = model.regularize_loss(training_loss, variables=adap_variables)
-    gradients = tf.gradients(training_loss, adap_variables)    
+    with tf.GradientTape() as tape:
+      outputs, _ = model(
+          meta_train_source,
+          labels=meta_train_target,
+          training=True,
+          step=optimizer.iterations)    
+      loss = model.compute_loss(outputs, meta_train_target, training=True)
+      training_loss = loss[0] / loss[1]
+      variables = model.trainable_variables       
+      args_dict = dict()
+      for v in variables:
+        args_dict.update({v.name:v})
+      adap_variables = []
+      shared_variables = []
+      for v in variables:
+        if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
+          adap_variables.append(v)
+        else:
+          shared_variables.append(v)
+      ##### Inner adaptation
+      training_loss = model.regularize_loss(training_loss, variables=adap_variables)
+      gradients = tf.gradients(training_loss, adap_variables)    
     def update(v,g,lr=1.0):
       if "embedding" in v.name:
         # print("embedding gradient's values: __________", g.values)
