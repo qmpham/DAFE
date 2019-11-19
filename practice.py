@@ -61,7 +61,7 @@ def debug(config,
   
   print("There are %d in-domain corpora"%len(source_file))
 
-  meta_train_dataset, meta_test_dataset = create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
+  meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
                                                                         batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
   with strategy.scope():
@@ -69,46 +69,29 @@ def debug(config,
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
+    ##### squeeze first dimension of per replica batch
+    for k in list(meta_train_source.keys()):
+      batch = meta_train_source[k]
+      meta_train_source.update({k:tf.squeeze(batch,0)})
+    for k in list(meta_train_target.keys()):
+      batch = meta_train_target[k]
+      meta_train_target.update({k:tf.squeeze(batch,0)})
+    for k in list(meta_test_source.keys()):
+      batch = meta_test_source[k]
+      meta_test_source.update({k:tf.squeeze(batch,0)})
+    for k in list(meta_test_target.keys()):
+      batch = meta_test_target[k]
+      meta_test_target.update({k:tf.squeeze(batch,0)})
+    #######
     outputs, _ = model(
         meta_train_source,
         labels=meta_train_target,
         training=True,
         step=optimizer.iterations)    
     loss = model.compute_loss(outputs, meta_train_target, training=True)
-    if isinstance(loss, tuple):
-      training_loss = loss[0] / loss[1]
-      reported_loss = loss[0] / loss[2]
-    else:
-      training_loss, reported_loss = loss, loss
-    variables = model.trainable_variables   
-    training_loss = model.regularize_loss(training_loss, variables=variables)
-    gradients = tf.gradients(training_loss, variables)
-    ##### Inner adaptation
-    args_dict = dict()
-    def update(v,g,lr=0.01):
-      if "embedding" in v.name:
-        return tf.tensor_scatter_nd_sub(v/lr,g.indices,g)*lr
-      else:
-        return v - lr* g
-    for g, v in zip(gradients, variables):
-      args_dict.update({v.name:update(v,g)})
-    #### Meta_loss:
-    outputs, _ = model.forward_fn(meta_test_source,
-        args_dict,
-        labels=meta_test_target,
-        training=True,
-        step=optimizer.iterations)
-    loss = model.compute_loss(outputs, meta_test_target, training=True)
-    if isinstance(loss, tuple):
-      training_loss = loss[0] / loss[1]
-      reported_loss = loss[0] / loss[2]
-    else:
-      training_loss, reported_loss = loss, loss
-    training_loss = model.regularize_loss(training_loss, variables=variables)
-    gradients = optimizer.get_gradients(training_loss, variables)
-    gradient_accumulator(gradients)
+    training_loss = loss[0] / loss[1]
+    reported_loss = loss[0] / loss[2]    
     num_examples = tf.shape(meta_test_target["length"])[0]
-    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
   def _apply_gradients():
@@ -159,18 +142,9 @@ def debug(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss, _ = next(meta_train_data_flow)  
+      loss, num_examples = next(meta_train_data_flow)  
       _loss.append(loss)
-      _step()
-      step = optimizer.iterations.numpy()
-      if step % report_every == 0:
-        elapsed = time.time() - start
-        tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; after %f seconds",
-            step, learning_rate(step), np.mean(_loss), elapsed)
-        _loss = []
-        start = time.time()
-      #print("number_examples_per_replica: ", num_examples)
+      print("number examples per replica: ", num_examples)
 
 def meta_train_v1(config,
           optimizer,          
@@ -976,6 +950,7 @@ def train(config,
   _, _ = next(train_data_flow)
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
+  _number_examples = []
   step = optimizer.iterations.numpy()
   if step <= 1:
     initializer = config.get("initializer","default")
@@ -993,16 +968,18 @@ def train(config,
     while True:
       #####Training batch
       loss, num_examples = next(train_data_flow)    
-      print("number_examples_in_an_iteration_per_replica: %d"%num_examples)
+      #print("number_examples_in_an_iteration_per_replica: %d"%num_examples)
       _step()
       _loss.append(loss)
+      _number_examples.append(num_examples)
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; after %f seconds",
-            step, learning_rate(step), np.mean(_loss), elapsed)
+            "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
         _loss = []
+        _number_examples = []
         start = time.time()
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
