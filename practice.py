@@ -70,6 +70,7 @@ def debug(config,
 
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
     ##### squeeze first dimension of per replica batch
+    """
     for k in list(meta_train_source.keys()):
       batch = meta_train_source[k]
       meta_train_source.update({k:tf.squeeze(batch,0)})
@@ -82,7 +83,9 @@ def debug(config,
     for k in list(meta_test_target.keys()):
       batch = meta_test_target[k]
       meta_test_target.update({k:tf.squeeze(batch,0)})
+    """
     #######
+    """
     outputs, _ = model(
         meta_train_source,
         labels=meta_train_target,
@@ -91,7 +94,10 @@ def debug(config,
     loss = model.compute_loss(outputs, meta_train_target, training=True)
     training_loss = loss[0] / loss[1]
     reported_loss = loss[0] / loss[2]    
+    """
+    reported_loss = 0
     num_examples = tf.shape(meta_test_target["length"])[0]
+    tf.prin("length shape: ", tf.shape(meta_test_target["length"]))
     return reported_loss, num_examples
 
   def _apply_gradients():
