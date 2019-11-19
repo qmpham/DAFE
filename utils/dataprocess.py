@@ -130,7 +130,7 @@ def meta_learning_function_on_next(metatrain_dataset, metatest_dataset, as_numpy
     def _fun():
       metatrain_iterator = iter(metatrain_dataset)
       metatest_iterator = iter(metatest_dataset)
-      @tf.function
+      
       def _tf_fun():
         return func(lambda: next(metatrain_iterator)+next(metatest_iterator))
 
