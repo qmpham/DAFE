@@ -629,7 +629,7 @@ def meta_train_v3(config,
           shared_variables.append(v)
       ##### Inner adaptation
       training_loss = model.regularize_loss(training_loss, variables=adap_variables)
-      gradients = tf.gradients(training_loss, adap_variables)    
+      gradients = tape.gradient(training_loss, adap_variables)    
       def update(v,g,lr=1.0):
         if "embedding" in v.name:
           # print("embedding gradient's values: __________", g.values)
