@@ -703,7 +703,7 @@ def meta_train_v3(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      for s in len(config.get("accumulation_step",2):
+      for s in range(int(config.get("accumulation_step",2))):
         meta_loss, loss, num_word_examples = next(meta_train_data_flow)  
         _loss.append(loss)
         _meta_loss.append(meta_loss)
