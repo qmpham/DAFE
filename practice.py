@@ -608,7 +608,7 @@ def meta_train_v3(config,
                                                                         batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
-    with tf.GradientTape() as tape:
+    with tf.GradientTape(persistent=True) as tape:
       outputs, _ = model(
           meta_train_source,
           labels=meta_train_target,
