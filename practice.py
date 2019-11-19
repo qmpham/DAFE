@@ -655,8 +655,8 @@ def meta_train_v3(config,
     meta_training_loss = model.regularize_loss(meta_training_loss, variables=shared_variables)
     gradients = optimizer.get_gradients(meta_training_loss, shared_variables)
     gradient_accumulator(gradients)
-    num_examples = tf.shape(meta_test_target["length"])[0]
-    return meta_training_loss, num_examples
+    num_word_examples = tf.reduce_sum(meta_test_target["length"])
+    return meta_training_loss, training_loss, num_word_examples
 
   def _apply_gradients():
     adap_variables = []
@@ -678,12 +678,13 @@ def meta_train_v3(config,
   def _meta_train_forward(next_fn):    
     with strategy.scope():
       meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+      per_replica_meta_loss, per_replica_loss, per_replica_num_word_examples = strategy.experimental_run_v2(
           _accumulate_gradients, args=(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
+      meta_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_meta_loss, None)
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
-      num_examples = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_num_examples, None)    
-    return loss, num_examples
+      num_word_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_word_examples, None)    
+    return meta_loss, loss, num_word_examples
     
   @tf.function
   def _step():
@@ -695,19 +696,23 @@ def meta_train_v3(config,
   start = time.time()  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   meta_train_data_flow = iter(_meta_train_forward())
-  _loss = []  
+  _loss = []
+  _meta_loss = []  
+  _num_word_examples = []
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss, _ = next(meta_train_data_flow)  
+      meta_loss, loss, num_word_examples = next(meta_train_data_flow)  
       _loss.append(loss)
+      _meta_loss.append(meta_loss)
+      _num_word_examples.append(num_word_examples)
       _step()
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; after %f seconds",
-            step, learning_rate(step), np.mean(_loss), elapsed)
+            "Step = %d ; Learning rate = %f ; Loss = %f; num_word_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.sum(_num_word_examples), elapsed)
         _loss = []
         start = time.time()
       if step % save_every == 0:
