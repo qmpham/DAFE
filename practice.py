@@ -97,7 +97,7 @@ def debug(config,
     """
     reported_loss = 0
     num_examples = tf.shape(meta_test_target["length"])[0]
-    tf.prin("length shape: ", tf.shape(meta_test_target["length"]))
+    tf.print("length shape: ", tf.shape(meta_test_target["length"]))
     return reported_loss, num_examples
 
   def _apply_gradients():
