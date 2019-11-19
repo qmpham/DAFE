@@ -3,30 +3,34 @@
 import numpy as np
 import tensorflow as tf
 
-def fixing_shape(*args):
-  src, tgt = args
-  new_src = {}
-  new_tgt = {}
-  for feature in list(src.keys()):
-    batch = src[feature]
-    batch_size = tf.shape(batch)[0]
-    print(batch_size)
-    dim = batch.shape.ndims
-    if dim==1:
-      new_batch = tf.reshape(batch,[batch_size])
-    elif dim==2:
-      new_batch = tf.reshape(batch,[batch_size,-1])
-    new_src.update({feature:new_batch})
-  for feature in list(tgt.keys()):
-    batch = tgt[feature]
-    batch_size = tf.shape(batch)[0]
-    dim = batch.shape.ndims
-    if dim==1:
-      new_batch = tf.reshape(batch,[batch_size])
-    elif dim==2:
-      new_batch = tf.reshape(batch,[batch_size,-1])
-    new_tgt.update({feature:new_batch})
-  return new_src, new_tgt
+def make_batch_per_replica_(num_replicas_in_sync):
+  def fixing_shape(*args):
+    src, tgt = args
+    new_src = {}
+    new_tgt = {}
+    for feature in list(src.keys()):
+      batch = src[feature]
+      dim = batch.shape.ndims
+      if dim==1:
+        batch = tf.expand_dims(batch,0)
+        new_batch = tf.reshape(batch,[num_replicas_in_sync,-1])
+      elif dim==2:
+        batch = tf.expand_dims(batch,0)
+        new_batch = tf.reshape(batch,[num_replicas_in_sync,-1,tf.shape(batch)[-1]])
+      new_src.update({feature:new_batch})
+    for feature in list(tgt.keys()):
+      batch = tgt[feature]
+      dim = batch.shape.ndims
+      if dim==1:
+        batch = tf.expand_dims(batch,0)
+        new_batch = tf.reshape(batch,[num_replicas_in_sync,-1])
+      elif dim==2:
+        batch = tf.expand_dims(batch,0)
+        new_batch = tf.reshape(batch,[num_replicas_in_sync,-1,tf.shape(batch)[-1]])
+      new_src.update({feature:new_batch})
+      new_tgt.update({feature:new_batch})
+    return new_src, new_tgt
+  return fixing_shape
 
 def merge_map_fn(*args):
   
@@ -76,6 +80,7 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
     meta_train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
               batch_size=batch_meta_train_size//len(source_file),
               batch_type=batch_type,
+              batch_multiplier=strategy.num_replicas_in_sync,
               domain=i,
               shuffle_buffer_size=shuffle_buffer_size,
               length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
@@ -85,6 +90,7 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
     meta_test_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
               batch_size= batch_meta_test_size//len(source_file),
               batch_type=batch_type,
+              batch_multiplier=strategy.num_replicas_in_sync,
               domain=i,
               shuffle_buffer_size=shuffle_buffer_size,
               length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
@@ -93,8 +99,8 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
   
   meta_train_dataset = tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
   meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
-  meta_train_dataset = meta_train_dataset.map(fixing_shape)
-  meta_test_dataset = meta_test_dataset.map(fixing_shape)
+  meta_train_dataset = meta_train_dataset.map(make_batch_per_replica_(strategy.num_replicas_in_sync))
+  meta_test_dataset = meta_test_dataset.map(make_batch_per_replica_(strategy.num_replicas_in_sync))
   with strategy.scope():
     meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
     meta_test_dataset = strategy.experimental_distribute_dataset(meta_test_dataset)
