@@ -582,9 +582,16 @@ def meta_train_v3(config,
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
   #####
+  with strategy.scope():
+    model.create_variables()
+    gradient_accumulator = optimizer_util.GradientAccumulator()  
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
+    for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+      checkpoint_path = checkpoint_manager.latest_checkpoint
+      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+      score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -600,10 +607,6 @@ def meta_train_v3(config,
   meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
                                                                         batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
-  with strategy.scope():
-    #model.create_variables(optimizer=optimizer)
-    gradient_accumulator = optimizer_util.GradientAccumulator()  
-
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
     outputs, _ = model(
         meta_train_source,
@@ -719,7 +722,6 @@ def meta_train_v3(config,
           tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
       if step > train_steps:
         break
-
 
 def finetuning(config,
           optimizer,          
@@ -975,7 +977,6 @@ def train(config,
         initial_value.append(variance_scaling_initialier(shape, scale=1.0, mode="fan_avg", distribution="uniform"))
       weight_reset(initial_value)       
 
-        
   with _summary_writer.as_default():
     while True:
       #####Training batch
