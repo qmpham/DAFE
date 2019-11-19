@@ -424,6 +424,9 @@ def meta_train_v2(config,
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
   #####
+  with strategy.scope():
+    model.create_variables()
+    gradient_accumulator = optimizer_util.GradientAccumulator()  
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
@@ -446,10 +449,6 @@ def meta_train_v2(config,
   meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
                                                                         batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
-  with strategy.scope():
-    model.create_variables()
-    gradient_accumulator = optimizer_util.GradientAccumulator()  
-
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
     tf.print("meta_train_source: ",meta_train_source, output_stream=sys.stderr)
     tf.print("meta_train_target: ",meta_train_target, output_stream=sys.stderr)
