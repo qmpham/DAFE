@@ -672,7 +672,7 @@ def meta_train_v3(config,
       # TODO: these reductions could be delayed until _step is called.
       meta_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_meta_loss, None)
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
-      num_word_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_word_examples, None)    
+      num_word_examples = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_num_word_examples, None)    
     return meta_loss, loss, num_word_examples
     
   @tf.function
