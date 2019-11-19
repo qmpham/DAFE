@@ -3,6 +3,18 @@
 import numpy as np
 import tensorflow as tf
 
+def fixing_shape(**args):
+  new_batch = {}
+  for feature, batch in args:
+    batch_size = tf.shape(batch)[0]
+    dim = tf.shape(batch).ndims
+    if dim==1:
+      batch = tf.reshape(batch,[batch_size])
+    elif dim==2:
+      batch = tf.reshape(batch,[batch_size,-1])
+    new_batch.update({feature:new_batch})
+  return new_batch
+
 def merge_map_fn(*args):
   
   src_batches = []

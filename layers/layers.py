@@ -1,7 +1,6 @@
 import tensorflow as tf
 import numpy as np
-
-import common
+from layers import common
 from opennmt.utils import misc
 
 

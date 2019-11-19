@@ -1,15 +1,3 @@
-"""This example demonstrates how to train a standard Transformer model using
-OpenNMT-tf as a library in about 200 lines of code.
-The purpose of this example is to showcase selected OpenNMT-tf APIs that can be
-useful in other projects:
-* efficient training dataset (with shuffling, bucketing, batching, prefetching, etc.)
-* inputter/encoder/decoder API
-* dynamic decoding API
-Producing a SOTA model is NOT a goal: this usually requires extra steps such as
-training a bigger model, using a larger batch size via multi GPU training and/or
-gradient accumulation, etc.
-"""
-
 import argparse
 import logging
 import yaml
