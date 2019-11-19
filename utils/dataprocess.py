@@ -3,17 +3,29 @@
 import numpy as np
 import tensorflow as tf
 
-def fixing_shape(**args):
-  new_batch = {}
-  for feature, batch in args:
+def fixing_shape(*args):
+  src, tgt = args
+  new_src = {}
+  new_tgt = {}
+  for feature in list(src.keys()):
+    batch = src[feature]
+    batch_size = tf.shape(batch)[0]
+    dim = batch.shape.ndims
+    if dim==1:
+      new_batch = tf.reshape(batch,[batch_size])
+    elif dim==2:
+      new_batch = tf.reshape(batch,[batch_size,-1])
+    new_src.update({feature:new_batch})
+  for feature in list(tgt.keys()):
+    batch = tgt[feature]
     batch_size = tf.shape(batch)[0]
     dim = tf.shape(batch).ndims
     if dim==1:
-      batch = tf.reshape(batch,[batch_size])
+      new_batch = tf.reshape(batch,[batch_size])
     elif dim==2:
-      batch = tf.reshape(batch,[batch_size,-1])
-    new_batch.update({feature:new_batch})
-  return new_batch
+      new_batch = tf.reshape(batch,[batch_size,-1])
+    new_tgt.update({feature:new_batch})
+  return new_src, new_tgt
 
 def merge_map_fn(*args):
   
@@ -80,6 +92,8 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
   
   meta_train_dataset = tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
   meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
+  meta_train_dataset = meta_train_dataset.map(fixing_shape)
+  meta_test_dataset = meta_test_dataset.map(fixing_shape)
   with strategy.scope():
     meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
     meta_test_dataset = strategy.experimental_distribute_dataset(meta_test_dataset)
