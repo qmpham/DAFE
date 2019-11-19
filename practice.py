@@ -703,14 +703,11 @@ def meta_train_v3(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      meta_loss, loss, num_word_examples = next(meta_train_data_flow)  
-      _loss.append(loss)
-      _meta_loss.append(meta_loss)
-      _num_word_examples.append(num_word_examples)
-      meta_loss, loss, num_word_examples = next(meta_train_data_flow) 
-      _loss.append(loss)
-      _meta_loss.append(meta_loss)
-      _num_word_examples.append(num_word_examples)
+      for s in len(config.get("accumulation_step",2):
+        meta_loss, loss, num_word_examples = next(meta_train_data_flow)  
+        _loss.append(loss)
+        _meta_loss.append(meta_loss)
+        _num_word_examples.append(num_word_examples)
       _step()
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
@@ -719,6 +716,8 @@ def meta_train_v3(config,
             "Step = %d ; Learning rate = %f ; Loss = %f; Meta_loss = %f; num_word_examples = %d; after %f seconds",
             step, learning_rate(step), np.mean(_loss), np.mean(_meta_loss), np.sum(_num_word_examples), elapsed)
         _loss = []
+        _meta_loss = []
+        _num_word_examples = []
         start = time.time()
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
