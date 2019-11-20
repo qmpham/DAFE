@@ -690,7 +690,7 @@ def meta_train_v3(config,
         elapsed = time.time() - start
         tf.get_logger().info(
             "Step = %d ; Learning rate = %f ; Loss = %f; Meta_loss = %f; num_word_examples = %d; after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.mean(_meta_loss), np.mean(_num_word_examples), elapsed)
+            step, learning_rate(step), np.mean(_loss), np.mean(_meta_loss), np.sum(_num_word_examples), elapsed)
         _loss = []
         _meta_loss = []
         _num_word_examples = []
