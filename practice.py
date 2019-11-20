@@ -600,21 +600,20 @@ def meta_train_v3(config,
       ##### Inner adaptation
       training_loss = model.regularize_loss(training_loss, variables=adap_variables)
       gradients = tape.gradient(training_loss, adap_variables)    
+      meta_train_lr = config.get("meta_train_lr",1.0)
       def update(v,g,lr=1.0):
         if "embedding" in v.name:
-          # print("embedding gradient's values: __________", g.values)
-          # print("embedding gradient's indices: _________", g.indices)
           return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
         else:
           return v-lr*g
       if config.get("stopping_gradient",True):
         print("apply stopping_gradient")
         for g, v in zip(gradients, adap_variables):      
-          args_dict.update({v.name: update(v,tf.stop_gradient(g))})
+          args_dict.update({v.name: v - meta_train_lr * tf.stop_gradient(g)})
       else:
         print("passing gradient")
         for g, v in zip(gradients, adap_variables):
-          args_dict.update({v.name: update(v,g)})
+          args_dict.update({v.name: update(v,g,lr=meta_train_lr)})
       #### Meta_loss:
       outputs, _ = model.forward_fn(meta_test_source,
           args_dict,
@@ -627,7 +626,7 @@ def meta_train_v3(config,
       gradients = tape.gradient(meta_training_loss, shared_variables)
       gradient_accumulator(gradients)
       num_word_examples = tf.reduce_sum(meta_test_target["length"])
-      tf.print("words per replica: ", num_word_examples)
+      
     return meta_training_loss, training_loss, num_word_examples
 
   def _apply_gradients():
