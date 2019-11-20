@@ -112,7 +112,7 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
   print("batch_type: ", batch_type)
   for i, src,tgt in zip(domain,source_file,target_file):
     meta_train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size=batch_meta_train_size //len(domain),
+              batch_size=batch_meta_train_size,
               batch_type=batch_type,
               batch_multiplier=1,
               domain=i,
@@ -122,7 +122,7 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
               maximum_labels_length=maximum_length))
 
     meta_test_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size= batch_meta_test_size // len(domain),
+              batch_size= batch_meta_test_size,
               batch_type=batch_type,
               batch_multiplier=1,
               domain=i,
