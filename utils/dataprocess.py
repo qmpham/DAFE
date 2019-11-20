@@ -95,6 +95,7 @@ def merge_map_fn(*args):
   return src_batch, tgt_batch
 
 def map_and_batch(*args):
+  print(args)
   src_batches=[]
   tgt_batches=[]
   for (src,tgt) in args:
