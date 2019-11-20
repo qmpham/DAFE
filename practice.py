@@ -142,15 +142,17 @@ def debug(config,
   import time
   start = time.time()  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
-  meta_train_data_flow = iter(_meta_train_forward())
+  #meta_train_data_flow = iter(_meta_train_forward())
   #meta_test_data_flow = iter(_meta_test_forward())
-  _loss = []  
+  #_loss = []  
+  meta_train_flow = iter(meta_train_dataset)
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss, num_examples = next(meta_train_data_flow)  
-      _loss.append(loss)
-      print("number examples per replica: ", num_examples)
+      #loss, num_examples = next(meta_train_data_flow)  
+      #_loss.append(loss)
+      #print("number examples per replica: ", num_examples)
+      print(next(meta_train_flow))
 
 def meta_train_v1(config,
           optimizer,          
