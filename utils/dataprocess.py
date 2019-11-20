@@ -94,22 +94,16 @@ def merge_map_fn(*args):
   #print(src_batch,tgt_batch)
   return src_batch, tgt_batch
 
-def map_and_batch(*args):
-  print(args)
-  src_batches=[]
-  tgt_batches=[]
-  for (src,tgt) in args:
-    src_batches.append(src)
-    tgt_batches.append(tgt)
-  print("element numb: ",len(src_batches))
+def ragged_map(*args):
+  src, tgt = args  
   src_batch = {}
   tgt_batch = {}
-  #print(src_batches[0].keys())
-  for feature in list(src_batches[0].keys()):
-    src_batch.update({feature: tf.concat([tf.RaggedTensor.from_tensor(tf.expand_dims(batch[feature])) for batch in src_batches])})
+  for feature in list(src.keys()):
+    src_batch.update({feature: tf.RaggedTensor.from_tensor(tf.expand_dims(src[feature],0))})
     
-  for feature in list(tgt_batches[0].keys()):
-    tgt_batch.update({feature: tf.concat([tf.RaggedTensor.from_tensor(tf.expand_dims(batch[feature])) for batch in tgt_batches])})
+  for feature in list(tgt.keys()):
+    tgt_batch.update({feature: tf.RaggedTensor.from_tensor(tf.expand_dims(tgt[feature],0))})
+
   return src_batch, tgt_batch
 
 def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length):
@@ -139,6 +133,8 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
   
   meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets) #tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
   meta_test_dataset = tf.data.experimental.sample_from_datasets(meta_test_datasets) #tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
+  meta_train_dataset = meta_train_dataset.map(ragged_map)
+  meta_test_dataset = meta_test_dataset.map(ragged_map)
   meta_train_dataset = meta_train_dataset.apply(tf.data.experimental.group_by_window(key_func=lambda *args:tf.cast(1,tf.int64),
                                                                                      reduce_func=lambda key, dataset: dataset.batch(strategy.num_replicas_in_sync),
                                                                                      window_size = strategy.num_replicas_in_sync))
