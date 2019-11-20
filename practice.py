@@ -577,21 +577,7 @@ def meta_train_v3(config,
   meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
                                                                         batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
-  def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
-    ##### squeeze first dimension of per replica batch
-    for k in list(meta_train_source.keys()):
-      batch = meta_train_source[k]
-      meta_train_source.update({k:tf.squeeze(batch,0)})
-    for k in list(meta_train_target.keys()):
-      batch = meta_train_target[k]
-      meta_train_target.update({k:tf.squeeze(batch,0)})
-    for k in list(meta_test_source.keys()):
-      batch = meta_test_source[k]
-      meta_test_source.update({k:tf.squeeze(batch,0)})
-    for k in list(meta_test_target.keys()):
-      batch = meta_test_target[k]
-      meta_test_target.update({k:tf.squeeze(batch,0)})
-    #######
+  def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):    
     with tf.GradientTape(persistent=True) as tape:
       outputs, _ = model(
           meta_train_source,
