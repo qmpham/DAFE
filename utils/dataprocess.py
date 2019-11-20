@@ -97,6 +97,7 @@ def merge_map_fn(*args):
 def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length):
   meta_train_datasets = [] 
   meta_test_datasets = [] 
+  print("batch_type: ", batch_type)
   for i, src,tgt in zip(domain,source_file,target_file):
     meta_train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
               batch_size=batch_meta_train_size//len(source_file),
