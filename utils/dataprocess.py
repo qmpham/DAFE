@@ -100,7 +100,7 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
   print("batch_type: ", batch_type)
   for i, src,tgt in zip(domain,source_file,target_file):
     meta_train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size=batch_meta_train_size//len(source_file),
+              batch_size=batch_meta_train_size,
               batch_type=batch_type,
               batch_multiplier=1,
               domain=i,
@@ -110,7 +110,7 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
               maximum_labels_length=maximum_length))
 
     meta_test_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size= batch_meta_test_size//len(source_file),
+              batch_size= batch_meta_test_size,
               batch_type=batch_type,
               batch_multiplier=1,
               domain=i,
@@ -119,8 +119,8 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
               maximum_features_length=maximum_length,
               maximum_labels_length=maximum_length))
   
-  meta_train_dataset = tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
-  meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
+  meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets) #tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
+  meta_test_dataset = tf.data.experimental.sample_from_datasets(meta_test_datasets) #tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
   meta_train_dataset = meta_train_dataset.apply(tf.data.experimental.group_by_window(key_func=lambda *args: tf.cast(1,tf.int64), 
                                   reduce_func = lambda key, dataset: dataset, window_size=strategy.num_replicas_in_sync))
   meta_test_dataset = meta_test_dataset.apply(tf.data.experimental.group_by_window(key_func = lambda *args: tf.cast(1,tf.int64), 
