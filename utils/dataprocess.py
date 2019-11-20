@@ -94,6 +94,23 @@ def merge_map_fn(*args):
   #print(src_batch,tgt_batch)
   return src_batch, tgt_batch
 
+def map_and_batch(*args):
+  src_batches=[]
+  tgt_batches=[]
+  for (src,tgt) in args:
+    src_batches.append(src)
+    tgt_batches.append(tgt)
+  print("element numb: ",len(src_batches))
+  src_batch = {}
+  tgt_batch = {}
+  #print(src_batches[0].keys())
+  for feature in list(src_batches[0].keys()):
+    src_batch.update({feature: tf.concat([tf.RaggedTensor.from_tensor(tf.expand_dims(batch[feature])) for batch in src_batches])})
+    
+  for feature in list(tgt_batches[0].keys()):
+    tgt_batch.update({feature: tf.concat([tf.RaggedTensor.from_tensor(tf.expand_dims(batch[feature])) for batch in tgt_batches])})
+  return src_batch, tgt_batch
+
 def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length):
   meta_train_datasets = [] 
   meta_test_datasets = [] 
@@ -121,8 +138,8 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
   
   meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets) #tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
   meta_test_dataset = tf.data.experimental.sample_from_datasets(meta_test_datasets) #tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
-  meta_train_dataset = meta_train_dataset.window(strategy.num_replicas_in_sync)
-  meta_test_dataset = meta_test_dataset.window(strategy.num_replicas_in_sync)
+  meta_train_dataset = meta_train_dataset.apply(tf.data.experimental.map_and_batch(map_and_batch, batch_size=strategy.num_replicas_in_sync))
+  meta_test_dataset = meta_test_dataset.apply(tf.data.experimental.map_and_batch(map_and_batch, batch_size=strategy.num_replicas_in_sync))
   #meta_train_dataset = meta_train_dataset.map(make_batch_per_replica_1_(strategy.num_replicas_in_sync))
   #meta_test_dataset = meta_test_dataset.map(make_batch_per_replica_1_(strategy.num_replicas_in_sync))
   """
