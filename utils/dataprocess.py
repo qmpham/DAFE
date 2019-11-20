@@ -143,11 +143,11 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
                                                                                      window_size = strategy.num_replicas_in_sync))
   #meta_train_dataset = meta_train_dataset.map(make_batch_per_replica_1_(strategy.num_replicas_in_sync))
   #meta_test_dataset = meta_test_dataset.map(make_batch_per_replica_1_(strategy.num_replicas_in_sync))
-  """
+  
   with strategy.scope():
     meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
     meta_test_dataset = strategy.experimental_distribute_dataset(meta_test_dataset)
-  """
+  
   return meta_train_dataset, meta_test_dataset
 
 def create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length):
