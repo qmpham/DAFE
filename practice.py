@@ -627,7 +627,7 @@ def meta_train_v3(config,
       gradients = tape.gradient(meta_training_loss, shared_variables)
       gradient_accumulator(gradients)
       num_word_examples = tf.reduce_sum(meta_test_target["length"])
-    
+      tf.print("num_word_examples per replica: ", num_word_examples)
     # tf.print("ids shape: ",tf.shape(meta_test_source["ids"]))
     # tf.print("ids shape: ",tf.shape(meta_train_source["ids"]))  
     # num_word_examples = tf.reduce_sum(meta_test_target["length"])
