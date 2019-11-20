@@ -577,7 +577,8 @@ def meta_train_v3(config,
   meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
                                                                         batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
   #####
-  def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):    
+  def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target): 
+    """   
     with tf.GradientTape(persistent=True) as tape:
       outputs, _ = model(
           meta_train_source,
@@ -626,7 +627,12 @@ def meta_train_v3(config,
       gradients = tape.gradient(meta_training_loss, shared_variables)
       gradient_accumulator(gradients)
       num_word_examples = tf.reduce_sum(meta_test_target["length"])
-      
+    """
+    tf.print("ids shape: ",tf.shape(meta_test_source["ids"]))
+    tf.print("ids shape: ",tf.shape(meta_train_source["ids"]))  
+    num_word_examples = tf.reduce_sum(meta_test_target["length"])
+    meta_training_loss = 0
+    training_loss = 0
     return meta_training_loss, training_loss, num_word_examples
 
   def _apply_gradients():
@@ -678,7 +684,7 @@ def meta_train_v3(config,
         _loss.append(loss)
         _meta_loss.append(meta_loss)
         _num_word_examples.append(num_word_examples)
-      _step()
+      #_step()
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
