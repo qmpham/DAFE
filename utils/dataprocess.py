@@ -121,6 +121,8 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
   
   meta_train_dataset = tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
   meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
+  meta_train_dataset = tf.data.experimental.group_by_window(meta_train_dataset, lambda args: tf.cast(1,tf.int64), lambda key, dataset: dataset, window_size=strategy.num_replicas_in_sync)
+  meta_test_dataset = tf.data.experimental.group_by_window(meta_test_dataset, lambda args: tf.cast(1,tf.int64), lambda key, dataset: dataset, window_size=strategy.num_replicas_in_sync)
   #meta_train_dataset = meta_train_dataset.map(make_batch_per_replica_1_(strategy.num_replicas_in_sync))
   #meta_test_dataset = meta_test_dataset.map(make_batch_per_replica_1_(strategy.num_replicas_in_sync))
   with strategy.scope():
