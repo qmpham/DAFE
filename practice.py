@@ -783,9 +783,13 @@ def meta_train_v5(config,
       training_loss = model.regularize_loss(training_loss, variables=shared_variables)
       gradients = tape.gradient(training_loss, shared_variables)    
       meta_train_lr = config.get("meta_train_lr",1.0)
+      print("meta_train_lr: ", meta_train_lr)
       def update(v,g,lr=1.0):
         if isinstance(g, tf.IndexedSlices):
-          return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
+          if "embedding" in v.name:
+            return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
+          else:
+            return tf.transpose(tf.tensor_scatter_nd_sub(tf.transpose(v)/lr,tf.expand_dims(g.indices,1),g.values)*lr)
         else:
           return v-lr*g
       if config.get("stopping_gradient",True):
