@@ -790,6 +790,7 @@ def meta_train_v5(config,
           args_dict.update({v.name: v-meta_train_lr*tf.stop_gradient(g)})
       else:
         print("passing gradient")
+        print(g,v)
         for g, v in zip(gradients, adap_variables):
           args_dict.update({v.name: update(v,g,lr=meta_train_lr)})
       #### Meta_loss:
