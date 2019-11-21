@@ -17,7 +17,7 @@ class My_inputter(WordEmbedder):
 
     def forward_fn(self, features, args_dict, training=None):
         embedding = args_dict[self.embedding.name]
-        #print("where are we? ________________",embedding)
+        print("where are we? ________________",embedding)
         outputs = tf.nn.embedding_lookup(embedding, features["ids"])
         outputs = common.dropout(outputs, self.dropout, training=training)
         return outputs
