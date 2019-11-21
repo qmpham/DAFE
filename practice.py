@@ -603,7 +603,7 @@ def meta_train_v3(config,
       ##### Inner adaptation
       training_loss = model.regularize_loss(training_loss, variables=adap_variables)
       gradients = tape.gradient(training_loss, adap_variables)    
-      meta_train_lr = config.get("meta_train_lr",1.0)
+      meta_train_lr = config.get("meta_train_lr", 0.1)
       print("meta_train_lr: ", meta_train_lr)
       def update(v,g,lr=1.0):
         if isinstance(g, tf.IndexedSlices):
@@ -626,23 +626,17 @@ def meta_train_v3(config,
           step=optimizer.iterations)
       loss = model.compute_loss(outputs, meta_test_target, training=True)
       meta_training_loss = loss[0] / loss[1]
-      meta_training_loss = model.regularize_loss(meta_training_loss, variables=shared_variables)
-      gradients = tape.gradient(meta_training_loss, shared_variables)
+      meta_training_loss = model.regularize_loss(meta_training_loss, variables=variables)
+      gradients = tape.gradient(meta_training_loss, variables)
       gradient_accumulator(gradients)
       num_word_examples = tf.reduce_sum(meta_test_target["length"])
     
     return meta_training_loss, training_loss, num_word_examples
 
   def _apply_gradients():
-    adap_variables = []
-    shared_variables = []
-    for v in model.trainable_variables:
-      if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
-        adap_variables.append(v)
-      else:
-        shared_variables.append(v)
+    variables = model.trainable_variables      
     grads_and_vars = []
-    for gradient, variable in zip(gradient_accumulator.gradients, shared_variables):
+    for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
