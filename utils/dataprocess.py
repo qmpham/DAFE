@@ -188,7 +188,10 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
   
   train_dataset = tf.data.experimental.sample_from_datasets(train_datasets)
   with strategy.scope():
-    train_dataset = strategy.experimental_distribute_dataset(train_dataset)    
+    base_dataset = train_dataset
+    train_dataset = strategy.experimental_distribute_dataset(train_dataset)  
+    train_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)  
 
   return train_dataset
 
