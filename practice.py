@@ -607,7 +607,7 @@ def meta_train_v3(config,
       print("meta_train_lr: ", meta_train_lr)
       def update(v,g,lr=1.0):
         if isinstance(g, tf.IndexedSlices):
-          tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr 
+          return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr 
         else:
           return v-lr*g
       if config.get("stopping_gradient",True):
@@ -783,7 +783,7 @@ def meta_train_v5(config,
       print("meta_train_lr: ", meta_train_lr)
       def update(v,g,lr=1.0):
         if isinstance(g, tf.IndexedSlices):
-          tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
+          return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
         else:
           return v-lr*g
       if config.get("stopping_gradient",True):
