@@ -607,10 +607,13 @@ def meta_train_v3(config,
       print("meta_train_lr: ", meta_train_lr)
       def update(v,g,lr=1.0):
         if isinstance(g, tf.IndexedSlices):
+          tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr 
+          """
           if "embedding" in v.name:
             return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr           
           else:
             return tf.transpose(tf.tensor_scatter_nd_sub(tf.transpose(v)/lr,tf.expand_dims(g.indices,1),g.values)*lr)
+          """
         else:
           return v-lr*g
       if config.get("stopping_gradient",True):
@@ -620,6 +623,7 @@ def meta_train_v3(config,
       else:
         print("passing gradient")
         for g, v in zip(gradients, adap_variables):
+          print(g,v)
           args_dict.update({v.name: update(v,g,lr=meta_train_lr)})
       #### Meta_loss:
       outputs, _ = model.forward_fn(meta_test_source,
@@ -786,10 +790,13 @@ def meta_train_v5(config,
       print("meta_train_lr: ", meta_train_lr)
       def update(v,g,lr=1.0):
         if isinstance(g, tf.IndexedSlices):
+          tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
+          """
           if "embedding" in v.name:
             return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
           else:
             return tf.transpose(tf.tensor_scatter_nd_sub(tf.transpose(v)/lr,tf.expand_dims(g.indices,1),g.values)*lr)
+          """
         else:
           return v-lr*g
       if config.get("stopping_gradient",True):
