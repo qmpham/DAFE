@@ -17,6 +17,7 @@ class Multi_domain_SelfAttentionEncoder(Encoder):
                num_layers,
                num_domains=6,
                num_domain_units=128,
+               ADAP_layer_stopping_gradient=False,
                num_units=512,
                num_heads=8,
                ffn_inner_dim=2048,
@@ -48,6 +49,7 @@ class Multi_domain_SelfAttentionEncoder(Encoder):
     self.multi_domain_layers = [
         Multi_domain_FeedForwardNetwork(num_domains*num_domain_units, num_units, name="ADAP_%d"%i)
         for i in range(num_layers)]
+    self.ADAP_layer_stopping_gradient = ADAP_layer_stopping_gradient
 
   def call(self, inputs, sequence_length=None, training=None):
     domain = inputs[1]
@@ -61,7 +63,10 @@ class Multi_domain_SelfAttentionEncoder(Encoder):
     #for layer in self.layers:
     for layer, multi_domain_layer in zip(self.layers,self.multi_domain_layers):
       inputs = layer(inputs, mask=mask, training=training)
-      inputs = multi_domain_layer(inputs, domain_mask) + inputs
+      if self.ADAP_layer_stopping_gradient:
+        inputs = multi_domain_layer(tf.stop_gradient(inputs), domain_mask) + inputs
+      else:
+        inputs = multi_domain_layer(inputs, domain_mask) + inputs
     outputs = self.layer_norm(inputs)
     return outputs, None, sequence_length
 
@@ -77,7 +82,10 @@ class Multi_domain_SelfAttentionEncoder(Encoder):
     #for layer in self.layers:
     for layer, multi_domain_layer in zip(self.layers,self.multi_domain_layers):
       inputs = layer.forward_fn(inputs, args_dict, mask=mask, training=training)
-      inputs = multi_domain_layer.forward_fn(inputs, args_dict, domain_mask) + inputs
+      if self.ADAP_layer_stopping_gradient:
+        inputs = multi_domain_layer.forward_fn(tf.stop_gradient(inputs), args_dict, domain_mask) + inputs
+      else:
+        inputs = multi_domain_layer.forward_fn(inputs, args_dict, domain_mask) + inputs
     outputs = self.layer_norm.forward_fn(inputs, args_dict)
     return outputs, None, sequence_length
     
