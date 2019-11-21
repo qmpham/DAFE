@@ -605,7 +605,7 @@ def meta_train_v3(config,
       gradients = tape.gradient(training_loss, adap_variables)    
       meta_train_lr = config.get("meta_train_lr",1.0)
       def update(v,g,lr=1.0):
-        if "embedding" in v.name:
+        if isinstance(g, tf.IndexedSlices):
           return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
         else:
           return v-lr*g
@@ -780,7 +780,7 @@ def meta_train_v5(config,
       gradients = tape.gradient(training_loss, shared_variables)    
       meta_train_lr = config.get("meta_train_lr",1.0)
       def update(v,g,lr=1.0):
-        if "embedding" in v.name:
+        if isinstance(g, tf.IndexedSlices):
           return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
         else:
           return v-lr*g
