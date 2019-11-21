@@ -604,6 +604,7 @@ def meta_train_v3(config,
       training_loss = model.regularize_loss(training_loss, variables=adap_variables)
       gradients = tape.gradient(training_loss, adap_variables)    
       meta_train_lr = config.get("meta_train_lr",1.0)
+      print("meta_train_lr: ", meta_train_lr)
       def update(v,g,lr=1.0):
         if isinstance(g, tf.IndexedSlices):
           if "embedding" in v.name:
