@@ -1105,12 +1105,15 @@ def main():
   }
   experiment = config.get("experiment","residual")
   print("running experiment: ", experiment)
+  ADAP_layer_stopping_gradient = config.get("ADAP_layer_stopping_gradient",False)
+  print("ADAP_layer_stopping_gradient: ", ADAP_layer_stopping_gradient)
   if experiment=="residual":
     model = Multi_domain_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
     encoder=Multi_domain_SelfAttentionEncoder(
         num_layers=6,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
         num_units=512,
         num_heads=8,
         ffn_inner_dim=2048,
@@ -1120,6 +1123,7 @@ def main():
     decoder=Multi_domain_SelfAttentionDecoder(
         num_layers=6,
         num_domains=6,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
         num_units=512,
         num_heads=8,
         ffn_inner_dim=2048,
