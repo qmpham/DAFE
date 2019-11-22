@@ -457,7 +457,6 @@ def meta_train_v6(config,
       loss = model.compute_loss(outputs, meta_train_target, training=True)
       training_loss = loss[0] / loss[1]
       gradients = tape.gradient(training_loss, adap_variables)
-      gradient_accumulator(gradients)
         #### meta gradient for shared parameters
       outputs, _ = model.forward_fn(meta_test_source,
           args_dict,
@@ -467,7 +466,7 @@ def meta_train_v6(config,
       loss = model.compute_loss(outputs, meta_test_target, training=True)
       meta_training_loss = loss[0] / loss[1]
       meta_training_loss = model.regularize_loss(meta_training_loss, variables=shared_variables)
-      gradients = tape.gradient(meta_training_loss, shared_variables)
+      gradients.extend(tape.gradient(meta_training_loss, shared_variables))
       gradient_accumulator(gradients)
       num_word_examples = tf.reduce_sum(meta_test_target["length"])
     
