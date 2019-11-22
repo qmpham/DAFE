@@ -800,7 +800,7 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "translate", "debug","metatrainv1", "metatrainv2", "metatrainv3", "metatrainv5", "metatrainv6" "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "translate", "debug","metatrainv1", "metatrainv2", "metatrainv3", "metatrainv5", "metatrainv6", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
   parser.add_argument("--output")
@@ -918,6 +918,6 @@ def main():
   elif args.run == "finetune":
     task.finetuning(config, meta_train_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "debug":
-    debug(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
+    task.debug(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
 if __name__ == "__main__":
   main()
