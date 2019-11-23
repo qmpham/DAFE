@@ -56,7 +56,7 @@ def variance_scaling_initialier(shape, scale=1.0, mode="fan_in", distribution="u
 
 def var_spec(var):
   print("var inspector:_____")
-  print(var, var.name)
+  print(var)
   if isinstance(var,list):
     print("contains:  %d elements"%len(var))
 
