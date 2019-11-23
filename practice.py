@@ -481,7 +481,6 @@ def meta_train_v6(config,
         adap_variables.append(v)
       else:
         shared_variables.append(v)
-    adap_variables.extend(shared_variables)
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, adap_variables+shared_variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
