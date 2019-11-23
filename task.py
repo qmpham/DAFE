@@ -823,7 +823,9 @@ def meta_train_v7(config,
           adap_variables.append(v)
         else:
           shared_variables.append(v)
-      gradients = tape.gradient(training_loss, variables)   
+      variables = adap_variables + shared_variables
+      gradients = tape.gradient(training_loss, variables)  
+      gradient_accumulator(gradients) 
       for g,v in zip(gradients, variables):
         if v in shared_variables:
           shared_gradients.append(g)
@@ -835,12 +837,13 @@ def meta_train_v7(config,
       
       if config.get("stopping_gradient",True):
         print("apply stopping_gradient")
-        for g, v in zip(gradients, shared_variables):      
+        for g, v in zip(shared_gradients, shared_variables):      
           args_dict.update({v.name: v-meta_train_lr*tf.stop_gradient(g)})
       else:
         print("passing gradient")
-        for g, v in zip(gradients, shared_variables):
+        for g, v in zip(shared_gradients, shared_variables):
           args_dict.update({v.name: update(v,g,lr=meta_train_lr)})
+      
       #### Meta_loss:
         #### update adap parameters first
       outputs, _ = model(
@@ -850,7 +853,7 @@ def meta_train_v7(config,
           step=optimizer.iterations)    
       loss = model.compute_loss(outputs, meta_test_target, training=True)
       training_loss = loss[0] / loss[1]
-      gradients = tape.gradient(training_loss, adap_variables)
+      adap_gradients = tape.gradient(training_loss, adap_variables)
         #### meta gradient for shared parameters
       outputs, _ = model.forward_fn(meta_test_source,
           args_dict,
@@ -859,7 +862,8 @@ def meta_train_v7(config,
           step=optimizer.iterations)
       loss = model.compute_loss(outputs, meta_test_target, training=True)
       meta_training_loss = loss[0] / loss[1]
-      gradients.extend(tape.gradient(meta_training_loss, shared_variables))
+      shared_gradients = tape.gradient(meta_training_loss, shared_variables)
+      gradients = adap_gradients + shared_gradients
       gradient_accumulator(gradients)
       num_word_examples = tf.reduce_sum(meta_test_target["length"])
     

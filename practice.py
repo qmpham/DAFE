@@ -896,6 +896,8 @@ def main():
   model.params.update({"average_loss_in_time": True})
   model.params.update({"beam_width": 5})
   ######
+  if args.run == "metatrainv7":
+    task.meta_train_v7(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   if args.run == "metatrainv6":
     meta_train_v6(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   if args.run == "metatrainv5":
