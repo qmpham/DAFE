@@ -870,7 +870,7 @@ def meta_train_v7(config,
       shared_gradients = tape.gradient(meta_training_loss, shared_variables)
       gradients = adap_gradients + shared_gradients
       gradient_accumulator(gradients)
-      num_word_examples = tf.reduce_sum(meta_test_target["length"])
+      num_word_examples = tf.reduce_sum(meta_test_target["length"]) + tf.reduce_sum(meta_train_target["length"])
     
     return meta_training_loss, training_loss, num_word_examples
 
