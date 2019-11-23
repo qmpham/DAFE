@@ -476,16 +476,14 @@ def meta_train_v6(config,
     variables = model.trainable_variables
     adap_variables = []
     shared_variables = []
-    print("variables:______",len(variables))
     for v in variables:
       if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
         adap_variables.append(v)
       else:
         shared_variables.append(v)
-    variables = adap_variables.extend(shared_variables)
-    print("variables:____________",variables, len(variables))
+    adap_variables.extend(shared_variables)
     grads_and_vars = []
-    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+    for gradient, variable in zip(gradient_accumulator.gradients, adap_variables+shared_variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
