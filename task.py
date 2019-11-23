@@ -830,7 +830,7 @@ def meta_train_v7(config,
       gradient_accumulator(gradients) 
       var_spec(variables)
       var_spec(shared_variables)
-      var_spec(adap_gradients)
+      var_spec(adap_variables)
       for g,v in zip(gradients, variables):
         if v.name in shared_variables_name:
           shared_gradients.append(g)
