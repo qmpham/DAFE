@@ -411,6 +411,7 @@ def meta_train_v6(config,
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target): 
      
     with tf.GradientTape(persistent=True) as tape:
+      ##### Inner adaptation
       outputs, _ = model(
           meta_train_source,
           labels=meta_train_target,
@@ -429,7 +430,6 @@ def meta_train_v6(config,
           adap_variables.append(v)
         else:
           shared_variables.append(v)
-      ##### Inner adaptation
       training_loss = model.regularize_loss(training_loss, variables=shared_variables)
       gradients = tape.gradient(training_loss, shared_variables)    
       meta_train_lr = config.get("meta_train_lr",1.0)
@@ -450,11 +450,11 @@ def meta_train_v6(config,
       #### Meta_loss:
         #### update adap parameters first
       outputs, _ = model(
-          meta_train_source,
-          labels=meta_train_target,
+          meta_test_source,
+          labels=meta_test_target,
           training=True,
           step=optimizer.iterations)    
-      loss = model.compute_loss(outputs, meta_train_target, training=True)
+      loss = model.compute_loss(outputs, meta_test_target, training=True)
       training_loss = loss[0] / loss[1]
       gradients = tape.gradient(training_loss, adap_variables)
         #### meta gradient for shared parameters
