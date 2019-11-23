@@ -54,6 +54,11 @@ def variance_scaling_initialier(shape, scale=1.0, mode="fan_in", distribution="u
     stddev = np.sqrt(scale / n)
     return tf.random.normal(shape, mean=0.0, stddev=stddev)
 
+def var_spec(var):
+  print("var inspector:_____")
+  print(var, var.name)
+  if isinstance(var,list):
+    print("contains:  %d elements"%len(var))
 
 class MultiBLEUScorer(object):
 

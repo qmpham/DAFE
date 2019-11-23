@@ -23,7 +23,7 @@ import numpy as np
 from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset
 from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
-from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer
+from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 
 def update(v,g,lr=1.0):
   if isinstance(g, tf.IndexedSlices):
@@ -824,12 +824,17 @@ def meta_train_v7(config,
         else:
           shared_variables.append(v)
       variables = adap_variables + shared_variables
+      adap_variables_name = [v.name for v in adap_variables]
+      shared_variables_name = [v.name for v in shared_variables]
       gradients = tape.gradient(training_loss, variables)  
       gradient_accumulator(gradients) 
+      var_spec(variables)
+      var_spec(shared_variables)
+      var_spec(adap_gradients)
       for g,v in zip(gradients, variables):
-        if v in shared_variables:
+        if v.name in shared_variables_name:
           shared_gradients.append(g)
-        elif v in adap_variables:
+        elif v.name in adap_variables_name:
           adap_gradients.append(g)
 
       meta_train_lr = config.get("meta_train_lr",1.0)
