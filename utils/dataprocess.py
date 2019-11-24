@@ -182,7 +182,7 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
   train_datasets = [] 
   for i,src,tgt in zip(domain,source_file,target_file):
     train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size=batch_train_size,
+              batch_size=batch_train_size//len(src),
               batch_type=batch_type,
               domain=i,
               shuffle_buffer_size=shuffle_buffer_size,
