@@ -1625,3 +1625,157 @@ def train(config,
       if step > train_steps:
         break
     
+def meta_train_v8(config,
+          optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
+  
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
+  #####
+  with strategy.scope():
+    model.create_variables(optimizer=optimizer)
+    gradient_accumulator = optimizer_util.GradientAccumulator()  
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_meta_train_size = config["batch_meta_train_size"]
+  batch_meta_test_size = config["batch_meta_test_size"]
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config["domain"]
+  
+  print("There are %d in-domain corpora"%len(source_file))
+
+  meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
+                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
+  #####
+  def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target): 
+     
+    with tf.GradientTape(persistent=True) as tape:
+      ##### Inner adaptation
+      outputs, _ = model(
+          meta_train_source,
+          labels=meta_train_target,
+          training=True,
+          step=optimizer.iterations)    
+      loss = model.compute_loss(outputs, meta_train_target, training=True)
+      training_loss = loss[0] / loss[1]
+      variables = model.trainable_variables       
+      args_dict = dict()
+      for v in variables:
+        args_dict.update({v.name:v})
+      gradients = tape.gradient(training_loss, variables)  
+      gradient_accumulator(gradients) 
+
+      meta_train_lr = config.get("meta_train_lr",1.0)
+      print("meta_train_lr: ", meta_train_lr)
+      
+      if config.get("stopping_gradient",True):
+        print("apply stopping_gradient")
+        for g, v in zip(gradients, variables):      
+          args_dict.update({v.name: v-meta_train_lr*tf.stop_gradient(g)})
+      else:
+        print("passing gradient")
+        for g, v in zip(gradients, variables):
+          args_dict.update({v.name: update(v,g,lr=meta_train_lr)})
+      
+      #### Meta_loss:
+        #### meta gradient for shared parameters
+      outputs, _ = model.forward_fn(meta_test_source,
+          args_dict,
+          labels=meta_test_target,
+          training=True,
+          step=optimizer.iterations)
+      loss = model.compute_loss(outputs, meta_test_target, training=True)
+      meta_training_loss = loss[0] / loss[1]
+      gradients = tape.gradient(meta_training_loss, variables)
+      gradient_accumulator(gradients)
+      num_word_examples = tf.reduce_sum(meta_test_target["length"]) + tf.reduce_sum(meta_train_target["length"])
+    
+    return meta_training_loss, training_loss, num_word_examples
+
+  def _apply_gradients():
+    variables = model.trainable_variables
+    grads_and_vars = []
+    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    gradient_accumulator.reset()
+ 
+  @utils.dataprocess.meta_learning_function_on_next(meta_train_dataset, meta_test_dataset)
+  def _meta_train_forward(next_fn):    
+    with strategy.scope():
+      meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target = next_fn()
+      per_replica_meta_loss, per_replica_loss, per_replica_num_word_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      meta_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_meta_loss, None)
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
+      num_word_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_word_examples, None)    
+    return meta_loss, loss, num_word_examples
+    
+  @tf.function
+  def _step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_gradients)
+  
+  # Runs the training loop.
+  import time
+  start = time.time()  
+  print("number of replicas: %d"%strategy.num_replicas_in_sync)
+  meta_train_data_flow = iter(_meta_train_forward())
+  _loss = []
+  _meta_loss = []  
+  _num_word_examples = []
+  with _summary_writer.as_default():
+    while True:
+      #####Training batch
+      for _ in range(int(config.get("accumulation_step",1))):
+        meta_loss, loss, num_word_examples = next(meta_train_data_flow)  
+        _loss.append(loss)
+        _meta_loss.append(meta_loss)
+        _num_word_examples.append(num_word_examples)
+      _step()
+      step = optimizer.iterations.numpy()
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; Meta_loss = %f; num_word_examples = %d; after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.mean(_meta_loss), np.sum(_num_word_examples), elapsed)
+        _loss = []
+        _meta_loss = []
+        _num_word_examples = []
+        start = time.time()
+      if step % save_every == 0:
+        tf.get_logger().info("Saving checkpoint for step %d", step)
+        checkpoint_manager.save(checkpoint_number=step)
+      if step % eval_every == 0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+      if step > train_steps:
+        break

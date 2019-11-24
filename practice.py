@@ -31,7 +31,7 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "translate", "debug","metatrainv1", "metatrainv2", "metatrainv3", "metatrainv5", "metatrainv6", "metatrainv7", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "translate", "debug","metatrainv1", "metatrainv2", "metatrainv3", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
   parser.add_argument("--output")
@@ -131,11 +131,13 @@ def main():
   ######
   if args.run == "metatrainv7":
     task.meta_train_v7(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
-  if args.run == "metatrainv6":
+  elif args.run == "metatrainv8":
+    task.meta_train_v8(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
+  elif args.run == "metatrainv6":
     task.meta_train_v6(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
-  if args.run == "metatrainv5":
+  elif args.run == "metatrainv5":
     task.meta_train_v5(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
-  if args.run == "metatrainv2":
+  elif args.run == "metatrainv2":
     task.meta_train_v2(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "metatrainv3":
     task.meta_train_v3(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
