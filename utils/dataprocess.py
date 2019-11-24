@@ -167,8 +167,12 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
   meta_train_dataset = tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
   meta_test_dataset = tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
   with strategy.scope():
-    meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
-    meta_test_dataset = strategy.experimental_distribute_dataset(meta_test_dataset)
+    base_dataset = meta_train_dataset      
+    meta_train_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)
+    base_dataset = meta_test_dataset      
+    meta_test_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)
 
   return meta_train_dataset, meta_test_dataset
 
@@ -186,10 +190,9 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
               maximum_features_length=maximum_length,
               maximum_labels_length=maximum_length))
   
-  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets)
+  train_dataset = tf.data.Dataset.zip(tuple(train_datasets)).map(merge_map_fn)
   with strategy.scope():
     base_dataset = train_dataset
-    train_dataset = strategy.experimental_distribute_dataset(train_dataset)  
     train_dataset = strategy.experimental_distribute_datasets_from_function(
           lambda _: base_dataset)  
 
