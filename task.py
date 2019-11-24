@@ -683,8 +683,8 @@ def finetuning(config,
     variables = []
     for v in model.trainable_variables:
       if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
-        print(var.name)
-        variables.append(var)
+        print(v.name)
+        variables.append(v)
     print("var numb: ", len(variables))
     training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
@@ -697,7 +697,7 @@ def finetuning(config,
     variables = []
     for v in model.trainable_variables:
       if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
-        variables.append(var)
+        variables.append(v)
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
