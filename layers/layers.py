@@ -55,7 +55,10 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     self.layer_norm = common.LayerNorm()
     self.inner_transpose = False
     self.outer_transpose = False
-
+    self.inner_use_bias = True
+    self.outer_use_bias = True
+    self.inner_activation = activation
+    self.outer_activation = None
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v2, self).build(input_shape)
     scope_name = self.name_scope()
@@ -76,10 +79,10 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     dom_inner_bias = tf.nn.embedding_lookup(self.inner_bias, domain)
     dom_inner_kernel = tf.reshape(dom_inner_kernel, [-1, self.inner_dim])
     inner = tf.matmul(inputs, dom_inner_kernel, transpose_b=self.inner_transpose)
-    if self.use_bias:
+    if self.inner_use_bias:
       inner = tf.nn.bias_add(inner, dom_inner_bias)
-    if self.activation is not None:
-      inner = self.activation(inner)  # pylint: disable=not-callable
+    if self.inner_activation is not None:
+      inner = self.inner_activation(inner)  # pylint: disable=not-callable
     if rank > 2:
       inner = tf.reshape(inner, shape[:-1] + [self.inner_dim])
     ##### output layer
@@ -92,10 +95,10 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     dom_outer_bias = tf.nn.embedding_lookup(self.outer_bias, domain)
     dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
     outputs = tf.matmul(inner, dom_outer_kernel, transpose_b=self.outer_transpose)
-    if self.use_bias:
+    if self.outer_use_bias:
       outputs = tf.nn.bias_add(outputs, dom_outer_bias)
-    if self.activation is not None:
-      outputs = self.activation(outputs)  # pylint: disable=not-callable
+    if self.outer_activation is not None:
+      outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     return outputs
