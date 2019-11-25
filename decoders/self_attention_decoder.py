@@ -278,7 +278,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
     return outputs, new_cache, attention
 
 
-class Multi_domain_SelfAttentionDecoder(Decoder):
+class Multi_domain_SelfAttentionDecoder_v2(Decoder):
   
   def __init__(self,
                num_layers,
@@ -296,7 +296,7 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
                num_sources=1,
                **kwargs):
     
-    super(Multi_domain_SelfAttentionDecoder, self).__init__(num_sources=num_sources, **kwargs)
+    super(Multi_domain_SelfAttentionDecoder_v2, self).__init__(num_sources=num_sources, **kwargs)
     self.num_units = num_units
     self.num_heads = num_heads
     self.dropout = dropout
