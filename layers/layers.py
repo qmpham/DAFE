@@ -95,12 +95,12 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     inputs = self.layer_norm(inputs)
     inner = self.inner.call_indomain(domain)(inputs)    
     inner = common.dropout(inner, self.dropout, training=training)
-    return self.outer(domain)(inner)
+    return self.outer.call_indomain(domain)(inner)
 
   def forward_fn(self, inputs, args_dict, domain, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
     inputs = self.layer_norm(inputs)
     inner = self.inner.forward_fn_indomain(domain)(inputs, args_dict)    
     inner = common.dropout(inner, self.dropout, training=training)
-    return self.outer.forward_fn(domain)(inner, args_dict)
+    return self.outer.forward_fn_indomain(domain)(inner, args_dict)
 
