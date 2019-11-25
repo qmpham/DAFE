@@ -77,17 +77,10 @@ class Multi_Dense(tf.keras.layers.Dense):
   def __init__(self, units, weight=None, bias=None, transpose=False, **kwargs):
     
     super(Multi_Dense, self).__init__(units, **kwargs)
-    self.weight = weight
+    self.kernel = weight
     self.transpose = transpose
     self.units = units
     self.bias = bias
-
-  def add_weight(self, name, *args, **kwargs):  # pylint: disable=arguments-differ
-    if self.weight is not None and name == "kernel":
-      return self.weight
-    elif self.bias is not None and name == "bias":
-      return self.bias
-    return super(Multi_Dense, self).add_weight(name, *args, **kwargs)
 
   def call_indomain(self, domain):
     def call(inputs):    
