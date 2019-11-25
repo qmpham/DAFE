@@ -80,7 +80,7 @@ class Multi_Dense(tf.keras.layers.Dense):
     self.weight = weight
     self.transpose = transpose
     self.units = units
-    self.bias
+    self.bias = bias
 
   def add_weight(self, name, *args, **kwargs):  # pylint: disable=arguments-differ
     if self.weight is not None and name == "kernel":
