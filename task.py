@@ -62,6 +62,7 @@ def translate(source_file,
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
+    tf.print("source_inputs", source_inputs)
     if experiment=="residual":
       encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length)
     else:
