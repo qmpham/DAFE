@@ -57,14 +57,14 @@ def translate(source_file,
   @tf.function
   def predict_next():    
     source = next(iterator)
-    print(source["ids"])
-    # Run the encoder.
+    #print(source["ids"])
+    #Run the encoder.
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
-    tf.print("source_inputs", source_inputs)
-    print("source_inputs:_____", source_inputs)
-    if experiment=="residual":
+    #tf.print("source_inputs", source_inputs)
+    #print("source_inputs:_____", source_inputs)
+    if experiment in ["residual","residualv2","ldr"]:
       encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length)
     else:
       encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
