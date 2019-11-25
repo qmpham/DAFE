@@ -118,14 +118,14 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
       inputs = tf.reshape(inputs, [-1, shape[-1]])
     dom_inner_kernel = tf.nn.embedding_lookup(inner_kernel, domain)
     dom_inner_bias = tf.nn.embedding_lookup(inner_bias, domain)
-    dom_inner_kernel = tf.reshape(dom_inner_kernel, [-1, self.units])
-    inner = tf.matmul(inputs, dom_inner_kernel, transpose_b=self.transpose)
-    if self.use_bias:
+    dom_inner_kernel = tf.reshape(dom_inner_kernel, [-1, self.inner_dim])
+    inner = tf.matmul(inputs, dom_inner_kernel, transpose_b=self.inner_transpose)
+    if self.inner_use_bias:
       inner = tf.nn.bias_add(inner, dom_inner_bias)
-    if self.activation is not None:
-      inner = self.activation(inner)  # pylint: disable=not-callable
+    if self.inner_activation is not None:
+      inner = self.inner_activation(inner)  # pylint: disable=not-callable
     if rank > 2:
-      inner = tf.reshape(inner, shape[:-1] + [self.units])
+      inner = tf.reshape(inner, shape[:-1] + [self.inner_dim])
     ##### output layer
     inner = common.dropout(inner, self.dropout, training=training)
     shape = shape_list(inner)
@@ -134,12 +134,12 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
       inner = tf.reshape(inner, [-1, shape[-1]])
     dom_outer_kernel = tf.nn.embedding_lookup(outer_kernel, domain)
     dom_outer_bias = tf.nn.embedding_lookup(outer_bias, domain)
-    dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.units])
-    outputs = tf.matmul(inner, dom_outer_kernel, transpose_b=self.transpose)
-    if self.use_bias:
+    dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
+    outputs = tf.matmul(inner, dom_outer_kernel, transpose_b=self.outer_transpose)
+    if self.outer_use_bias:
       outputs = tf.nn.bias_add(outputs, dom_outer_bias)
-    if self.activation is not None:
-      outputs = self.activation(outputs)  # pylint: disable=not-callable
+    if self.outer_activation is not None:
+      outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
     if rank > 2:
-      outputs = tf.reshape(outputs, shape[:-1] + [self.units])
+      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     return outputs
