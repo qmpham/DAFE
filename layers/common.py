@@ -89,8 +89,8 @@ class Multi_Dense(tf.keras.layers.Dense):
       return self.bias
     return super(Multi_Dense, self).add_weight(name, *args, **kwargs)
 
-  def call_indomain(self,domain):
-    def call(self, inputs):    
+  def call_indomain(self, domain):
+    def call(inputs):    
       shape = shape_list(inputs)
       rank = len(shape)      
       if rank > 2:
@@ -109,7 +109,7 @@ class Multi_Dense(tf.keras.layers.Dense):
     return call
 
   def forward_fn_indomain(self,domain):
-    def forward_fn(self, inputs, domain, args_dict):
+    def forward_fn(inputs, domain, args_dict):
       shape = shape_list(inputs)
       rank = len(shape)
       domain = domain[0]
