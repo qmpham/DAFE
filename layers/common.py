@@ -71,6 +71,71 @@ class Dense(tf.keras.layers.Dense):
     return m
 
 
+
+class Multi_Dense(tf.keras.layers.Dense):
+  
+  def __init__(self, units, weight=None, bias=None, transpose=False, **kwargs):
+    
+    super(Multi_Dense, self).__init__(units, **kwargs)
+    self.weight = weight
+    self.transpose = transpose
+    self.units = units
+    self.bias
+
+  def add_weight(self, name, *args, **kwargs):  # pylint: disable=arguments-differ
+    if self.weight is not None and name == "kernel":
+      return self.weight
+    elif self.bias is not None and name == "bias":
+      return self.bias
+    return super(Multi_Dense, self).add_weight(name, *args, **kwargs)
+
+  def call_indomain(self,domain):
+    def call(self, inputs):    
+      shape = shape_list(inputs)
+      rank = len(shape)      
+      if rank > 2:
+        inputs = tf.reshape(inputs, [-1, shape[-1]])
+      dom_kernel = tf.nn.embedding_lookup(self.kernel, domain)
+      dom_bias = tf.nn.embedding_lookup(self.bias, domain)
+      dom_kernel = tf.reshape(dom_kernel, [-1, self.units])
+      outputs = tf.matmul(inputs, dom_kernel, transpose_b=self.transpose)
+      if self.use_bias:
+        outputs = tf.nn.bias_add(outputs, dom_bias)
+      if self.activation is not None:
+        outputs = self.activation(outputs)  # pylint: disable=not-callable
+      if rank > 2:
+        outputs = tf.reshape(outputs, shape[:-1] + [self.units])
+      return outputs
+    return call
+
+  def forward_fn_indomain(self,domain):
+    def forward_fn(self, inputs, domain, args_dict):
+      shape = shape_list(inputs)
+      rank = len(shape)
+      domain = domain[0]
+      if rank > 2:
+        inputs = tf.reshape(inputs, [-1, shape[-1]])
+      kernel = args_dict[self.kernel.name]
+      dom_kernel = tf.nn.embedding_lookup(kernel, domain)
+      bias = args_dict[self.bias.name]
+      dom_bias = tf.nn.embedding_lookup(bias, domain)
+      kernel = tf.reshape(dom_kernel, [-1, self.units])
+      outputs = tf.matmul(inputs, dom_kernel, transpose_b=self.transpose)
+      if self.use_bias:
+        outputs = tf.nn.bias_add(outputs, dom_bias)
+      if self.activation is not None:
+        outputs = self.activation(outputs)  # pylint: disable=not-callable
+      if rank > 2:
+        outputs = tf.reshape(outputs, shape[:-1] + [self.units])
+      return outputs
+    return forward_fn
+
+  def map_v1_weights(self, weights):
+    m = [(self.kernel, weights["kernel"])]
+    if self.use_bias:
+      m.append((self.bias, weights["bias"]))
+    return m
+
 class LayerNorm(tf.keras.layers.Layer):
   
   def __init__(self, epsilon=1e-6, **kwargs):
