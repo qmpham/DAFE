@@ -1846,4 +1846,4 @@ def model_inspect(config,
   
   # Runs the training loop.
   train_data_flow = iter(_train_forward())
-  _, _ = next(train_data_flow)
+  _ = next(train_data_flow)
