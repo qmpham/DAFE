@@ -44,6 +44,7 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
                domain_numb=6,
                dropout=0.1,
                activation=tf.nn.relu,
+               outer_activation=None,
                **kwargs):
     
     super(Multi_domain_FeedForwardNetwork_v2, self).__init__(**kwargs)
