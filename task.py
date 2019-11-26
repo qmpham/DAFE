@@ -1785,19 +1785,16 @@ def model_inspect(config,
           strategy,  
           checkpoint_manager,
           checkpoint,
-          maximum_length=80,
-          batch_size = 2048,
-          batch_type = "tokens",
+          maximum_length=30,
+          batch_size = 2,
+          batch_type = "examples",
           experiment="residual",
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=200000,
           save_every=5000,
           eval_every=15000,
           report_every=100): 
-  if config.get("train_steps",None)!=None:
-    train_steps = config.get("train_steps")
-  if config.get("batch_type",None)!=None:
-    batch_type = config.get("batch_type")
+  
   #####
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
@@ -1805,13 +1802,15 @@ def model_inspect(config,
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
-  batch_train_size = config["batch_train_size"]  
+  batch_train_size = batch_size
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
   domain = config["domain"]
   
   print("There are %d in-domain corpora"%len(source_file))
+  print("batch_size", batch_size)
+
 
   train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, 
                                                                         batch_train_size, batch_type, shuffle_buffer_size, maximum_length)
@@ -1846,4 +1845,5 @@ def model_inspect(config,
   
   # Runs the training loop.
   train_data_flow = iter(_train_forward())
-  _ = next(train_data_flow)
+  for i in range(6):
+    _ = next(train_data_flow)
