@@ -1823,7 +1823,7 @@ def model_inspect(config,
     outputs, _ = model(
         source,
         labels=target,
-        training=True,
+        training=False,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, target, training=True)
     variables = model.trainable_variables
