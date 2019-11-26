@@ -105,7 +105,7 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
       tf.print("#######")
       tf.print("ADAP_max_abs_pooling: ", tf.reduce_max(tf.abs(outputs)))
       tf.print("ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)))
-      tf.print("argmax: ", tf.math.top_k(tf.abs(outputs)),k=5)
+      tf.print("argmax: ", tf.math.top_k(tf.abs(outputs),k=5))
       tf.print("domain: ", domain)
       tf.print("#######")
     return outputs
