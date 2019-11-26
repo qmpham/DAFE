@@ -1563,7 +1563,7 @@ def train(config,
       strategy.experimental_run_v2(_apply_gradients)
 
   def _set_weight(v, w):
-    v.assign(w)
+    v.assign(tf.cast(w,v.dtype))
 
   @tf.function
   def weight_reset(snapshots):
