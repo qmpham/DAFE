@@ -58,7 +58,7 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     self.inner_use_bias = True
     self.outer_use_bias = True
     self.inner_activation = activation
-    self.outer_activation = None
+    self.outer_activation = tf.nn.sigmoid
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v2, self).build(input_shape)
     scope_name = self.name_scope()
