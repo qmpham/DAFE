@@ -31,7 +31,7 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "translate", "debug","metatrainv1", "metatrainv2", "metatrainv3", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "translate", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
   parser.add_argument("--output")
@@ -152,6 +152,8 @@ def main():
   model.params.update({"average_loss_in_time": True})
   model.params.update({"beam_width": 5})
   ######
+  if args.run == "inspect":
+    task.model_inspect(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   if args.run == "metatrainv7":
     task.meta_train_v7(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "metatrainv8":
