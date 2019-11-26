@@ -101,6 +101,9 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
       outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
+    if not training:
+      tf.print("ADAP_max_abs_pooling: ", tf.reduce_max(tf.abs(outputs)))
+      tf.print("ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)))
     return outputs
 
   def forward_fn(self, inputs, args_dict, domain, training=None):  # pylint: disable=arguments-differ

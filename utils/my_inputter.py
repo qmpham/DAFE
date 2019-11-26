@@ -100,6 +100,7 @@ class My_inputter(WordEmbedder):
             num_shards=num_shards,
             shard_index=shard_index))
         return dataset
+    
     def make_evaluation_dataset(self,
                               features_file,
                               labels_file,
