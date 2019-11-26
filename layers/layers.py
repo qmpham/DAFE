@@ -103,6 +103,7 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     if not training:
       tf.print("#######")
+      tf.print("Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)))
       tf.print("ADAP_max_abs_pooling: ", tf.reduce_max(tf.abs(outputs)))
       tf.print("ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)))
       tf.print("argmax: ", tf.math.top_k(tf.abs(outputs),k=5))

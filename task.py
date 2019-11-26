@@ -1847,3 +1847,66 @@ def model_inspect(config,
   train_data_flow = iter(_train_forward())
   for i in range(6):
     _ = next(train_data_flow)
+
+def src_wemb_pretrain(config,
+          optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
+  #####
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_train_size = config["batch_train_size"]  
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config["domain"]
+  
+  print("There are %d in-domain corpora"%len(source_file))
+
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, 
+                                                                        batch_train_size, batch_type, shuffle_buffer_size, maximum_length)
+  #####
+  with strategy.scope():
+    model.create_variables(optimizer=optimizer)
+    gradient_accumulator = optimizer_util.GradientAccumulator()  
+
+  def _accumulate_gradients(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    variables = model.trainable_variables
+    print("var numb: ", len(variables))
+    training_loss = model.regularize_loss(training_loss, variables=variables)
+    gradients = optimizer.get_gradients(training_loss, variables)
+    gradient_accumulator(gradients)
+    num_examples = tf.reduce_sum(target["length"])
+    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
+    return reported_loss, num_examples
