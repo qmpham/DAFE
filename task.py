@@ -1786,7 +1786,7 @@ def model_inspect(config,
           checkpoint_manager,
           checkpoint,
           maximum_length=6,
-          batch_size = ,
+          batch_size = 1,
           batch_type = "examples",
           experiment="residual",
           shuffle_buffer_size=-1,  # Uniform shuffle.
