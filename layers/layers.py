@@ -150,3 +150,58 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     return outputs
+
+class DAFE(tf.keras.layers.Layer):
+
+  def __init__(self,
+               input_dim, 
+               domain_numb=6,
+               dropout=0.1,
+               **kwargs):
+    
+    super(DAFE, self).__init__(**kwargs)
+    self.domain_numb = domain_numb
+    self.input_dim = input_dim
+    self.layer_norm = common.LayerNorm()
+
+  def build(self, input_shape):
+    super(DAFE, self).build(input_shape)
+    scope_name = self.name_scope()
+    self.inner_bias = self.add_weight("%s_inner_bias"%scope_name, shape=[self.domain_numb, self.inner_dim])
+    
+  def call(self, inputs, domain, training=None):  # pylint: disable=arguments-differ
+    """Runs the layer."""
+    inputs = self.layer_norm(inputs)
+    ##### inner layer
+    shape = shape_list(inputs)
+    rank = len(shape)      
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    dom_inner_bias = tf.nn.embedding_lookup(self.inner_bias, domain)
+    outputs = tf.nn.bias_add(inputs, dom_inner_bias)    
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
+    if not training:
+      tf.print("#######")
+      tf.print("ADAP_max_abs_pooling: ", tf.reduce_max(tf.abs(outputs)))
+      tf.print("ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)))
+      tf.print("argmax: ", tf.math.top_k(tf.abs(outputs),k=5))
+      tf.print("domain: ", domain)
+      tf.print("#######")
+
+    return outputs
+
+  def forward_fn(self, inputs, args_dict, domain, training=None):  # pylint: disable=arguments-differ
+    """Runs the layer."""
+    """Runs the layer."""
+    inputs = self.layer_norm(inputs)
+    ##### inner layer
+    shape = shape_list(inputs)
+    rank = len(shape)      
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    dom_inner_bias = tf.nn.embedding_lookup(self.inner_bias, domain)
+    outputs = tf.nn.bias_add(inputs, dom_inner_bias)    
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
+    return outputs
