@@ -401,11 +401,11 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
       new_cache.append(layer_cache)
       if self.ADAP_layer_stopping_gradient:
         domain_adap_vec = multi_domain_layer(tf.stop_gradient(inputs), domain, training=training)
-        self.regularization_losses.append(regularizer(domain_adap_vec))
+        self.regularization_losses.append(tf.reduce_sum(tf.abs(domain_adap_vec)))
         inputs = domain_adap_vec + inputs
       else:
         domain_adap_vec = multi_domain_layer(inputs, domain, training=training)
-        self.regularization_losses.append(regularizer(domain_adap_vec))
+        self.regularization_losses.append(tf.reduce_sum(tf.abs(domain_adap_vec)))
         inputs = domain_adap_vec + inputs
 
     outputs = self.layer_norm(inputs)
