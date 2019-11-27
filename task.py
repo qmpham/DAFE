@@ -1521,9 +1521,11 @@ def train(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
+    regularization_losses = model.losses
+    print(regularization_losses)
+    training_loss += tf.add_n([loss_ for loss_ in regularization_losses if model.name_scope() in loss_.name])
     variables = model.trainable_variables
     print("var numb: ", len(variables))
-    training_loss = model.regularize_loss(training_loss, variables=variables)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
@@ -1676,9 +1678,7 @@ def meta_train_v8(config,
           training=True,
           step=optimizer.iterations)    
       loss = model.compute_loss(outputs, meta_train_target, training=True)
-      regularization_losses = model.losses
-      print(regularization_losses)
-      training_loss = loss[0] / loss[1] + tf.add_n([loss_ for loss_ in regularization_losses if model.name_scope() in loss_.name])
+      training_loss = loss[0] / loss[1]
       variables = model.trainable_variables       
       args_dict = dict()
       for v in variables:
