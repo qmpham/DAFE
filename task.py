@@ -1676,7 +1676,9 @@ def meta_train_v8(config,
           training=True,
           step=optimizer.iterations)    
       loss = model.compute_loss(outputs, meta_train_target, training=True)
-      training_loss = loss[0] / loss[1]
+      regularization_losses = model.losses
+      print(regularization_losses)
+      training_loss = loss[0] / loss[1] + tf.add_n([loss_ for loss_ in regularization_losses if model.name_scope() in loss_.name])
       variables = model.trainable_variables       
       args_dict = dict()
       for v in variables:
