@@ -1825,9 +1825,9 @@ def model_inspect(config,
         training=False,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, target, training=True)
-    regularize_losses = tf.compat.v1.losses.get_losses()
-    print(regularize_losses)
-    loss = loss + tf.add_n(regularize_losses)
+    regularization_losses = model.regularization_losses
+    print(regularization_losses)
+    loss = loss + tf.add_n(regularization_losses)
     variables = model.trainable_variables
     print("trainable_variables: ")
     for v in variables:

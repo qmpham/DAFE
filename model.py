@@ -56,7 +56,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     self.encoder = encoder
     self.decoder = decoder
     self.share_embeddings = share_embeddings
-
+    self.regularization_losses = []
   def auto_config(self, num_replicas=1):
     config = super(Multi_domain_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
@@ -123,7 +123,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           encoder_outputs,
           encoder_state,
           encoder_sequence_length)
-
+    self.regularization_losses = self.encoder.regularization_losses + self.decoder.regularization_losses
     return outputs, predictions
 
   def forward_fn(self, features, args_dict, labels=None, training=None, step=None):

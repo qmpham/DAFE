@@ -120,6 +120,7 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
     self.layer_norm = LayerNorm()
+    self.regularization_losses = []
     self.layers = [
         transformer.SelfAttentionEncoderLayer(
             num_units,
@@ -140,6 +141,9 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
     domain = domain[0]
     inputs = inputs[0]
     inputs *= self.num_units**0.5
+
+    regularizer = tf.keras.regularizers.l1(l=0.01)
+
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs)
     inputs = common.dropout(inputs, self.dropout, training=training)
@@ -148,10 +152,15 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
     for layer, multi_domain_layer in zip(self.layers,self.multi_domain_layers):
       inputs = layer(inputs, mask=mask, training=training)
       if self.ADAP_layer_stopping_gradient:
-        inputs = multi_domain_layer(tf.stop_gradient(inputs), domain) + inputs
+        domain_adap_vec = multi_domain_layer(tf.stop_gradient(inputs),domain, training=training)
+        self.regularization_losses.append(regularizer(domain_adap_vec))
+        inputs = domain_adap_vec + inputs
       else:
-        inputs = multi_domain_layer(inputs, domain) + inputs
+        domain_adap_vec = multi_domain_layer(inputs, domain, training=training)
+        self.regularization_losses.append(regularizer(domain_adap_vec))
+        inputs = domain_adap_vec + inputs
     outputs = self.layer_norm(inputs)
+    
     return outputs, None, sequence_length
 
   def forward_fn(self, inputs, args_dict, sequence_length=None, training=None):
