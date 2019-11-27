@@ -72,7 +72,8 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     """Runs the layer."""
     inputs = self.layer_norm(inputs)
     regularizer = tf.keras.regularizers.l1(l=0.001)
-    self.add_loss(regularizer(inputs), inputs=True)
+    regularizer_loss = regularizer(inputs)
+    tf.compat.v1.losses.add_loss(regularizer_loss, loss_collection=tf.GraphKeys.LOSSES)
     ##### inner layer
     shape = shape_list(inputs)
     rank = len(shape)      
