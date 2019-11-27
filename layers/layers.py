@@ -102,7 +102,7 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
       outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
-    #self.add_loss(tf.reduce_sum(tf.abs(outputs)))
+    self.add_loss(tf.reduce_sum(tf.abs(outputs)))
     if not training:
       tf.print("#######")
       tf.print("Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)))
