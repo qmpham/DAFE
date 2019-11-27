@@ -134,7 +134,7 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
         Multi_domain_FeedForwardNetwork_v2(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
         for i in range(num_layers)]
     self.ADAP_layer_stopping_gradient = ADAP_layer_stopping_gradient
-  @tf.function
+  
   def call(self, inputs, sequence_length=None, training=None):
     domain = inputs[1]
     domain = domain[0]
