@@ -132,7 +132,8 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
             ffn_activation=ffn_activation)
         for i in range(num_layers)]    
     self.multi_domain_layers = [
-        Multi_domain_FeedForwardNetwork_v2(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
+        Multi_domain_FeedForwardNetwork_v2(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, 
+                activity_regularizer=tf.compat.v1.keras.layers.ActivityRegularization(l1=1.0,l2=1.0))
         for i in range(num_layers)]
     self.ADAP_layer_stopping_gradient = ADAP_layer_stopping_gradient
 
