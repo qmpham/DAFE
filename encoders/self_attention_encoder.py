@@ -120,7 +120,6 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
     self.layer_norm = LayerNorm()
-    self.regularization_losses = []
     self.layers = [
         transformer.SelfAttentionEncoderLayer(
             num_units,
@@ -153,11 +152,9 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
       inputs = layer(inputs, mask=mask, training=training)
       if self.ADAP_layer_stopping_gradient:
         domain_adap_vec = multi_domain_layer(tf.stop_gradient(inputs),domain, training=training)
-        self.regularization_losses.append(tf.reduce_sum(tf.abs(domain_adap_vec)))
         inputs = domain_adap_vec + inputs
       else:
         domain_adap_vec = multi_domain_layer(inputs, domain, training=training)
-        self.regularization_losses.append(tf.reduce_sum(tf.abs(domain_adap_vec)))
         inputs = domain_adap_vec + inputs
     outputs = self.layer_norm(inputs)
     
