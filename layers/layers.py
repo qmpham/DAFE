@@ -100,7 +100,7 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
       outputs = tf.nn.bias_add(outputs, dom_outer_bias)
     if self.outer_activation is not None:
       outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
-    self.add_loss(0.01 * tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
+    self.add_loss(0.001 * tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
     
