@@ -1537,7 +1537,7 @@ def train(config,
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync)
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
@@ -1598,11 +1598,11 @@ def train(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss, num_examples = next(train_data_flow)    
-      #print("number_examples_in_an_iteration_per_replica: %d"%num_examples)
-      _step()
-      _loss.append(loss)
-      _number_examples.append(num_examples)
+      for _ in range(int(config.get("accumulation_step",1))):
+        loss, num_examples = next(train_data_flow)    
+        _loss.append(loss)
+        _number_examples.append(num_examples)
+      _step()  
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
