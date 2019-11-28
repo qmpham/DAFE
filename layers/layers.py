@@ -106,12 +106,8 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     
     if not training:
       tf.print("#######")
-      tf.print(self.name_scope())
-      tf.print("Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)))
-      tf.print("ADAP_max_abs_pooling: ", tf.reduce_max(tf.abs(outputs)))
-      tf.print("ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)))
-      #tf.print("argmax: ", tf.math.top_k(tf.abs(outputs),k=5))
-      tf.print("domain: ", domain)
+      tf.print(self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_max_abs_pooling: ", 
+                tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, sep="|")
       tf.print("#######")
     
     return outputs
