@@ -1521,9 +1521,11 @@ def train(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    regularization_losses = model.losses
-    print(regularization_losses)
-    training_loss += tf.add_n([loss_ for loss_ in regularization_losses if model.name_scope() in loss_.name])
+    
+    if config.get("ADAP_activity_regularizing",False):
+      regularization_losses = model.losses
+      print(regularization_losses)
+      training_loss += tf.add_n([loss_ for loss_ in regularization_losses if model.name_scope() in loss_.name])
     variables = model.trainable_variables
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
