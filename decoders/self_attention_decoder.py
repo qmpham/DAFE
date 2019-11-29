@@ -346,6 +346,7 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
     for i, layer in enumerate(self.layers):
       m += layer.map_v1_weights(weights["layer_%d" % i])
     return m
+  
   def _run(self,
            inputs,
            sequence_length=None,

@@ -177,14 +177,24 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
   return meta_train_dataset, meta_test_dataset
 
 
-def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length):
+def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=True):
 
   train_datasets = [] 
-  for i,src,tgt in zip(domain,source_file,target_file):
-    train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+  if multi_domain:
+    for i,src,tgt in zip(domain,source_file,target_file):
+      train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
               batch_size=batch_train_size,
               batch_type=batch_type,
               domain=i,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length))
+  else:
+    for src,tgt in zip(source_file,target_file):
+      train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size=batch_train_size,
+              batch_type=batch_type,
               shuffle_buffer_size=shuffle_buffer_size,
               length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=maximum_length,
