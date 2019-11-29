@@ -168,9 +168,9 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
     for layer, multi_domain_layer in zip(self.layers,self.multi_domain_layers):
       inputs = layer.forward_fn(inputs, args_dict, mask=mask, training=training)
       if self.ADAP_layer_stopping_gradient:
-        inputs = multi_domain_layer.forward_fn(tf.stop_gradient(inputs), args_dict, domain) + inputs
+        inputs = multi_domain_layer.forward_fn(tf.stop_gradient(inputs), args_dict, domain, training=training) + inputs
       else:
-        inputs = multi_domain_layer.forward_fn(inputs, args_dict, domain) + inputs
+        inputs = multi_domain_layer.forward_fn(inputs, args_dict, domain, training=training) + inputs
     outputs = self.layer_norm.forward_fn(inputs, args_dict)
     return outputs, None, sequence_length
     
