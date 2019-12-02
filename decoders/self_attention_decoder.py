@@ -6,7 +6,7 @@ from opennmt.decoders.decoder import Decoder
 from opennmt.decoders.self_attention_decoder import SelfAttentionDecoder
 from layers import common, transformer
 from opennmt.layers.position import SinusoidalPositionEncoder
-from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2
+from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
 from utils.utils_ import make_domain_mask
 class Multi_domain_SelfAttentionDecoder(Decoder):
   
@@ -293,6 +293,7 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
                ffn_dropout=0.1,
                ffn_activation=tf.nn.relu,
                position_encoder_class=SinusoidalPositionEncoder,
+               multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v2,
                num_sources=1,
                **kwargs):
     
@@ -316,7 +317,7 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
             ffn_activation=ffn_activation)
         for i in range(num_layers)]
     self.multi_domain_layers = [
-        Multi_domain_FeedForwardNetwork_v2(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
+        multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
         for i in range(num_layers)]
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
   def initialize(self, vocab_size=None, output_layer=None):  

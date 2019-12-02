@@ -111,6 +111,7 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
                ffn_dropout=0.1,
                ffn_activation=tf.nn.relu,
                position_encoder_class=SinusoidalPositionEncoder,
+               multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v2,
                **kwargs):
     
     super(Multi_domain_SelfAttentionEncoder_v2, self).__init__(**kwargs)
@@ -131,7 +132,7 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
             ffn_activation=ffn_activation)
         for i in range(num_layers)]    
     self.multi_domain_layers = [
-        Multi_domain_FeedForwardNetwork_v2(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
+        multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
         for i in range(num_layers)]
     self.ADAP_layer_stopping_gradient = ADAP_layer_stopping_gradient
   
