@@ -1524,6 +1524,7 @@ def train(config,
     
     if config.get("ADAP_activity_regularizing",False):
       activity_regularization_loss_scale = config.get("activity_regularization_loss_scale",0.001)
+      print("activity_regularization_loss_scale: ",activity_regularization_loss_scale)
       regularization_losses = model.losses
       print(regularization_losses)
       training_loss += activity_regularization_loss_scale * tf.add_n([loss_ for loss_ in regularization_losses if model.name_scope() in loss_.name])
