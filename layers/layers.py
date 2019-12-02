@@ -52,6 +52,7 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
                dropout=0.1,
                activation=tf.nn.relu,
                outer_activation=None,
+               activity_regularization_loss_scale=0.001,
                **kwargs):
     
     super(Multi_domain_FeedForwardNetwork_v2, self).__init__(**kwargs)
@@ -67,6 +68,7 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     self.outer_use_bias = True
     self.inner_activation = activation
     self.outer_activation = outer_activation
+    self.activity_regularization_loss_scale = activity_regularization_loss_scale
   
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v2, self).build(input_shape)
@@ -108,7 +110,7 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
       outputs = tf.nn.bias_add(outputs, dom_outer_bias)
     if self.outer_activation is not None:
       outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
-    self.add_loss(0.001 * tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
+    self.add_loss(self.activity_regularization_loss_scale * tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
     
