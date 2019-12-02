@@ -1575,7 +1575,6 @@ def train(config,
       for snap, var in zip(snapshots, model.trainable_variables):
         strategy.extended.update(var, _set_weight, args=(snap, ))
 
-  
   # Runs the training loop.
   import time
   start = time.time()  

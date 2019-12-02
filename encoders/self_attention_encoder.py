@@ -182,7 +182,6 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
       m += layer.map_v1_weights(weights["layer_%d" % i])
     return m
 
-
 class Multi_domain_SelfAttentionEncoder_v3(Encoder):
 
   def __init__(self,
