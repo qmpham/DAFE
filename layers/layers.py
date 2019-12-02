@@ -25,7 +25,14 @@ class Multi_domain_FeedForwardNetwork(tf.keras.layers.Layer):
     inner = self.inner(inputs)
     inner = inner * tf.broadcast_to(tf.expand_dims(mask,1), tf.shape(inner))
     inner = common.dropout(inner, self.dropout, training=training)
-    return self.outer(inner)
+    outputs = self.outer(inner)
+    self.add_loss(0.001 * tf.reduce_mean(tf.reduce_sum(tf.abs(tf.reshape(outputs,[-1,tf.shape(outputs)[-1]])),axis=-1)))
+    if not training:
+      tf.print("#######")
+      tf.print(self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_max_abs_pooling: ", 
+                tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), sep="|")
+      tf.print("#######")
+    return outputs
 
   def forward_fn(self, inputs, args_dict, mask, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
