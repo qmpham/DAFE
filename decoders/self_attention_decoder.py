@@ -277,7 +277,6 @@ class Multi_domain_SelfAttentionDecoder(Decoder):
     outputs = self.layer_norm.forward_fn(inputs, args_dict)
     return outputs, new_cache, attention
 
-
 class Multi_domain_SelfAttentionDecoder_v2(Decoder):
   
   def __init__(self,

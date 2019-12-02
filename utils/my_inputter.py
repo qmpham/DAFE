@@ -141,6 +141,7 @@ class LDR_inputter(WordEmbedder):
             self.trainable = embedding.get("trainable", True)
             self.embedding_file_with_header = embedding.get("with_header", True)
             self.case_insensitive_embeddings = embedding.get("case_insensitive", True)
+    
     def make_features(self, element=None, features=None, domain=1, training=None):
         features = super(LDR_inputter, self).make_features(
             element=element, features=features, training=training)
