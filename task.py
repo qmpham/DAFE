@@ -24,6 +24,7 @@ from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, crea
 from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
+from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
 
 def update(v,g,lr=1.0):
   if isinstance(g, tf.IndexedSlices):
