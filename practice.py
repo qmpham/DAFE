@@ -25,7 +25,7 @@ from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer
 import task
-
+from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
 def main():
   devices = tf.config.experimental.list_logical_devices(device_type="GPU")
   print(devices)
