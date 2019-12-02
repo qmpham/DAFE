@@ -60,6 +60,7 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     self.outer_use_bias = True
     self.inner_activation = activation
     self.outer_activation = outer_activation
+  
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v2, self).build(input_shape)
     scope_name = self.name_scope()
@@ -186,10 +187,8 @@ class DAFE(tf.keras.layers.Layer):
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     if not training:
       tf.print("#######")
-      tf.print("ADAP_max_abs_pooling: ", tf.reduce_max(tf.abs(outputs)))
-      tf.print("ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)))
-      tf.print("argmax: ", tf.math.top_k(tf.abs(outputs),k=5))
-      tf.print("domain: ", domain)
+      tf.print("ADAP_max_abs_pooling: ", tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), 
+                "domain: ", domain, sep="|")
       tf.print("#######")
 
     return outputs
