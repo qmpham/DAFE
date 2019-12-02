@@ -180,7 +180,7 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
 def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=True):
 
   train_datasets = [] 
-  if not multi_domain:
+  if multi_domain:
     for i,src,tgt in zip(domain,source_file,target_file):
       train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
               batch_size=batch_train_size,
