@@ -25,7 +25,7 @@ from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
-
+from opennmt.utils import average_checkpoints
 def update(v,g,lr=1.0):
   if isinstance(g, tf.IndexedSlices):
     return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
@@ -1699,7 +1699,7 @@ def train_v2(config,
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
-    #tf.print("token_numb:____", num_examples, "domain:____", source["domain"])
+    tf.print("token_numb:____", num_examples, "domain:____", source["domain"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
@@ -2086,3 +2086,95 @@ def src_wemb_pretrain(config,
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
+
+def averaged_checkpoint_translate(config, source_file,
+              reference,
+              model,
+              checkpoint_manager,
+              checkpoint,
+              domain,
+              output_file,
+              length_penalty,
+              experiment="ldr",
+              score_type="MultiBLEU",
+              batch_size=10,
+              beam_size=5):
+  
+  # Create the inference dataset.
+  checkpoint_path = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+                        max_count=8,
+                        model_key="model")
+  checkpoint.restore(checkpoint_path)
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
+  print("In domain %d"%domain)
+  dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
+  iterator = iter(dataset)
+
+  # Create the mapping for target ids to tokens.
+  ids_to_tokens = model.labels_inputter.ids_to_tokens
+
+  @tf.function
+  def predict_next():    
+    source = next(iterator)
+    source_length = source["length"]
+    batch_size = tf.shape(source_length)[0]
+    source_inputs = model.features_inputter(source)
+    if experiment in ["residual","residualv2"]:
+      encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length)
+    else:
+      encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
+
+    # Prepare the decoding strategy.
+    if beam_size > 1:
+      encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
+      source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
+      decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
+    else:
+      decoding_strategy = onmt.utils.GreedySearch()
+
+    # Run dynamic decoding.
+    decoder_state = model.decoder.initial_state(
+        memory=encoder_outputs,
+        memory_sequence_length=source_length)
+    if experiment in ["residual","residualv2"]:
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
+    elif experiment=="ldr":
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
+    else:
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
+    decoded = model.decoder.dynamic_decode(
+        map_input_fn,
+        tf.fill([batch_size], START_OF_SENTENCE_ID),
+        end_id=END_OF_SENTENCE_ID,
+        initial_state=decoder_state,
+        decoding_strategy=decoding_strategy,
+        maximum_iterations=250)
+    target_lengths = decoded.lengths
+    target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64))
+    return target_tokens, target_lengths
+
+  # Iterates on the dataset.
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  print("output file: ", output_file)
+  with open(output_file, "w") as output_:
+    while True:    
+      try:
+        batch_tokens, batch_length = predict_next()
+        for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
+          sentence = b" ".join(tokens[0][:length[0]])
+          print_bytes(sentence, output_)
+          #print_bytes(sentence)
+      except tf.errors.OutOfRangeError:
+        break
+  if reference!=None:
+    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
+    score = scorer(reference, output_file)
+    if score is None:
+      return 0.0
+    else:
+      return score
