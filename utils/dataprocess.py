@@ -135,12 +135,17 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
   meta_test_dataset = tf.data.experimental.sample_from_datasets(meta_test_datasets) #tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
   
   with strategy.scope():
+    """
     base_dataset = meta_train_dataset      
     meta_train_dataset = strategy.experimental_distribute_datasets_from_function(
           lambda _: base_dataset)
     base_dataset = meta_test_dataset      
     meta_test_dataset = strategy.experimental_distribute_datasets_from_function(
           lambda _: base_dataset)
+    """
+    meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
+    meta_test_dataset = strategy.experimental_distribute_dataset(meta_test_dataset)
+
   
   return meta_train_dataset, meta_test_dataset
 
