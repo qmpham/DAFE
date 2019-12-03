@@ -195,6 +195,8 @@ def debug(config,
     """
     reported_loss = 0
     num_examples = tf.shape(meta_test_target["ids"])[0]
+    token_numb = tf.reduce_sum(meta_test_dataset["length"])
+    tf.print("token_numb: ", token_numb)
     #tf.print("ids shape: ", tf.shape(meta_test_target["ids"]), "token_numb: ", tf.reduce_sum(meta_test_dataset["length"]))
     return reported_loss, num_examples
 
