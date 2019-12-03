@@ -1700,7 +1700,7 @@ def train_v2(config,
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
-    #tf.print("token_numb:____", num_examples, "domain:____", source["domain"])
+    tf.print("token_numb:____", num_examples, "domain:____", source["domain"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
