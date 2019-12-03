@@ -35,24 +35,8 @@ def _compute_fans(shape):
 def variance_scaling_initialier(shape, scale=1.0, mode="fan_in", distribution="uniform"):
   assert mode in ["fan_in","fan_out","fan_avg"]
   assert distribution in ["uniform","truncated_normal","untruncated_normal"]
-
-  fan_in, fan_out = _compute_fans(shape)
-  if mode == "fan_in":
-    n = fan_in
-  elif mode == "fan_out":
-    n = fan_out
-  else:
-    n = (fan_in + fan_out)/2
-  
-  if distribution == "uniform":
-    limit = np.sqrt(3 * scale / n)
-    return np.random.uniform(-limit, limit, shape)
-  elif distribution == "truncated_normal":
-    stddev = np.sqrt(scale / n) 
-    return tf.random.truncated_normal(shape, mean=0.0, stddev=stddev)
-  else:
-    stddev = np.sqrt(scale / n)
-    return tf.random.normal(shape, mean=0.0, stddev=stddev)
+  initializer = tf.keras.initializers.VarianceScaling(scale=scale, mode=mode, distribution=distribution)
+  return initializer(shape)
 
 def var_spec(var):
   print("var inspector:_____")
