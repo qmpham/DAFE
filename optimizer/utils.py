@@ -4,7 +4,7 @@ import inspect
 
 import tensorflow as tf
 import tensorflow_addons as tfa
-
+import six
 from tensorflow_addons.optimizers.weight_decay_optimizers import DecoupledWeightDecayExtension
 
 
@@ -95,3 +95,5 @@ class GradientAccumulator(object):
           for gradient in self._gradients)
     else:
       return self._gradients
+
+

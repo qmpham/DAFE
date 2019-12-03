@@ -31,7 +31,6 @@ def _compute_fans(shape):
     fan_out = shape[-1] * receptive_field_size
   return int(fan_in), int(fan_out)
 
-
 def variance_scaling_initialier(shape, scale=1.0, mode="fan_in", distribution="uniform"):
   assert mode in ["fan_in","fan_out","fan_avg"]
   assert distribution in ["uniform","truncated_normal","untruncated_normal"]
@@ -67,6 +66,91 @@ class MultiBLEUScorer(object):
     except subprocess.CalledProcessError:      
       return None
 
+def average_checkpoints(model_dir,
+                        output_dir,
+                        trackables,
+                        max_count=8,
+                        model_key="model"):
+  """Averages object-based checkpoints.
+
+  Args:
+    model_dir: The directory containing checkpoints.
+    output_dir: The directory that will contain the averaged checkpoint.
+    trackables: A dictionary containing the trackable objects included in the
+      checkpoint.
+    max_count: The maximum number of checkpoints to average.
+    model_key: The key in :obj:`trackables` that references the model.
+
+  Returns:
+    The path to the directory containing the averaged checkpoint.
+
+  Raises:
+    ValueError: if :obj:`output_dir` is the same as :obj:`model_dir`.
+    ValueError: if a model is not found in :obj:`trackables` or is not already
+      built.
+    ValueError: if no checkpoints are found in :obj:`model_dir`.
+  """
+  if model_dir == output_dir:
+    raise ValueError("Model and output directory must be different")
+  model = trackables.get(model_key)
+  if model is None:
+    raise ValueError("%s not found in trackables %s" % (model_key, trackables))
+  if not model.built:
+    raise ValueError("The model should be built before calling this function")
+
+  checkpoint = tf.train.Checkpoint(**trackables)
+  checkpoint_manager = tf.train.CheckpointManager(checkpoint, model_dir, max_to_keep=None)
+
+  checkpoints_path = checkpoint_manager.checkpoints
+  if not checkpoints_path:
+    raise ValueError("No checkpoints found in %s" % model_dir)
+  if len(checkpoints_path) > max_count:
+    checkpoints_path = checkpoints_path[-max_count:]
+  num_checkpoints = len(checkpoints_path)
+  last_step = int(checkpoints_path[-1].split("-")[-1])
+
+  tf.get_logger().info("Averaging %d checkpoints...", num_checkpoints)
+  for i, checkpoint_path in enumerate(reversed(checkpoints_path)):
+    tf.get_logger().info("Reading checkpoint %s...", checkpoint_path)
+    if i == 0:
+      checkpoint.restore(checkpoint_path).assert_existing_objects_matched()
+      for variable in model.variables:
+        variable.assign(variable / num_checkpoints)
+    else:
+      reader = tf.train.load_checkpoint(checkpoint_path)
+      for path in six.iterkeys(reader.get_variable_to_shape_map()):
+        if not path.startswith(model_key) or ".OPTIMIZER_SLOT" in path:
+          continue
+        variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
+        variable = variable_which(trackables, variable_path)
+        value = reader.get_tensor(path)
+        variable.assign_add(value / num_checkpoints)
+
+  new_checkpoint_manager = tf.train.CheckpointManager(checkpoint, output_dir, max_to_keep=None)
+  new_checkpoint_manager.save(checkpoint_number=last_step)
+  return output_dir
+
+def variable_which(structure, path):
+  """Follows :obj:`path` in a nested structure of objects, lists, and dicts."""
+  for key in path.split("/"):
+    if isinstance(structure, list):
+      try:
+        index = int(key)
+        structure = structure[index] if index < len(structure) else None
+      except ValueError:
+        raise ValueError("Expected a list index, got %s instead" % key)
+    elif isinstance(structure, dict):
+      structure = structure.get(key)
+    else:
+      structure = getattr(structure, key, None)
+    if structure is None:
+      if sum([key in v.name for v in structure.trainable_variables]):
+        for v in structure.trainable_variables:
+          if key in v.name:
+            return v
+      else:
+        raise ValueError("Invalid path in structure: %s" % path)
+  return structure
 
 
   
