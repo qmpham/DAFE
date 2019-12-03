@@ -178,7 +178,7 @@ def main():
     task.translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
   elif args.run=="translatev2":
-    model.build(None)
+    model.create_variables()
     print("translate in domain %d"%(int(args.domain)))
     task.averaged_checkpoint_translate(config, args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
