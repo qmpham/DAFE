@@ -195,7 +195,7 @@ def debug(config,
     """
     reported_loss = 0
     num_examples = tf.shape(meta_test_target["ids"])[0]
-    tf.print("ids shape: ", tf.shape(meta_test_target["ids"]), "token_numb: ", tf.reduce_sum(meta_test_dataset["length"]))
+    #tf.print("ids shape: ", tf.shape(meta_test_target["ids"]), "token_numb: ", tf.reduce_sum(meta_test_dataset["length"]))
     return reported_loss, num_examples
 
   def _apply_gradients():
@@ -219,7 +219,6 @@ def debug(config,
       num_examples = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_num_examples, None)    
     return loss, num_examples
 
-  
   @dataset_util.function_on_next(meta_train_dataset)
   def _meta_train_iteration(next_fn):    
     with strategy.scope():
