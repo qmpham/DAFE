@@ -31,7 +31,7 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "trainv2", "translate", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "trainv2", "translate", "translatev2", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
   parser.add_argument("--output")
@@ -177,7 +177,7 @@ def main():
     print("translate in domain %d"%(int(args.domain)))
     task.translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
-  elif experiment=="averaged_checkpoint_translate":
+  elif args.run=="translatev2":
     model.build(None)
     print("translate in domain %d"%(int(args.domain)))
     task.averaged_checkpoint_translate(config, args.src, args.ref, model, checkpoint_manager,
