@@ -130,7 +130,7 @@ def average_checkpoints(model_dir,
 
   new_checkpoint_manager = tf.train.CheckpointManager(checkpoint, output_dir, max_to_keep=None)
   new_checkpoint_manager.save(checkpoint_number=last_step)
-  return output_dir
+  return new_checkpoint_manager
 
 def variable_which(structure, path):
   """Follows :obj:`path` in a nested structure of objects, lists, and dicts."""

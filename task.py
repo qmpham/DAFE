@@ -2102,11 +2102,11 @@ def averaged_checkpoint_translate(config, source_file,
               beam_size=5):
   
   # Create the inference dataset.
-  checkpoint_path = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+  new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
                         max_count=8,
                         model_key="model")
-  checkpoint.restore(checkpoint_path)
-  tf.get_logger().info("Evaluating model %s", checkpoint_path)
+  checkpoint.restore(new_checkpoint_manager.latest_checkpoint)
+  tf.get_logger().info("Evaluating model %s", new_checkpoint_manager.latest_checkpoint)
   print("In domain %d"%domain)
   dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
   iterator = iter(dataset)
