@@ -111,13 +111,13 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
-    
+    """
     if not training:
       tf.print("#######")
       tf.print(self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_max_abs_pooling: ", 
                 tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, sep="|")
       tf.print("#######")
-    
+    """
     return outputs
 
   def forward_fn(self, inputs, args_dict, domain, training=None):  # pylint: disable=arguments-differ
