@@ -176,7 +176,6 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
 
   return meta_train_dataset, meta_test_dataset
 
-
 def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=True):
 
   train_datasets = [] 
@@ -207,7 +206,6 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
           lambda _: base_dataset)  
 
   return train_dataset
-
 
 def meta_learning_function_on_next(metatrain_dataset, metatest_dataset, as_numpy=False):
   

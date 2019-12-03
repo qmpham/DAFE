@@ -193,7 +193,7 @@ def debug(config,
     """
     reported_loss = 0
     num_examples = tf.shape(meta_test_target["ids"])[0]
-    tf.print("ids shape: ", tf.shape(meta_test_target["ids"]))
+    tf.print("ids shape: ", tf.shape(meta_test_target["ids"]), "token_numb: ", tf.reduce_sum(meta_test_dataset["length"]))
     return reported_loss, num_examples
 
   def _apply_gradients():
@@ -245,7 +245,7 @@ def debug(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss, num_examples = next(meta_train_data_flow)  
+      _, num_examples = next(meta_train_data_flow)  
       #_loss.append(loss)
       print("number examples per replica: ", num_examples)
       #print(next(meta_train_flow))
