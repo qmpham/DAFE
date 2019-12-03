@@ -42,7 +42,7 @@ def translate(source_file,
               length_penalty,
               experiment="ldr",
               score_type="MultiBLEU",
-              batch_size=32,
+              batch_size=10,
               beam_size=5):
   
   # Create the inference dataset.
