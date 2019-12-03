@@ -142,9 +142,11 @@ def debug(config,
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
   #####
+  """
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  """
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
