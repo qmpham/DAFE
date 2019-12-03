@@ -133,7 +133,7 @@ def average_checkpoints(model_dir,
 
 def variable_which(structure, path):
   """Follows :obj:`path` in a nested structure of objects, lists, and dicts."""
-  for key in path.split("/"):
+  for key in path.split("/")[::-1]:
     if isinstance(structure, list):
       try:
         index = int(key)
@@ -144,13 +144,16 @@ def variable_which(structure, path):
       structure = structure.get(key)
     else:
       structure = getattr(structure, key, None)
-    if structure is None:
-      if sum([key in v.name for v in structure.trainable_variables]):
-        for v in structure.trainable_variables:
-          if key in v.name:
-            return v
-      else:
-        raise ValueError("Invalid path in structure: %s" % path)
+    if structure==None:
+      raise ValueError("Invalid path in structure: %s" % path)
+  name = path.split("/")[-1]
+  if not(structure is None):
+    if sum([name in v.name for v in structure.trainable_variables]):
+      for v in structure.trainable_variables:
+        if key in v.name:
+          return v
+    else:
+      raise ValueError("Invalid path in structure: %s" % path)
   return structure
 
 
