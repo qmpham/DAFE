@@ -146,14 +146,13 @@ def variable_which(structure, path):
       structure = getattr(structure, key, None)
     if structure==None:
       raise ValueError("Invalid path in structure: %s" % path)
-  name = path.split("/")[-1]
-  if not(structure is None):
-    if sum([name in v.name for v in structure.trainable_variables]):
-      for v in structure.trainable_variables:
-        if key in v.name:
-          return v
-    else:
-      raise ValueError("Invalid path in structure: %s" % path)
+  name = path.split("/")[-1]  
+  if sum([name in v.name for v in structure.trainable_variables]):
+    for v in structure.trainable_variables:
+      if name in v.name:
+        return v
+  else:
+    raise ValueError("Invalid path in structure: %s" % path)
   return structure
 
 
