@@ -212,7 +212,7 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
 
   return train_dataset
 
-def create_trainining_dataset_v2(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=True):
+def create_trainining_dataset_v2(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, length_bucket_width, multi_domain=True):
 
   train_datasets = [] 
   if multi_domain:
@@ -222,7 +222,7 @@ def create_trainining_dataset_v2(strategy, model, domain, source_file, target_fi
               batch_type=batch_type,
               domain=i,
               shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=maximum_length,
               maximum_labels_length=maximum_length))
   else:
@@ -231,7 +231,7 @@ def create_trainining_dataset_v2(strategy, model, domain, source_file, target_fi
               batch_size=batch_train_size * strategy.num_replicas_in_sync,
               batch_type=batch_type,
               shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=maximum_length,
               maximum_labels_length=maximum_length))
   
