@@ -140,7 +140,7 @@ def main():
         ffn_dropout=0.1))
   elif experiment=="pretrain":
     return
-    
+  
   learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=4000), step_duration= config.get("step_duration",16))
   meta_train_optimizer = tfa.optimizers.LazyAdam(1.0)
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)
@@ -176,6 +176,11 @@ def main():
     model.build(None)
     print("translate in domain %d"%(int(args.domain)))
     task.translate(args.src, args.ref, model, checkpoint_manager,
+              checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
+  elif experiment=="averaged_checkpoint_translate":
+    model.build(None)
+    print("translate in domain %d"%(int(args.domain)))
+    task.averaged_checkpoint_translate(config, args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
   elif args.run == "finetune":
     task.finetuning(config, meta_train_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
