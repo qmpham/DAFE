@@ -199,7 +199,7 @@ def debug(config,
     print("meta_train_target:_____", meta_train_target)
     print("meta_test_source:_____", meta_test_source)
     print("meta_test_target:_____", meta_test_target)
-    #tf.print("ids shape: ", tf.shape(meta_test_target["ids"]), "token_numb: ", tf.reduce_sum(meta_test_dataset["length"]))
+    tf.print("ids shape: ", tf.shape(meta_test_target["ids"]), "token_numb: ", tf.reduce_sum(meta_test_target["length"]))
     return reported_loss, num_examples
 
   def _apply_gradients():
