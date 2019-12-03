@@ -4,6 +4,7 @@ import subprocess
 import io
 import re
 import os
+import six
 def make_domain_mask(num_domains, num_domain_units=8, dtype=tf.float32):
   M = np.zeros((num_domains, num_domains * num_domain_units))
   for i in range(num_domains):

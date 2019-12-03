@@ -26,7 +26,7 @@ from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
 from utils.utils_ import average_checkpoints
-import six
+
 def update(v,g,lr=1.0):
   if isinstance(g, tf.IndexedSlices):
     return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
