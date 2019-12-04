@@ -1645,7 +1645,7 @@ def train_v2(config,
           batch_size = 2048,
           batch_type = "tokens",
           experiment="residual",
-          shuffle_buffer_size=-1,  # Uniform shuffle.
+          shuffle_buffer_size=5000000,  # Uniform shuffle.
           train_steps=200000,
           save_every=5000,
           eval_every=15000,
@@ -1666,11 +1666,11 @@ def train_v2(config,
   source_file = config["src"]
   target_file = config["tgt"]
   domain = config["domain"]
-  
+  length_bucket_width = config.get("length_bucket_width",1)
   print("There are %d in-domain corpora"%len(source_file))
 
   train_dataset = create_trainining_dataset_v2(strategy, model, domain, source_file, target_file, 
-                                                                        batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=(config["experiment"]!="baseline"))
+                                                                        batch_train_size, batch_type, shuffle_buffer_size, maximum_length, length_bucket_width, multi_domain=(config["experiment"]!="baseline"))
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
