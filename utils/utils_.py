@@ -125,7 +125,7 @@ def average_checkpoints(model_dir,
         variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
         variable = variable_which(trackables, variable_path)
         value = reader.get_tensor(path)
-        tf.print("variable:___", variable.name, tf.shape(value),sep="|")
+        #tf.print("variable:___", variable.name, tf.shape(value),sep="|")
         variable.assign_add(value / num_checkpoints)
 
   new_checkpoint_manager = tf.train.CheckpointManager(checkpoint, output_dir, max_to_keep=None)
