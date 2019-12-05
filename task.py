@@ -151,100 +151,69 @@ def debug(config,
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
-  batch_meta_train_size = config["batch_meta_train_size"]
-  batch_meta_test_size = config["batch_meta_test_size"]
+  batch_train_size = config["batch_train_size"]  
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
   domain = config["domain"]
-  
+  length_bucket_width = config.get("length_bucket_width",1)
   print("There are %d in-domain corpora"%len(source_file))
 
-  meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
-                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
+  train_dataset = create_trainining_dataset_v2(strategy, model, domain, source_file, target_file, 
+                                              batch_train_size, batch_type, shuffle_buffer_size, maximum_length, 
+                                              length_bucket_width, multi_domain=(config["experiment"]!="baseline"))
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
-  def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
-    ##### squeeze first dimension of per replica batch
-    """
-    for k in list(meta_train_source.keys()):
-      batch = meta_train_source[k]
-      meta_train_source.update({k:tf.squeeze(batch,0)})
-    for k in list(meta_train_target.keys()):
-      batch = meta_train_target[k]
-      meta_train_target.update({k:tf.squeeze(batch,0)})
-    for k in list(meta_test_source.keys()):
-      batch = meta_test_source[k]
-      meta_test_source.update({k:tf.squeeze(batch,0)})
-    for k in list(meta_test_target.keys()):
-      batch = meta_test_target[k]
-      meta_test_target.update({k:tf.squeeze(batch,0)})
-    """
-    #######
+  def _accumulate_gradients(source, target):
     """
     outputs, _ = model(
-        meta_train_source,
-        labels=meta_train_target,
+        source,
+        labels=target,
         training=True,
-        step=optimizer.iterations)    
-    loss = model.compute_loss(outputs, meta_train_target, training=True)
-    training_loss = loss[0] / loss[1]
-    reported_loss = loss[0] / loss[2]    
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    
+    if config.get("ADAP_activity_regularizing",False):
+      activity_regularization_loss_scale = config.get("activity_regularization_loss_scale",0.001)
+      print("activity_regularization_loss_scale: ",activity_regularization_loss_scale)
+      regularization_losses = model.losses
+      print(regularization_losses)
+      training_loss += activity_regularization_loss_scale * tf.add_n([loss_ for loss_ in regularization_losses if model.name_scope() in loss_.name])
+    variables = model.trainable_variables
+    print("var numb: ", len(variables))
+    gradients = optimizer.get_gradients(training_loss, variables)
+    gradient_accumulator(gradients)
     """
+    num_examples = tf.reduce_sum(target["length"])
+    tf.print("token_numb:____", num_examples, "domain:____", source["domain"])
     reported_loss = 0
-    num_examples = tf.shape(meta_test_target["ids"])[0]
-    print("meta_train_source:_____", meta_train_source)
-    print("meta_train_target:_____", meta_train_target)
-    print("meta_test_source:_____", meta_test_source)
-    print("meta_test_target:_____", meta_test_target)
-    tf.print("ids shape: ", tf.shape(meta_test_target["ids"]), "token_numb: ", tf.reduce_sum(meta_test_target["length"]))
+    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
-  def _apply_gradients():
-    variables = model.trainable_variables
-    grads_and_vars = []
-    for gradient, variable in zip(gradient_accumulator.gradients, variables):
-      # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync)
-      grads_and_vars.append((scaled_gradient, variable))
-    optimizer.apply_gradients(grads_and_vars)
-    gradient_accumulator.reset()
- 
-  @utils.dataprocess.meta_learning_function_on_next(meta_train_dataset, meta_test_dataset)
-  def _meta_train_forward(next_fn):    
-    with strategy.scope():
-      meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target))
-      # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
-      num_examples = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_num_examples, None)    
-    return loss, num_examples
-
-  @dataset_util.function_on_next(meta_train_dataset)
-  def _meta_train_iteration(next_fn):    
+  @dataset_util.function_on_next(train_dataset)
+  def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      return per_replica_source, per_replica_target
-  
-  @dataset_util.function_on_next(meta_test_dataset)
-  def _meta_test_iteration(next_fn):    
-    with strategy.scope():
-      return next_fn()
- 
-  @tf.function
-  def _step():
-    with strategy.scope():
-      strategy.experimental_run_v2(_apply_gradients)
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, num_examples
   
   # Runs the training loop.
   import time
   start = time.time()  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
-  meta_train_data_flow = iter(_meta_train_forward())
+  meta_train_data_flow = iter(_train_forward())
   
   with _summary_writer.as_default():
     while True:
@@ -1670,7 +1639,8 @@ def train_v2(config,
   print("There are %d in-domain corpora"%len(source_file))
 
   train_dataset = create_trainining_dataset_v2(strategy, model, domain, source_file, target_file, 
-                                                                        batch_train_size, batch_type, shuffle_buffer_size, maximum_length, length_bucket_width, multi_domain=(config["experiment"]!="baseline"))
+                                              batch_train_size, batch_type, shuffle_buffer_size, maximum_length, 
+                                              length_bucket_width, multi_domain=(config["experiment"]!="baseline"))
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)

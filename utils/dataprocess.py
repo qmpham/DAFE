@@ -216,6 +216,7 @@ def create_trainining_dataset_v2(strategy, model, domain, source_file, target_fi
 
   train_datasets = [] 
   if multi_domain:
+    print("Using multi-domain inputter")
     for i,src,tgt in zip(domain,source_file,target_file):
       train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
               batch_size=batch_train_size * strategy.num_replicas_in_sync,
@@ -226,6 +227,7 @@ def create_trainining_dataset_v2(strategy, model, domain, source_file, target_fi
               maximum_features_length=maximum_length,
               maximum_labels_length=maximum_length))
   else:
+    print("Using stardard inputter")
     for src,tgt in zip(source_file,target_file):
       train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
               batch_size=batch_train_size * strategy.num_replicas_in_sync,
