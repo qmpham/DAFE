@@ -161,7 +161,7 @@ def debug(config,
 
   train_dataset = create_trainining_dataset_v2(strategy, model, domain, source_file, target_file, 
                                               batch_train_size, batch_type, shuffle_buffer_size, maximum_length, 
-                                              length_bucket_width, multi_domain=(config["experiment"]!="baseline"))
+                                              length_bucket_width, multi_domain=True)
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)

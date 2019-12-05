@@ -119,9 +119,9 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1))
   elif experiment=="baseline":
-    model = SequenceToSequence(
-    source_inputter=WordEmbedder(embedding_size=512),
-    target_inputter=WordEmbedder(embedding_size=512),
+    model = Multi_domain_SequenceToSequence(
+    source_inputter=My_inputter(embedding_size=512),
+    target_inputter=My_inputter(embedding_size=512),
     encoder=onmt.encoders.SelfAttentionEncoder(
         num_layers=6,
         num_units=512,
