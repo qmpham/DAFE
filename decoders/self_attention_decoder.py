@@ -348,6 +348,48 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
       m += layer.map_v1_weights(weights["layer_%d" % i])
     return m
   
+  def call(self,
+           inputs,
+           length_or_step=None,
+           state=None,
+           input_fn=None,
+           sampling_probability=None,
+           training=None):
+    
+    self._assert_is_initialized()
+    if isinstance(inputs, list):
+      rank = inputs[0].shape.ndims
+    else:
+      rank = inputs.shape.ndims
+    domain = inputs[1]
+    domain = domain[0]
+    if rank == 2:
+      if length_or_step.shape.ndims != 0:
+        raise ValueError("length_or_step should be a scalar with the current timestep")
+      outputs, state, attention = self.step(
+          inputs,
+          length_or_step,
+          state=state,
+          memory=self.memory,
+          memory_sequence_length=self.memory_sequence_length,
+          training=training)
+      logits = self.output_layer(outputs)
+    elif rank == 3:
+      if length_or_step.shape.ndims != 1:
+        raise ValueError("length_or_step should contain the length of each sequence")
+      logits, state, attention = self.forward(
+          inputs,
+          sequence_length=length_or_step,
+          initial_state=state,
+          memory=self.memory,
+          memory_sequence_length=self.memory_sequence_length,
+          input_fn=input_fn,
+          sampling_probability=sampling_probability,
+          training=training)
+    else:
+      raise ValueError("Unsupported input rank %d" % rank)
+    return logits, state, attention
+
   def _run(self,
            inputs,
            sequence_length=None,

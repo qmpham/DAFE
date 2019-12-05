@@ -18,7 +18,6 @@ def gelu(x):
   """
   return 0.5 * x * (1 + tf.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * tf.pow(x, 3))))
 
-
 class Dense(tf.keras.layers.Dense):
   
   def __init__(self, units, weight=None, transpose=False, **kwargs):
@@ -197,3 +196,52 @@ class LayerWrapper(tf.keras.layers.Layer):
     """Creates a layer wrapper from its configuration."""
     layer = tf.keras.layers.deserialize(config.pop("layer"))
     return cls(layer, **config)
+
+class Multi_ADAP_Dense(tf.keras.layers.Dense):
+  
+  def __init__(self, units, input_units, multi_domain_adapter_class, weight=None, transpose=False, num_domain_units=128, num_domains=6, **kwargs):
+    
+    super(Multi_ADAP_Dense, self).__init__(units, **kwargs)
+    self.weight = weight
+    self.transpose = transpose
+    self.adapter = multi_domain_adapter_class(input_units, num_domain_units, input_units, domain_numb=num_domains, name="ADAP_output_layer")
+
+  def add_weight(self, name, *args, **kwargs):  # pylint: disable=arguments-differ
+    if self.weight is not None and name == "kernel":
+      return self.weight
+    return super(Multi_ADAP_Dense, self).add_weight(name, *args, **kwargs)
+
+  def call(self, inputs, domain):
+
+    shape = shape_list(inputs)
+    rank = len(shape)
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    kernel = tf.transpose(self.adapter(tf.transpose(self.kernel), domain))
+    outputs = tf.matmul(inputs, kernel, transpose_b=self.transpose)
+    if self.use_bias:
+      outputs = tf.nn.bias_add(outputs, self.bias)
+    if self.activation is not None:
+      outputs = self.activation(outputs)  # pylint: disable=not-callable
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.units])
+    return outputs
+
+  def forward_fn(self, inputs, domain, args_dict):
+
+    shape = shape_list(inputs)
+    rank = len(shape)
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    kernel = args_dict[self.kernel.name]
+    kernel = tf.transpose(self.adapter(tf.transpose(kernel), domain))
+    outputs = tf.matmul(inputs, kernel, transpose_b=self.transpose)
+    if self.use_bias:
+      bias = args_dict[self.bias.name]
+      outputs = tf.nn.bias_add(outputs, bias)
+    if self.activation is not None:
+      outputs = self.activation(outputs)  # pylint: disable=not-callable
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.units])
+    return outputs
+
