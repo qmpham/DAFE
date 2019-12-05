@@ -119,7 +119,7 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1))
   elif experiment=="baseline":
-    model = Multi_domain_SequenceToSequence(
+    model = LDR_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
     encoder=onmt.encoders.SelfAttentionEncoder(
