@@ -80,6 +80,7 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
     """Runs the layer."""
     if not(mask is None):
       mask=tf.cast(mask,tf.float32)
+    mask=None
     inputs = self.layer_norm(inputs)
     ##### inner layer
     shape = shape_list(inputs)
