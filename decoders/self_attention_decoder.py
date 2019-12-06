@@ -326,7 +326,7 @@ class Multi_domain_SelfAttentionDecoder_v1(Decoder):
     else:
       if vocab_size is None:
         raise ValueError("One of vocab_size and output_layer must be set")
-      self.output_layer = common.Multi_ADAP_Dense(vocab_size, self.units, Multi_domain_FeedForwardNetwork_v2)
+      self.output_layer = common.Multi_ADAP_Dense(vocab_size, self.num_units, Multi_domain_FeedForwardNetwork_v2)
 
   @property
   def minimum_sources(self):
