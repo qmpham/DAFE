@@ -1660,11 +1660,24 @@ def train_v2(config,
       training_loss, reported_loss = loss, loss
     
     if config.get("ADAP_activity_regularizing",False):
-      activity_regularization_loss_scale = config.get("activity_regularization_loss_scale",0.001)
-      print("activity_regularization_loss_scale: ",activity_regularization_loss_scale)
+      layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
+      output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.1)
+      print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+      print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
       regularization_losses = model.losses
+      print("model_name_scope", model.name_scope())
       print(regularization_losses)
-      training_loss += activity_regularization_loss_scale * tf.add_n([loss_ for loss_ in regularization_losses if model.name_scope() in loss_.name])
+      layer_activity_regularization_losses = []
+      output_activity_regularization_losses = []
+      for loss_ in regularization_losses:
+        if "multi_adap__dense" in loss_.name:
+          output_activity_regularization_losses.append(loss_)
+        else:
+          layer_activity_regularization_losses.append(loss_)
+      print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
+      print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
+      training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
+      training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
     variables = model.trainable_variables
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
