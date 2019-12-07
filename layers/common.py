@@ -246,3 +246,53 @@ class Multi_ADAP_Dense(tf.keras.layers.Dense):
       outputs = tf.reshape(outputs, shape[:-1] + [self.units])
     return outputs
 
+class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
+  
+  def __init__(self, units, input_units, multi_domain_adapter_class, weight=None, transpose=False, num_domain_units=128, num_domains=6, **kwargs):
+    
+    super(Multi_ADAP_Dense_v1, self).__init__(units, **kwargs)
+    self.transpose = transpose
+    self.adapter = multi_domain_adapter_class(input_units, num_domain_units, input_units, domain_numb=num_domains, name="ADAP_output_layer")
+
+  def build(self, input_shape):
+    super(Multi_ADAP_Dense_v1, self).build(input_shape)
+    scope_name = self.name_scope()
+    self.bias = self.add_weight("%s_outer_bias"%scope_name, shape=[self.domain_numb, self.units])
+
+  def call(self, inputs, domain):
+
+    shape = shape_list(inputs)
+    rank = len(shape)
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    kernel = self.kernel
+    kernel = tf.transpose(self.adapter(tf.transpose(tf.stop_gradient(kernel)), domain)) + kernel
+    outputs = tf.matmul(inputs, kernel, transpose_b=self.transpose)
+    if self.use_bias:
+      bias = tf.nn.embedding_lookup(self.bias, domain)
+      outputs = tf.nn.bias_add(outputs, bias)
+    if self.activation is not None:
+      outputs = self.activation(outputs)  # pylint: disable=not-callable
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.units])
+    return outputs
+
+  def forward_fn(self, inputs, args_dict, domain):
+
+    shape = shape_list(inputs)
+    rank = len(shape)
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    kernel = args_dict[self.kernel.name]
+    kernel = tf.transpose(self.adapter(tf.transpose(tf.stop_gradient(kernel)), domain)) + kernel
+    outputs = tf.matmul(inputs, kernel, transpose_b=self.transpose)
+    if self.use_bias:
+      bias = args_dict[self.bias.name]
+      bias = tf.nn.embedding_lookup(bias, domain)
+      outputs = tf.nn.bias_add(outputs, bias)
+    if self.activation is not None:
+      outputs = self.activation(outputs)  # pylint: disable=not-callable
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.units])
+    return outputs
+
