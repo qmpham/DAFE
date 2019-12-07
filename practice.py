@@ -121,6 +121,29 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1))
+  elif experiment=="residualv3":
+    model = Multi_domain_SequenceToSequence(
+    source_inputter=My_inputter(embedding_size=512),
+    target_inputter=My_inputter(embedding_size=512),
+    encoder=Multi_domain_SelfAttentionEncoder_v2(
+        num_layers=6,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1),
+    decoder=Multi_domain_SelfAttentionDecoder_v5(
+        num_layers=6,
+        num_domains=6,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1))
   elif experiment=="ldr":
     model = LDR_SequenceToSequence(
     source_inputter=LDR_inputter(embedding_size=config.get("ldr_embedding_size",464), num_domains=config.get("num_domains", 8), num_domain_units=config.get("num_domain_units", 8)),
