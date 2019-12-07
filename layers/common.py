@@ -234,7 +234,7 @@ class Multi_ADAP_Dense(tf.keras.layers.Dense):
     if rank > 2:
       inputs = tf.reshape(inputs, [-1, shape[-1]])
     kernel = args_dict[self.kernel.name]
-    kernel = tf.transpose(self.adapter(tf.transpose(kernel), domain))+kernel
+    kernel = tf.transpose(self.adapter(tf.transpose(tf.stop_gradient(kernel)), domain)) + kernel
     outputs = tf.matmul(inputs, kernel, transpose_b=self.transpose)
     if self.use_bias:
       bias = args_dict[self.bias.name]
