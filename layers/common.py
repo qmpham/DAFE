@@ -228,7 +228,7 @@ class Multi_ADAP_Dense(tf.keras.layers.Dense):
       outputs = tf.reshape(outputs, shape[:-1] + [self.units])
     return outputs
 
-  def forward_fn(self, inputs, domain, args_dict):
+  def forward_fn(self, inputs, args_dict, domain):
 
     shape = shape_list(inputs)
     rank = len(shape)
