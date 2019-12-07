@@ -252,6 +252,7 @@ class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
     
     super(Multi_ADAP_Dense_v1, self).__init__(units, **kwargs)
     self.transpose = transpose
+    self.domain_numb = num_domains
     self.adapter = multi_domain_adapter_class(input_units, num_domain_units, input_units, domain_numb=num_domains, name="ADAP_output_layer")
 
   def build(self, input_shape):
