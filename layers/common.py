@@ -250,19 +250,19 @@ class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
   
   def __init__(self, units, input_units, multi_domain_adapter_class, weight=None, transpose=False, num_domain_units=128, num_domains=6, **kwargs):
     
-    super(Multi_ADAP_Dense_v1, self).__init__(**kwargs)
+    super(Multi_ADAP_Dense_v1, self).__init__(units, **kwargs)
     self.transpose = transpose
+    self.use_bias = False
+    self.use_multi_bias = True
     self.domain_numb = num_domains
-    self.units = units
     self.adapter = multi_domain_adapter_class(input_units, num_domain_units, input_units, domain_numb=num_domains, name="ADAP_output_layer")
 
   def build(self, input_shape):
     super(Multi_ADAP_Dense_v1, self).build(input_shape)
     scope_name = self.name_scope()
-    self.multi_bias = self.add_weight("%s_outer_bias"%scope_name, shape=[self.domain_numb, self.units])
+    self.multi_bias = self.add_weight("%s_multi_bias"%scope_name, shape=[self.domain_numb, self.units])
 
   def call(self, inputs, domain):
-
     shape = shape_list(inputs)
     rank = len(shape)
     if rank > 2:
@@ -270,7 +270,8 @@ class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
     kernel = self.kernel
     kernel = tf.transpose(self.adapter(tf.transpose(tf.stop_gradient(kernel)), domain)) + kernel
     outputs = tf.matmul(inputs, kernel, transpose_b=self.transpose)
-    if self.use_bias:
+    if self.use_multi_bias:
+      print("Using Multi_bias")
       bias = tf.nn.embedding_lookup(self.multi_bias, domain)
       outputs = tf.nn.bias_add(outputs, bias)
     if self.activation is not None:
@@ -288,7 +289,8 @@ class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
     kernel = args_dict[self.kernel.name]
     kernel = tf.transpose(self.adapter(tf.transpose(tf.stop_gradient(kernel)), domain)) + kernel
     outputs = tf.matmul(inputs, kernel, transpose_b=self.transpose)
-    if self.use_bias:
+    if self.use_multi_bias:
+      print("Using Multi_bias")
       multi_bias = args_dict[self.multi_bias.name]
       bias = tf.nn.embedding_lookup(multi_bias, domain)
       outputs = tf.nn.bias_add(outputs, bias)
