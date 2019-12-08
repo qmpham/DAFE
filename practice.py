@@ -31,7 +31,7 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "trainv2", "translate", "translatev2", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "trainv2", "translate", "translatev2", "translatev3", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
   parser.add_argument("--output")
@@ -228,6 +228,17 @@ def main():
     print("translate in domain %d"%(int(args.domain)))
     task.averaged_checkpoint_translate(config, args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
+  elif args.run=="translatev3":
+    model.create_variables()
+    print("translate in domain %d"%(int(args.domain)))
+    translate_config_file = args.src
+    with open(translate_config_file, "r") as stream:
+      translate_config = yaml.load(stream)
+    for src_file, domain in zip(translate_config["src"], translate_config["domain"]):
+      output_file = "%s.trans"%src_file.strip().split("/")[-1]
+      print("output_file: ", output_file)
+      task.averaged_checkpoint_translate(config, src_file, None, model, checkpoint_manager,
+              checkpoint, int(domain), output_file, length_penalty=0.6, experiment=experiment)
   elif args.run == "finetune":
     task.finetuning(config, meta_train_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "debug":
