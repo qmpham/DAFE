@@ -52,6 +52,8 @@ def main():
   print("running experiment: ", experiment)
   ADAP_layer_stopping_gradient = config.get("ADAP_layer_stopping_gradient",False)
   print("ADAP_layer_stopping_gradient: ", ADAP_layer_stopping_gradient)
+  num_domain_units = config.get("num_domain_units",128)
+  num_domains = config.get("num_domains", 6)
   if experiment=="residual":
     model = Multi_domain_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
@@ -81,6 +83,8 @@ def main():
     target_inputter=My_inputter(embedding_size=512),
     encoder=Multi_domain_SelfAttentionEncoder_v2(
         num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
         num_units=512,
         num_heads=8,
@@ -90,7 +94,8 @@ def main():
         ffn_dropout=0.1),
     decoder=Multi_domain_SelfAttentionDecoder_v2(
         num_layers=6,
-        num_domains=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
         num_units=512,
         num_heads=8,
@@ -104,6 +109,8 @@ def main():
     target_inputter=My_inputter(embedding_size=512),
     encoder=Multi_domain_SelfAttentionEncoder_v2(
         num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
         num_units=512,
         num_heads=8,
@@ -113,7 +120,8 @@ def main():
         ffn_dropout=0.1),
     decoder=Multi_domain_SelfAttentionDecoder_v1(
         num_layers=6,
-        num_domains=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
         num_units=512,
         num_heads=8,
@@ -127,6 +135,8 @@ def main():
     target_inputter=My_inputter(embedding_size=512),
     encoder=Multi_domain_SelfAttentionEncoder_v2(
         num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
         num_units=512,
         num_heads=8,
@@ -136,7 +146,8 @@ def main():
         ffn_dropout=0.1),
     decoder=Multi_domain_SelfAttentionDecoder_v5(
         num_layers=6,
-        num_domains=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
         num_units=512,
         num_heads=8,
