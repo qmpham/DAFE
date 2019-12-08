@@ -258,7 +258,7 @@ class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
   def build(self, input_shape):
     super(Multi_ADAP_Dense_v1, self).build(input_shape)
     scope_name = self.name_scope()
-    self.bias = self.add_weight("%s_outer_bias"%scope_name, shape=[self.domain_numb, self.units])
+    self.multi_bias = self.add_weight("%s_outer_bias"%scope_name, shape=[self.domain_numb, self.units])
 
   def call(self, inputs, domain):
 
@@ -270,7 +270,7 @@ class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
     kernel = tf.transpose(self.adapter(tf.transpose(tf.stop_gradient(kernel)), domain)) + kernel
     outputs = tf.matmul(inputs, kernel, transpose_b=self.transpose)
     if self.use_bias:
-      bias = tf.nn.embedding_lookup(self.bias, domain)
+      bias = tf.nn.embedding_lookup(self.multi_bias, domain)
       outputs = tf.nn.bias_add(outputs, bias)
     if self.activation is not None:
       outputs = self.activation(outputs)  # pylint: disable=not-callable
@@ -288,8 +288,8 @@ class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
     kernel = tf.transpose(self.adapter(tf.transpose(tf.stop_gradient(kernel)), domain)) + kernel
     outputs = tf.matmul(inputs, kernel, transpose_b=self.transpose)
     if self.use_bias:
-      bias = args_dict[self.bias.name]
-      bias = tf.nn.embedding_lookup(bias, domain)
+      multi_bias = args_dict[self.multi_bias.name]
+      bias = tf.nn.embedding_lookup(multi_bias, domain)
       outputs = tf.nn.bias_add(outputs, bias)
     if self.activation is not None:
       outputs = self.activation(outputs)  # pylint: disable=not-callable
