@@ -125,7 +125,9 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
 
   def forward_fn(self, inputs, args_dict, domain, mask=None, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
-    mask=tf.cast(mask,tf.float32)
+    if not(mask is None):
+      mask=tf.cast(mask,tf.float32)
+    mask=None
     inner_kernel = args_dict[self.inner_kernel.name]
     outer_kernel = args_dict[self.outer_kernel.name]
     inner_bias = args_dict[self.inner_bias.name]
@@ -161,8 +163,10 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
       outputs = tf.nn.bias_add(outputs, dom_outer_bias)
     if self.outer_activation is not None:
       outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
-    self.add_loss(tf.divide(tf.reduce_sum(mask * tf.reduce_sum(tf.abs(outputs),axis=-1)), tf.reduce_sum(mask)))
-    #self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
+    if mask is not None:
+      self.add_loss(tf.divide(tf.reduce_sum(mask * tf.reduce_sum(tf.abs(outputs),axis=-1)), tf.reduce_sum(mask)))
+    else:
+      self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     return outputs
