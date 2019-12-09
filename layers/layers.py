@@ -26,7 +26,7 @@ class Multi_domain_FeedForwardNetwork(tf.keras.layers.Layer):
     inner = inner * tf.broadcast_to(tf.expand_dims(mask,1), tf.shape(inner))
     inner = common.dropout(inner, self.dropout, training=training)
     outputs = self.outer(inner)
-    self.add_loss(0.001 * tf.reduce_mean(tf.reduce_sum(tf.abs(tf.reshape(outputs,[-1,tf.shape(outputs)[-1]])),axis=-1)))
+    self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.abs(tf.reshape(outputs,[-1,tf.shape(outputs)[-1]])),axis=-1)))
     if not training:
       tf.print("#######")
       tf.print(self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_max_abs_pooling: ", 
@@ -163,12 +163,12 @@ class Multi_domain_FeedForwardNetwork_v2(tf.keras.layers.Layer):
       outputs = tf.nn.bias_add(outputs, dom_outer_bias)
     if self.outer_activation is not None:
       outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
-    """
+    
     if mask is not None:
-      self.add_loss(tf.divide(tf.reduce_sum(mask * tf.reduce_sum(tf.abs(outputs),axis=-1)), tf.reduce_sum(mask)))
+      self.add_loss(lambda: tf.divide(tf.reduce_sum(mask * tf.reduce_sum(tf.abs(outputs),axis=-1)), tf.reduce_sum(mask)))
     else:
-      self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
-    """
+      self.add_loss(lambda: tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
+    
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     return outputs
