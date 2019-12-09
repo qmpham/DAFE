@@ -281,7 +281,6 @@ class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
     return outputs
 
   def forward_fn(self, inputs, args_dict, domain):
-
     shape = shape_list(inputs)
     rank = len(shape)
     if rank > 2:
