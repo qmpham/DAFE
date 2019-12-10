@@ -1954,6 +1954,35 @@ def meta_train_v8(config,
           step=optimizer.iterations)    
       loss = model.compute_loss(outputs, meta_train_target, training=True)
       training_loss = loss[0] / loss[1]
+      if config.get("ADAP_activity_regularizing",False):
+        layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
+        output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
+        print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+        print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
+        if isinstance(layer_activity_regularization_loss_scale, list):
+          domain = meta_train_source["domain"][0]
+          layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
+          layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
+        if isinstance(output_activity_regularization_loss_scale, list):
+          domain = meta_train_source["domain"][0]
+          output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
+          output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
+        regularization_losses = model.losses
+        print("model_name_scope", model.name_scope())
+        print(regularization_losses)
+        layer_activity_regularization_losses = []
+        output_activity_regularization_losses = []
+        for loss_ in regularization_losses:
+          if "multi_adap__dense" in loss_.name:
+            output_activity_regularization_losses.append(loss_)
+          else:
+            layer_activity_regularization_losses.append(loss_)
+        print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
+        print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
+        if len(layer_activity_regularization_losses)>0:
+          training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
+        if len(output_activity_regularization_losses)>0:
+          training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
       variables = model.trainable_variables       
       args_dict = dict()
       for v in variables:
@@ -1982,6 +2011,35 @@ def meta_train_v8(config,
           step=optimizer.iterations)
       loss = model.compute_loss(outputs, meta_test_target, training=True)
       meta_training_loss = loss[0] / loss[1]
+      if config.get("ADAP_activity_regularizing",False):
+        layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
+        output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
+        print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+        print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
+        if isinstance(layer_activity_regularization_loss_scale, list):
+          domain = meta_train_source["domain"][0]
+          layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
+          layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
+        if isinstance(output_activity_regularization_loss_scale, list):
+          domain = meta_train_source["domain"][0]
+          output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
+          output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
+        regularization_losses = model.losses
+        print("model_name_scope", model.name_scope())
+        print(regularization_losses)
+        layer_activity_regularization_losses = []
+        output_activity_regularization_losses = []
+        for loss_ in regularization_losses:
+          if "multi_adap__dense" in loss_.name:
+            output_activity_regularization_losses.append(loss_)
+          else:
+            layer_activity_regularization_losses.append(loss_)
+        print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
+        print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
+        if len(layer_activity_regularization_losses)>0:
+          meta_training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
+        if len(output_activity_regularization_losses)>0:
+          meta_training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
       gradients = tape.gradient(meta_training_loss, variables)
       gradient_accumulator(gradients)
       num_word_examples = tf.reduce_sum(meta_test_target["length"]) + tf.reduce_sum(meta_train_target["length"])
