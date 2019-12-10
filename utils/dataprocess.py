@@ -3,6 +3,14 @@
 import numpy as np
 import tensorflow as tf
 
+def count_lines(filename):
+  """Returns the number of lines of the file :obj:`filename`."""
+  with open(filename, mode="rb") as f:
+    i = 0
+    for i, _ in enumerate(f):
+      pass
+    return i + 1
+
 def make_batch_per_replica_1_(num_replicas_in_sync):
   def fixing_shape(*args):
     src, tgt = args
@@ -188,6 +196,42 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
     for i,src,tgt in zip(domain,source_file,target_file):
       train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
               batch_size=batch_train_size,
+              batch_type=batch_type,
+              domain=i,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length))
+  else:
+    for src,tgt in zip(source_file,target_file):
+      train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size=batch_train_size,
+              batch_type=batch_type,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length))
+  
+  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets) #tf.data.Dataset.zip(tuple(train_datasets)).map(merge_map_fn)
+  with strategy.scope():
+    base_dataset = train_dataset
+    train_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)  
+
+  return train_dataset
+
+def create_trainining_dataset_v1(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=True):
+
+  train_datasets = [] 
+  datasets_size = [count_lines(src) for src in source_file]
+  datasets_numb = len(source_file)
+  batch_size_ratios = [data_size/sum(datasets_size) for data_size in datasets_size]
+  batches_size = [round(batch_train_size*datasets_numb*ratio) for ratio in batch_size_ratios]
+  print("batch size per domain: ", batches_size)
+  if multi_domain:
+    for i,src,tgt in zip(domain,source_file,target_file):
+      train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size=batches_size[i],
               batch_type=batch_type,
               domain=i,
               shuffle_buffer_size=shuffle_buffer_size,
