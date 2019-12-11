@@ -2223,7 +2223,7 @@ def meta_train_v9(config,
         _meta_loss.append(meta_loss)
         _num_word_examples.append(num_word_examples)
       _step()
-      step = optimizer.iterations.numpy()
+      step = optimizer_1.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
