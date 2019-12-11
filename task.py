@@ -2197,9 +2197,9 @@ def meta_train_v9(config,
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       if "ADAP" in v.name:
-        adap_grads_and_vars.append(scaled_gradient, variable)
+        adap_grads_and_vars.append((scaled_gradient, variable))
       else:
-        shared_grads_and_vars.append(scaled_gradient, variable)
+        shared_grads_and_vars.append((scaled_gradient, variable))
       grads_and_vars.append((scaled_gradient, variable))
     optimizer_1.apply_gradients(shared_grads_and_vars)
     optimizer_2.apply_gradients(adap_grads_and_vars)
