@@ -2139,14 +2139,6 @@ def meta_train_v9(config,
         if len(output_activity_regularization_losses)>0:
           training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
       variables = model.trainable_variables    
-      shared_variables = []
-      adap_variables = []
-      for v in variables:
-        if "ADAP" in v.name:
-          adap_variables.append(v)
-        else:
-          shared_variables.append(v)
-      variables = shared_variables + adap_variables
       args_dict = dict()
       for v in variables:
         args_dict.update({v.name:v})
@@ -2182,21 +2174,13 @@ def meta_train_v9(config,
 
   def _apply_gradients():
     variables = model.trainable_variables    
-    shared_variables = []
-    adap_variables = []
-    for v in variables:
-      if "ADAP" in v.name:
-        adap_variables.append(v)
-      else:
-        shared_variables.append(v)
-    variables = shared_variables + adap_variables
     grads_and_vars = []
     shared_grads_and_vars = []
     adap_grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
-      if "ADAP" in v.name:
+      if "ADAP" in variable.name:
         adap_grads_and_vars.append((scaled_gradient, variable))
       else:
         shared_grads_and_vars.append((scaled_gradient, variable))
