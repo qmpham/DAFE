@@ -2069,9 +2069,9 @@ def meta_train_v9(config,
           experiment="residual",
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=200000,
-          save_every=50,
-          eval_every=15,
-          report_every=10): 
+          save_every=500,
+          eval_every=1500,
+          report_every=100): 
   
   if config.get("train_steps",None)!=None:
     train_steps = config.get("train_steps")
