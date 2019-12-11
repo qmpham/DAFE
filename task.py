@@ -2147,7 +2147,7 @@ def meta_train_v9(config,
 
       meta_train_lr = config.get("meta_train_lr",1.0)
       print("meta_train_lr: ", meta_train_lr)
-      
+      meta_train_lr = learning_rate(optimizer_1.iterations)
       if config.get("stopping_gradient",True):
         print("apply stopping_gradient")
         for g, v in zip(gradients, variables):      
