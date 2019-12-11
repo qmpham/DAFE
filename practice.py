@@ -245,7 +245,7 @@ def main():
   elif args.run == "metatrainv8":
     task.meta_train_v8(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "metatrainv9":
-    task.meta_train_v9(config, meta_test_optimizer, meta_train_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
+    task.meta_train_v9(config, meta_test_optimizer, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "metatrainv6":
     task.meta_train_v6(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "metatrainv5":
