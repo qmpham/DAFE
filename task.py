@@ -62,7 +62,7 @@ def translate(source_file,
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
-    if experiment in ["residual","residualv2","residualv1","residualv3"]:
+    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5"]:
       encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length)
     else:
       encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
@@ -79,7 +79,7 @@ def translate(source_file,
     decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
         memory_sequence_length=source_length)
-    if experiment in ["residual","residualv2","residualv1","residualv3"]:
+    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
     elif experiment=="ldr":
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
