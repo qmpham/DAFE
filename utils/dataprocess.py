@@ -156,6 +156,55 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
   
   return meta_train_dataset, meta_test_dataset
 
+def create_multi_domain_meta_trainining_dataset_v1(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length):
+  meta_train_datasets = [] 
+  meta_test_datasets = [] 
+  print("batch_type: ", batch_type)
+  datasets_size = [count_lines(src) for src in source_file]
+  datasets_numb = len(source_file)
+  batch_size_ratios = [data_size/sum(datasets_size) for data_size in datasets_size]
+  meta_train_batches_size = [round(batch_meta_train_size * datasets_numb * ratio) for ratio in batch_size_ratios]
+  meta_test_batches_size = [round(batch_meta_test_size * datasets_numb * ratio) for ratio in batch_size_ratios]
+  print("meta_train_batches_size per domain: ", meta_train_batches_size)
+  print("meta_test_batches_size per domain: ", meta_test_batches_size)
+  for i, src,tgt in zip(domain,source_file,target_file):
+    meta_train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size=meta_train_batches_size[i],
+              batch_type=batch_type,
+              batch_multiplier=1,
+              domain=i,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length))
+
+    meta_test_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size= meta_test_batches_size[i],
+              batch_type=batch_type,
+              batch_multiplier=1,
+              domain=i,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length))
+  
+  meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets) #tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
+  meta_test_dataset = tf.data.experimental.sample_from_datasets(meta_test_datasets) #tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
+  
+  with strategy.scope():    
+    base_dataset = meta_train_dataset      
+    meta_train_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)
+    base_dataset = meta_test_dataset      
+    meta_test_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)
+    """
+    meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
+    meta_test_dataset = strategy.experimental_distribute_dataset(meta_test_dataset)
+    """
+  
+  return meta_train_dataset, meta_test_dataset
+
 def create_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length):
   meta_train_datasets = [] 
   meta_test_datasets = [] 
