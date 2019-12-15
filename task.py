@@ -2948,7 +2948,7 @@ def averaged_checkpoint_translate(config, source_file,
   
   # Create the inference dataset.
   new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
-                        max_count=8,
+                        max_count=3,
                         model_key="model")
   checkpoint.restore(new_checkpoint_manager.latest_checkpoint)
   tf.get_logger().info("Evaluating model %s", new_checkpoint_manager.latest_checkpoint)
