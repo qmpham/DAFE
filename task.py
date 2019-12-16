@@ -145,38 +145,41 @@ def debug(config,
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
-  batch_train_size = config["batch_train_size"]  
+  #####
+  batch_meta_train_size = config["batch_meta_train_size"]
+  batch_meta_test_size = config["batch_meta_test_size"]
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
   domain = config["domain"]
-  length_bucket_width = config.get("length_bucket_width",1)
+  
   print("There are %d in-domain corpora"%len(source_file))
 
-  train_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
-                                              batch_train_size, batch_type, shuffle_buffer_size, maximum_length, 
-                                              length_bucket_width, picking_prob="Anneal")
+  meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
+                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, 
+                                                                        shuffle_buffer_size, maximum_length, picking_prob="Anneal")
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
 
-  def _accumulate_gradients(source, target):
-    num_examples = tf.reduce_sum(target["length"])
-    tf.print("token_numb:____", num_examples, "domain:____", source["domain"][0])
+  def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
+    num_examples = tf.reduce_sum(meta_train_target["length"])
+    tf.print("token_numb:____", num_examples, "domain:____", meta_train_source["domain"][0])
     reported_loss = 0
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
-  @dataset_util.function_on_next(train_dataset)
-  def _train_forward(next_fn):    
+  @utils.dataprocess.meta_learning_function_on_next(meta_train_dataset, meta_test_dataset)
+  def _meta_train_forward(next_fn):    
     with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target = next_fn()
+      per_replica_meta_loss, per_replica_loss, per_replica_num_word_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, num_examples
+      meta_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_meta_loss, None)
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
+      num_word_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_word_examples, None)    
+    return meta_loss, loss, num_word_examples
   
   # Runs the training loop.
   import time
@@ -1882,7 +1885,8 @@ def meta_train_v8(config,
   print("There are %d in-domain corpora"%len(source_file))
 
   meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
-                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length, picking_prob=picking_prob)
+                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, 
+                                                                        shuffle_buffer_size, maximum_length, picking_prob=picking_prob)
   #####
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target): 
      
