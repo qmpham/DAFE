@@ -172,7 +172,7 @@ def debug(config,
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples, domain
 
-  @utils.dataprocess.meta_learning_function_on_next(meta_train_dataset, meta_test_dataset)
+  @utils.dataprocess.meta_learning_function_on_next(meta_train_dataset, meta_train_dataset)
   def _meta_train_forward(next_fn):    
     with strategy.scope():
       meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target = next_fn()
