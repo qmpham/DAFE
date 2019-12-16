@@ -137,7 +137,8 @@ def debug(config,
           train_steps=200000,
           save_every=5000,
           eval_every=15000,
-          report_every=100): 
+          report_every=100,
+          picking_prob=None): 
   if config.get("train_steps",None)!=None:
     train_steps = config.get("train_steps")
   if config.get("batch_type",None)!=None:
@@ -157,7 +158,7 @@ def debug(config,
 
   meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
                                                                         batch_meta_train_size, batch_meta_test_size, batch_type, 
-                                                                        shuffle_buffer_size, maximum_length, picking_prob="Anneal")
+                                                                        shuffle_buffer_size, maximum_length, picking_prob=picking_prob)
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
