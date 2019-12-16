@@ -151,7 +151,7 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
       picking_prob = [p**power for p in picking_prob]
       return [p/sum(picking_prob) for p in picking_prob]
     def gen():
-      for i in itertools.count(1):
+      for i in range(200000):
         yield(anneal(picking_prob, i))
     picking_prob = tf.data.Dataset.from_generator(gen, (tf.float32), (tf.TensorShape([None])))
     print("picking probability: ", picking_prob)
