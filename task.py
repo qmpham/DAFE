@@ -165,7 +165,7 @@ def debug(config,
 
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
     num_examples = tf.reduce_sum(meta_train_target["length"])
-    domain = meta_test_source["domain"][0]
+    domain = meta_train_source["domain"][0]
     #tf.print("token_numb:____", num_examples, "domain:____", meta_train_source["domain"][0])
     reported_loss = 0
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
