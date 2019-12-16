@@ -185,7 +185,7 @@ def debug(config,
   import time
   start = time.time()  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
-  meta_train_data_flow = iter(_train_forward())
+  meta_train_data_flow = iter(_meta_train_forward())
   
   with _summary_writer.as_default():
     while True:
