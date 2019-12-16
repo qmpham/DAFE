@@ -145,15 +145,13 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
   elif picking_prob=="Anneal":
     import itertools
     datasets_size = [count_lines(src) for src in source_file]
-    picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
-    def anneal(picking_prob, step, end=200000):
+    picking_prob_ = [data_size/sum(datasets_size) for data_size in datasets_size]
+    def anneal(step, end=200000):
       power = (end-step)/end
-      picking_prob = [p**power for p in picking_prob]
-      return [p/sum(picking_prob) for p in picking_prob]
-    def gen():
-      for i in itertools.count(1):
-        yield(anneal(picking_prob, i))
-    picking_prob = tf.data.Dataset.from_generator(gen, (tf.float32), (tf.TensorShape([None])))
+      probs = [p**power for p in picking_prob_]
+      return [p/sum(probs) for p in probs]
+    step = tf.data.Dataset.range(200000)
+    picking_prob = step.map(lambda i: anneal(i))
     print("picking probability: ", picking_prob)
 
   meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets, weights=picking_prob) #tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
