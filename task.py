@@ -185,7 +185,7 @@ def debug(config,
   # Runs the training loop.
   import time
   start = time.time()  
-  print("number of replicas: %d"%strategy.num_replicas_in_sync)
+  #print("number of replicas: %d"%strategy.num_replicas_in_sync)
   meta_train_data_flow = iter(_meta_train_forward())
   step=0
   count = np.array([0] * len(source_file))
