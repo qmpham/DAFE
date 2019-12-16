@@ -162,6 +162,7 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
     base_dataset = meta_train_dataset      
     meta_train_dataset = strategy.experimental_distribute_datasets_from_function(
           lambda _: base_dataset)
+  with strategy.scope():
     base_dataset = meta_test_dataset      
     meta_test_dataset = strategy.experimental_distribute_datasets_from_function(
           lambda _: base_dataset)
