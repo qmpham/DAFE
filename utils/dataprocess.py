@@ -355,7 +355,7 @@ def meta_learning_function_on_next(metatrain_dataset, metatest_dataset, as_numpy
       metatest_iterator = iter(metatest_dataset)
       @tf.function
       def _tf_fun():
-        return func(lambda: next(metatrain_iterator)+next(metatest_iterator))
+        return func(lambda: next(metatrain_iterator).extend(next(metatest_iterator)))
 
       while True:
         try:
