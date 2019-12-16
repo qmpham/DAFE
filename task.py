@@ -185,7 +185,7 @@ def debug(config,
   # Runs the training loop.
   import time
   start = time.time()  
-  #print("number of replicas: %d"%strategy.num_replicas_in_sync)
+  print("number of replicas: %d"%strategy.num_replicas_in_sync)
   meta_train_data_flow = iter(_meta_train_forward())
   step=0
   count = np.array([0] * len(source_file))
@@ -199,7 +199,7 @@ def debug(config,
       if step % 100 == 0:
         print([c/sum(count) for c in count])
       #_loss.append(loss)
-      print("number examples per replica: ", num_examples)
+      #print("number examples per replica: ", num_examples)
       #print(next(meta_train_flow))
 
 def meta_train_v1(config,
