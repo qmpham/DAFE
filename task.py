@@ -166,6 +166,7 @@ def debug(config,
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
     num_examples = tf.reduce_sum(meta_train_target["length"])
     domain = meta_train_source["domain"][0]
+    tf.print("domain:",domain)
     #tf.print("token_numb:____", num_examples, "domain:____", meta_train_source["domain"][0])
     reported_loss = 0
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
@@ -195,7 +196,7 @@ def debug(config,
       #####Training batch
       _, num_examples, domain = next(meta_train_data_flow) 
       domain = domain.numpy()
-      print(domain)
+      #print(domain)
       count += np.array([1 if i==int(domain) else 0 for i in range(len(source_file))])
       step +=1
       if step % 100 == 0:
