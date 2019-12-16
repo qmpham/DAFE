@@ -176,6 +176,7 @@ def debug(config,
   def _meta_train_forward(next_fn):    
     with strategy.scope():
       meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target = next_fn()
+      print(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target)
       per_replica_loss, per_replica_num_word_examples, per_replica_domain = strategy.experimental_run_v2(
           _accumulate_gradients, args=(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
