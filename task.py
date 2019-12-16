@@ -173,13 +173,12 @@ def debug(config,
   def _meta_train_forward(next_fn):    
     with strategy.scope():
       meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target = next_fn()
-      per_replica_meta_loss, per_replica_loss, per_replica_num_word_examples = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_num_word_examples = strategy.experimental_run_v2(
           _accumulate_gradients, args=(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
-      meta_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_meta_loss, None)
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
       num_word_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_word_examples, None)    
-    return meta_loss, loss, num_word_examples
+    return loss, num_word_examples
   
   # Runs the training loop.
   import time
