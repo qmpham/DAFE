@@ -143,12 +143,6 @@ def debug(config,
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
   #####
-  """
-  if checkpoint_manager.latest_checkpoint is not None:
-    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-    checkpoint.restore(checkpoint_manager.latest_checkpoint)
-  """
-  #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
   batch_train_size = config["batch_train_size"]  
@@ -159,41 +153,16 @@ def debug(config,
   length_bucket_width = config.get("length_bucket_width",1)
   print("There are %d in-domain corpora"%len(source_file))
 
-  train_dataset = create_trainining_dataset_v2(strategy, model, domain, source_file, target_file, 
+  train_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
                                               batch_train_size, batch_type, shuffle_buffer_size, maximum_length, 
-                                              length_bucket_width, multi_domain=True)
+                                              length_bucket_width, picking_prob="Anneal")
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
-    gradient_accumulator = optimizer_util.GradientAccumulator()  
 
   def _accumulate_gradients(source, target):
-    """
-    outputs, _ = model(
-        source,
-        labels=target,
-        training=True,
-        step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
-    if isinstance(loss, tuple):
-      training_loss = loss[0] / loss[1]
-      reported_loss = loss[0] / loss[2]
-    else:
-      training_loss, reported_loss = loss, loss
-    
-    if config.get("ADAP_activity_regularizing",False):
-      activity_regularization_loss_scale = config.get("activity_regularization_loss_scale",0.001)
-      print("activity_regularization_loss_scale: ",activity_regularization_loss_scale)
-      regularization_losses = model.losses
-      print(regularization_losses)
-      training_loss += activity_regularization_loss_scale * tf.add_n([loss_ for loss_ in regularization_losses if model.name_scope() in loss_.name])
-    variables = model.trainable_variables
-    print("var numb: ", len(variables))
-    gradients = optimizer.get_gradients(training_loss, variables)
-    gradient_accumulator(gradients)
-    """
     num_examples = tf.reduce_sum(target["length"])
-    tf.print("token_numb:____", num_examples, "domain:____", source["domain"])
+    tf.print("token_numb:____", num_examples, "domain:____", source["domain"][0])
     reported_loss = 0
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
