@@ -164,32 +164,40 @@ def debug(config,
 
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
     num_examples = tf.reduce_sum(meta_train_target["length"])
-    tf.print("token_numb:____", num_examples, "domain:____", meta_train_source["domain"][0])
+    domain = meta_test_source["domain"][0]
+    #tf.print("token_numb:____", num_examples, "domain:____", meta_train_source["domain"][0])
     reported_loss = 0
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples
+    return reported_loss, num_examples, domain
 
   @utils.dataprocess.meta_learning_function_on_next(meta_train_dataset, meta_test_dataset)
   def _meta_train_forward(next_fn):    
     with strategy.scope():
       meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_word_examples = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_num_word_examples, per_replica_domain = strategy.experimental_run_v2(
           _accumulate_gradients, args=(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
-      num_word_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_word_examples, None)    
-    return loss, num_word_examples
+      num_word_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_word_examples, None) 
+      domain = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_domain, None)
+    return loss, num_word_examples, domain
   
   # Runs the training loop.
   import time
   start = time.time()  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   meta_train_data_flow = iter(_meta_train_forward())
-  
+  step=0
+  count = [0] * len(source_file)
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      _, num_examples = next(meta_train_data_flow)  
+      _, num_examples, domain = next(meta_train_data_flow) 
+      domain = domain.numpy()
+      count += [1 if i==int(domain) else 0 for i in range(len(source_file))]
+      step +=1
+      if step % 100 == 0:
+        print([c/sum(count) for c in count])
       #_loss.append(loss)
       print("number examples per replica: ", num_examples)
       #print(next(meta_train_flow))
