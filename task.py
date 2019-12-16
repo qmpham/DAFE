@@ -1882,6 +1882,7 @@ def meta_train_v8(config,
           batch_size = 2048,
           batch_type = "tokens",
           experiment="residual",
+          picking_prob=None,
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=200000,
           save_every=5000,
@@ -1912,7 +1913,7 @@ def meta_train_v8(config,
   print("There are %d in-domain corpora"%len(source_file))
 
   meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
-                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
+                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length, picking_prob=picking_prob)
   #####
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target): 
      
