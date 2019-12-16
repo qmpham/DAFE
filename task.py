@@ -195,6 +195,7 @@ def debug(config,
       #####Training batch
       _, num_examples, domain = next(meta_train_data_flow) 
       domain = domain.numpy()
+      print(domain)
       count += np.array([1 if i==int(domain) else 0 for i in range(len(source_file))])
       step +=1
       if step % 100 == 0:

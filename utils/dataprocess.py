@@ -141,7 +141,7 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
   if picking_prob=="Natural":
     datasets_size = [count_lines(src) for src in source_file]
     picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
-    picking_prob = [1.0,0.0,0.0,0.0,0.0,0.0,0.0]
+    picking_prob = [1.0,0.0,0.0,0.0,0.0,0.0]
     print("picking probability: ", picking_prob)
   elif picking_prob=="Anneal":
     import itertools
