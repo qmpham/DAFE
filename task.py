@@ -188,13 +188,13 @@ def debug(config,
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   meta_train_data_flow = iter(_meta_train_forward())
   step=0
-  count = [0] * len(source_file)
+  count = np.array([0] * len(source_file))
   with _summary_writer.as_default():
     while True:
       #####Training batch
       _, num_examples, domain = next(meta_train_data_flow) 
       domain = domain.numpy()
-      count += [1 if i==int(domain) else 0 for i in range(len(source_file))]
+      count += np.array([1 if i==int(domain) else 0 for i in range(len(source_file))])
       step +=1
       if step % 100 == 0:
         print([c/sum(count) for c in count])
