@@ -114,7 +114,7 @@ def ragged_map(*args):
 
   return src_batch, tgt_batch
 
-def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length):
+def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length, picking_prob=None):
   meta_train_datasets = [] 
   meta_test_datasets = [] 
   print("batch_type: ", batch_type)
@@ -138,9 +138,26 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
               length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=maximum_length,
               maximum_labels_length=maximum_length))
-  
-  meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets) #tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
-  meta_test_dataset = tf.data.experimental.sample_from_datasets(meta_test_datasets) #tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
+  if picking_prob=="Natural":
+    datasets_size = [count_lines(src) for src in source_file]
+    picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+    print("picking probability: ", picking_prob)
+  elif picking_prob=="Anneal":
+    import itertools
+    datasets_size = [count_lines(src) for src in source_file]
+    picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+    def anneal(picking_prob, step, end=200000):
+      power = (end-step)/end
+      picking_prob = [p**power for p in picking_prob]
+      return [p/sum(picking_prob) for p in picking_prob]
+    def gen():
+      for i in itertools.count(1):
+        yield(anneal(picking_prob, i))
+    picking_prob = tf.data.Dataset.from_generator(gen, (tf.float32), (tf.TensorShape([None])))
+    print("picking probability: ", picking_prob)
+
+  meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets, weights=picking_prob) #tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
+  meta_test_dataset = tf.data.experimental.sample_from_datasets(meta_test_datasets, weights=picking_prob) #tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
   
   with strategy.scope():    
     base_dataset = meta_train_dataset      
@@ -149,10 +166,6 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
     base_dataset = meta_test_dataset      
     meta_test_dataset = strategy.experimental_distribute_datasets_from_function(
           lambda _: base_dataset)
-    """
-    meta_train_dataset = strategy.experimental_distribute_dataset(meta_train_dataset)
-    meta_test_dataset = strategy.experimental_distribute_dataset(meta_test_dataset)
-    """
   
   return meta_train_dataset, meta_test_dataset
 
@@ -334,48 +347,6 @@ def create_trainining_dataset_v2(strategy, model, domain, source_file, target_fi
     train_dataset = strategy.experimental_distribute_dataset(train_dataset)
 
   return train_dataset
-
-def create_multi_domain_meta_trainining_dataset_v2(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length):
-  meta_train_datasets = [] 
-  meta_test_datasets = [] 
-  print("batch_type: ", batch_type)
-  datasets_size = [count_lines(src) for src in source_file]
-  picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
-  print("picking probability: ", picking_prob)
-
-  for i, src,tgt in zip(domain,source_file,target_file):
-    meta_train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size=batch_meta_train_size,
-              batch_type=batch_type,
-              batch_multiplier=1,
-              domain=i,
-              shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
-              maximum_features_length=maximum_length,
-              maximum_labels_length=maximum_length))
-
-    meta_test_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
-              batch_size= batch_meta_test_size,
-              batch_type=batch_type,
-              batch_multiplier=1,
-              domain=i,
-              shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
-              maximum_features_length=maximum_length,
-              maximum_labels_length=maximum_length))
-  
-  meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets, picking_prob) 
-  meta_test_dataset = tf.data.experimental.sample_from_datasets(meta_test_datasets, picking_prob) 
-  
-  with strategy.scope():    
-    base_dataset = meta_train_dataset      
-    meta_train_dataset = strategy.experimental_distribute_datasets_from_function(
-          lambda _: base_dataset)
-    base_dataset = meta_test_dataset      
-    meta_test_dataset = strategy.experimental_distribute_datasets_from_function(
-          lambda _: base_dataset)
-  
-  return meta_train_dataset, meta_test_dataset
 
 def meta_learning_function_on_next(metatrain_dataset, metatest_dataset, as_numpy=False):
     
