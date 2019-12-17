@@ -1900,7 +1900,7 @@ def meta_train_v8(config,
                                                                         shuffle_buffer_size, maximum_length, picking_prob=picking_prob)
   #####
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target): 
-     
+    tf.print("meta_train_domain", meta_train_source["domain"][0], "meta_test_domain: ", meta_test_source["domain"][0], sep="|")
     with tf.GradientTape(persistent=True) as tape:
       ##### Inner adaptation
       outputs, _ = model(
