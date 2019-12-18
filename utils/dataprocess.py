@@ -147,7 +147,7 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
     import itertools
     datasets_size = [count_lines(src) for src in source_file]
     picking_prob_ = [data_size/sum(datasets_size) for data_size in datasets_size]
-    def anneal(i, end=200000):
+    def anneal(i, end=200000 * strategy.num_replicas_in_sync):
       i = (end-i)/end
       prob_ = [p**i  for p in picking_prob_]
       return [p/sum(prob_) for p in prob_]
