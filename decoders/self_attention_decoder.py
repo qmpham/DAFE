@@ -606,6 +606,7 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
                ffn_activation=tf.nn.relu,
                position_encoder_class=SinusoidalPositionEncoder,
                multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v2,
+               ADAP_contribution=None,
                num_sources=1,
                **kwargs):
     
@@ -632,6 +633,9 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
         multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
         for i in range(num_layers)]
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
+    if ADAP_contribution==None:
+      ADAP_contribution==[1.0] * num_layers
+    self.ADAP_contribution = ADAP_contribution
 
   def initialize(self, vocab_size=None, output_layer=None):  
     if output_layer is not None:
@@ -754,9 +758,9 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
           training=training)
       new_cache.append(layer_cache)
       if self.ADAP_layer_stopping_gradient:
-        inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) + inputs
+        inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
       else:
-        inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) + inputs
+        inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
 
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
@@ -894,9 +898,9 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
           training=training)
       new_cache.append(layer_cache)
       if self.ADAP_layer_stopping_gradient:
-        inputs = multi_domain_layer.forward_fn(tf.stop_gradient(inputs), args_dict, domain, mask=mask, training=training) + inputs
+        inputs = multi_domain_layer.forward_fn(tf.stop_gradient(inputs), args_dict, domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
       else:
-        inputs = multi_domain_layer.forward_fn(inputs, args_dict, domain, mask=mask, training=training) + inputs
+        inputs = multi_domain_layer.forward_fn(inputs, args_dict, domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
 
     outputs = self.layer_norm.forward_fn(inputs, args_dict)
     return outputs, new_cache, attention
@@ -1186,6 +1190,7 @@ class Multi_domain_SelfAttentionDecoder_v5(Decoder):
                ffn_activation=tf.nn.relu,
                position_encoder_class=SinusoidalPositionEncoder,
                multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v2,
+               ADAP_contribution=None,
                num_sources=1,
                **kwargs):
     
@@ -1212,7 +1217,9 @@ class Multi_domain_SelfAttentionDecoder_v5(Decoder):
         multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
         for i in range(num_layers)]
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
-
+    if ADAP_contribution==None:
+      ADAP_contribution=[1.0] * num_layers
+    self.ADAP_contribution = ADAP_contribution
   def initialize(self, vocab_size=None, output_layer=None):  
     if output_layer is not None:
       self.output_layer = output_layer
@@ -1334,9 +1341,9 @@ class Multi_domain_SelfAttentionDecoder_v5(Decoder):
           training=training)
       new_cache.append(layer_cache)
       if self.ADAP_layer_stopping_gradient:
-        inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) + inputs
+        inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
       else:
-        inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) + inputs
+        inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
 
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
@@ -1476,9 +1483,9 @@ class Multi_domain_SelfAttentionDecoder_v5(Decoder):
           training=training)
       new_cache.append(layer_cache)
       if self.ADAP_layer_stopping_gradient:
-        inputs = multi_domain_layer.forward_fn(tf.stop_gradient(inputs), args_dict, domain, mask=mask, training=training) + inputs
+        inputs = multi_domain_layer.forward_fn(tf.stop_gradient(inputs), args_dict, domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
       else:
-        inputs = multi_domain_layer.forward_fn(inputs, args_dict, domain, mask=mask, training=training) + inputs
+        inputs = multi_domain_layer.forward_fn(inputs, args_dict, domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
 
     outputs = self.layer_norm.forward_fn(inputs, args_dict)
     return outputs, new_cache, attention

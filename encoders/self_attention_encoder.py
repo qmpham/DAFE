@@ -112,6 +112,7 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
                ffn_activation=tf.nn.relu,
                position_encoder_class=SinusoidalPositionEncoder,
                multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v2,
+               ADAP_contribution=None,
                **kwargs):
     
     super(Multi_domain_SelfAttentionEncoder_v2, self).__init__(**kwargs)
@@ -135,7 +136,9 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
         multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
         for i in range(num_layers)]
     self.ADAP_layer_stopping_gradient = ADAP_layer_stopping_gradient
-  
+    if ADAP_contribution == None:
+      ADAP_contribution = [1.0] * num_layers
+    self.ADAP_contribution = ADAP_contribution
   def call(self, inputs, sequence_length=None, training=None):
     domain = inputs[1]
     domain = domain[0]
@@ -149,9 +152,9 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
     for layer, multi_domain_layer in zip(self.layers,self.multi_domain_layers):
       inputs = layer(inputs, mask=mask, training=training)
       if self.ADAP_layer_stopping_gradient:
-        inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) + inputs
+        inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
       else:
-        inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) + inputs
+        inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
     outputs = self.layer_norm(inputs)
     
     return outputs, None, sequence_length
