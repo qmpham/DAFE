@@ -249,7 +249,7 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
 
   return meta_train_dataset, meta_test_dataset
 
-def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=True):
+def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=True, picking_prob=None):
 
   train_datasets = [] 
   if multi_domain:
@@ -272,7 +272,26 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
               maximum_features_length=maximum_length,
               maximum_labels_length=maximum_length))
   
-  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets) #tf.data.Dataset.zip(tuple(train_datasets)).map(merge_map_fn)
+  if picking_prob=="Natural":
+    datasets_size = [count_lines(src) for src in source_file]
+    picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+    #picking_prob = [1.0,0.01,0.01,0.01,0.01,0.01]
+    print("picking probability: ", picking_prob)
+  elif picking_prob=="Anneal":
+    import itertools
+    datasets_size = [count_lines(src) for src in source_file]
+    picking_prob_ = [data_size/sum(datasets_size) for data_size in datasets_size]
+    def anneal(i, end=200000 * strategy.num_replicas_in_sync):
+      i = (end-i)/end
+      prob_ = [p**i  for p in picking_prob_]
+      return [p/sum(prob_) for p in prob_]
+    tensor = tf.Variable(np.array([anneal(i) for i in range(200000)]))
+    picking_prob = tf.data.Dataset.from_tensor_slices(tensor)
+    print("picking probability: ", picking_prob)
+  else:
+    print("picking probability: ", picking_prob)
+
+  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob) #tf.data.Dataset.zip(tuple(train_datasets)).map(merge_map_fn)
   with strategy.scope():
     base_dataset = train_dataset
     train_dataset = strategy.experimental_distribute_datasets_from_function(
