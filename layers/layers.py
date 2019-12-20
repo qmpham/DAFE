@@ -303,7 +303,7 @@ class Multi_domain_FeedForwardNetwork_v1(tf.keras.layers.Layer):
                output_dim,
                domain_numb=6,
                dropout=0.1,
-               activation=tf.nn.relu,
+               activation=tf.nn.tanh,
                outer_activation=None,
                **kwargs):
     
