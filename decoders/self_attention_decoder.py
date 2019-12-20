@@ -635,8 +635,9 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
     if ADAP_contribution==None:
       ADAP_contribution =[1.0] * num_layers
-    self.ADAP_contribution = ADAP_contribution
 
+    self.ADAP_contribution = ADAP_contribution
+    print("ADAP contribution", self.ADAP_contribution)
   def initialize(self, vocab_size=None, output_layer=None):  
     if output_layer is not None:
       self.output_layer = output_layer
