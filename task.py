@@ -1518,7 +1518,7 @@ def train(config,
   print("There are %d in-domain corpora"%len(source_file))
 
   train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, 
-                                                                        batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=(config["experiment"]!="baseline"))
+                                                                        batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=(config["experiment"]!="baseline"),picking_prob=config.get("picking_prob",None))
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
