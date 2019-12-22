@@ -3005,7 +3005,7 @@ def train_v8(config,
     args_dict = dict()
     for v in variables:
       args_dict.update({v.name:v})
-    gradients = tf.gradient(training_loss, variables)  
+    gradients = tf.gradients(training_loss, variables)  
     gradient_accumulator(gradients)
     
     outputs, _ = model(meta_test_source,
@@ -3015,7 +3015,7 @@ def train_v8(config,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, meta_test_target, training=True)
     meta_training_loss = loss[0] / loss[1]
-    gradients = tf.gradient(meta_training_loss, variables)
+    gradients = tf.gradients(meta_training_loss, variables)
     gradient_accumulator(gradients)
     num_word_examples = tf.reduce_sum(meta_test_target["length"]) + tf.reduce_sum(meta_train_target["length"])
   
