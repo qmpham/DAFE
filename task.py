@@ -3009,7 +3009,6 @@ def train_v8(config,
     gradient_accumulator(gradients)
     
     outputs, _ = model(meta_test_source,
-        args_dict,
         labels=meta_test_target,
         training=True,
         step=optimizer.iterations)
