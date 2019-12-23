@@ -20,7 +20,7 @@ from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
 from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
-from utils.dataprocess import merge_map_fn, create_trainining_dataset_v1, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset, create_trainining_dataset_v2, create_multi_domain_meta_trainining_dataset_v1
+from utils.dataprocess import merge_map_fn, create_trainining_dataset_v1, create_multi_domain_meta_trainining_dataset_v2, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset, create_trainining_dataset_v2, create_multi_domain_meta_trainining_dataset_v1
 from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
@@ -3002,9 +3002,6 @@ def train_v8(config,
       if len(output_activity_regularization_losses)>0:
         training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
     variables = model.trainable_variables       
-    args_dict = dict()
-    for v in variables:
-      args_dict.update({v.name:v})
     gradients = tf.gradients(training_loss, variables)  
     gradient_accumulator(gradients)
     
@@ -3072,6 +3069,170 @@ def train_v8(config,
             step, learning_rate(step), np.mean(_loss), np.mean(_meta_loss), np.sum(_num_word_examples), elapsed)
         _loss = []
         _meta_loss = []
+        _num_word_examples = []
+        start = time.time()
+      if step % save_every == 0:
+        tf.get_logger().info("Saving checkpoint for step %d", step)
+        checkpoint_manager.save(checkpoint_number=step)
+      if step % eval_every == 0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+      if step > train_steps:
+        break
+
+def meta_train_v12(config,
+          inner_optimizer,
+          outer_optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          picking_prob=None,
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
+  #####
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_meta_train_size = config["batch_meta_train_size"]
+  batch_meta_test_size = config["batch_meta_test_size"]
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config["domain"]
+  
+  print("There are %d in-domain corpora"%len(source_file))
+
+  meta_train_datasets = create_multi_domain_meta_trainining_dataset_v2(strategy, model, domain, source_file, target_file, 
+                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length)
+  #####
+  with strategy.scope():
+    model.create_variables(optimizer=outer_optimizer)
+    _outer_gradient_accumulator = optimizer_util.GradientAccumulator()  
+    _inner_gradient_accumulator = optimizer_util.GradientAccumulator()
+
+  def _accumulate_meta_train_gradients(source, target):
+    print("source: ", source)
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=outer_optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    variables = model.trainable_variables
+    print("var numb: ", len(variables))
+    gradients = outer_optimizer.get_gradients(training_loss, variables)
+    _outer_gradient_accumulator(gradients)
+    _inner_gradient_accumulator(gradients)
+    num_examples = tf.shape(source["length"])[0]
+    return reported_loss, num_examples
+
+  def _apply_inner_gradients():
+    variables = model.trainable_variables
+    grads_and_vars = []
+    for gradient, variable in zip(_inner_gradient_accumulator.gradients, variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(_inner_gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    outer_optimizer.apply_gradients(grads_and_vars)
+    _inner_gradient_accumulator.reset()
+
+  def _apply_outer_gradients():
+    variables = model.trainable_variables
+    grads_and_vars = []
+    for gradient, variable in zip(_outer_gradient_accumulator.gradients, variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(_outer_gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    outer_optimizer.apply_gradients(grads_and_vars)
+    _outer_gradient_accumulator.reset()
+
+  @tf.function
+  def _inner_train_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_inner_gradients)
+  @tf.function
+  def _outer_train_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_outer_gradients)
+  def _set_weight(v, w):
+    v.assign(w)
+
+  @tf.function
+  def weight_reset(snapshots):
+    with strategy.scope():
+      for snap, var in zip(snapshots, model.trainable_variables):
+        strategy.extended.update(var, _set_weight, args=(snap, ))
+
+  meta_train_data_flows = []
+  for meta_train_dataset in meta_train_datasets:
+    @dataset_util.function_on_next(meta_train_dataset)
+    def _meta_train_forward(next_fn):    
+      with strategy.scope():
+        per_replica_source, per_replica_target = next_fn()
+        per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+            _accumulate_meta_train_gradients, args=(per_replica_source, per_replica_target))
+        # TODO: these reductions could be delayed until _step is called.
+        loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
+        num_examples = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_num_examples, None)    
+      return loss, num_examples
+
+    meta_train_data_flow = iter(_meta_train_forward())
+    meta_train_data_flows.append(meta_train_data_flow)
+
+  # Runs the training loop.
+  import time
+  start = time.time()  
+  print("number of replicas: %d"%strategy.num_replicas_in_sync)
+  _loss = [[]] * len(meta_train_data_flows)
+  _num_word_examples = []
+  inner_loop_numb = [int(1)] * len(meta_train_data_flows)
+  with _summary_writer.as_default():
+    while True:  
+      ##save current value of variables
+      snapshots = [v.value() for v in model.trainable_variables]    
+      domain = np.random.choice(len(meta_train_data_flows),1)      
+      ##inner loop
+      for _ in range(inner_loop_numb[domain]):
+        loss, num_word_examples = next(meta_train_data_flow[domain])  
+        _loss[domain].append(loss)  
+        _num_word_examples.append(num_word_examples)
+        _inner_train_step()
+      ##outer loop
+      weight_reset(snapshots)
+      _outer_train_step()
+      ####      
+      step = outer_optimizer.iterations.numpy()
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; num_word_examples = %d; after %f seconds",
+            step, learning_rate(step), np.mean([np.mean(losses) for losses in _loss]), np.sum(_num_word_examples), elapsed)
+        _loss = [[]] * len(meta_train_data_flows)
         _num_word_examples = []
         start = time.time()
       if step % save_every == 0:
