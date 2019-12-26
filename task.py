@@ -3215,7 +3215,7 @@ def meta_train_v12(config,
     while True:  
       ##save current value of variables
       snapshots = [v.value() for v in model.trainable_variables]    
-      domain = np.random.choice(len(meta_train_data_flows),1)      
+      domain = np.random.choice(len(meta_train_data_flows),1)[0]      
       ##inner loop
       for _ in range(inner_loop_numb[domain]):
         loss, num_word_examples = next(meta_train_data_flow[domain])  
