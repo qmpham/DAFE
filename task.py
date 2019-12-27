@@ -3148,7 +3148,7 @@ def meta_train_v12(config,
     gradients = outer_optimizer.get_gradients(training_loss, variables)
     _outer_gradient_accumulator(gradients)
     _inner_gradient_accumulator(gradients)
-    num_examples = tf.shape(source["length"])[0]
+    num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
 
   def _apply_inner_gradients():
@@ -3198,7 +3198,7 @@ def meta_train_v12(config,
             _accumulate_meta_train_gradients, args=(per_replica_source, per_replica_target))
         # TODO: these reductions could be delayed until _step is called.
         loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
-        num_examples = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_num_examples, None)    
+        num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)    
       return loss, num_examples
 
     meta_train_data_flow = iter(_meta_train_forward())
