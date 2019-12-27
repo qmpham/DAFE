@@ -3210,7 +3210,7 @@ def meta_train_v12(config,
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = [[]] * len(meta_train_data_flows)
   _num_word_examples = []
-  inner_loop_numb = [int(1)] * len(meta_train_data_flows)
+  inner_loop_numb = [int(2)] * len(meta_train_data_flows)
   with _summary_writer.as_default():
     while True:  
       ##save current value of variables
