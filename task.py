@@ -3149,6 +3149,7 @@ def meta_train_v12(config,
     _outer_gradient_accumulator(gradients)
     _inner_gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
+    tf.print("domain:",source["domain"][0])
     return reported_loss, num_examples
 
   def _apply_inner_gradients():
