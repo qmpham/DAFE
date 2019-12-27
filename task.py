@@ -3131,7 +3131,7 @@ def meta_train_v12(config,
     _inner_gradient_accumulator = optimizer_util.GradientAccumulator()
 
   def _accumulate_meta_train_gradients(source, target):
-    print("source: ", source)
+    #print("source: ", source)
     outputs, _ = model(
         source,
         labels=target,
@@ -3158,7 +3158,7 @@ def meta_train_v12(config,
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(_inner_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
-    outer_optimizer.apply_gradients(grads_and_vars)
+    inner_optimizer.apply_gradients(grads_and_vars)
     _inner_gradient_accumulator.reset()
 
   def _apply_outer_gradients():
