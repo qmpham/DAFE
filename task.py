@@ -3248,7 +3248,7 @@ def meta_train_v12(config,
       if step > train_steps:
         break
 
-def meta_train_v8(config,
+def meta_train_v13(config,
           optimizer,          
           learning_rate,
           model,  
@@ -3295,6 +3295,8 @@ def meta_train_v8(config,
   #####
   def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target): 
     #tf.print("meta_train_domain", meta_train_source["domain"][0], "meta_test_domain: ", meta_test_source["domain"][0], sep="|")
+    meta_train_source["domain"] = tf.tile(tf.expand_dims(meta_test_source["domain"][0],0), meta_train_source["domain"].shape)
+    meta_train_target["domain"] = tf.tile(tf.expand_dims(meta_test_target["domain"][0],0), meta_train_target["domain"].shape)
     with tf.GradientTape(persistent=True) as tape:
       ##### Inner adaptation
       outputs, _ = model(
