@@ -35,9 +35,10 @@ def main():
   parser.add_argument("run", choices=["train", "trainv3", "metatrainv12", "trainv2", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
-  parser.add_argument("--output")
-  parser.add_argument("--domain")
+  parser.add_argument("--output", default="trans")
+  parser.add_argument("--domain", default=0)
   parser.add_argument("--ref", default=None)
+  parser.add_argument("--maxcount",default=3)
   args = parser.parse_args()
   print("Running mode: ", args.run)
   config_file = args.config
@@ -333,7 +334,7 @@ def main():
     model.create_variables()
     print("translate in domain %d"%(int(args.domain)))
     task.averaged_checkpoint_translate(config, args.src, args.ref, model, checkpoint_manager,
-              checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
+              checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment, max_count=args.maxcount)
   elif args.run=="translatev3":
     model.create_variables()
     translate_config_file = args.src
