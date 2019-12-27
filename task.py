@@ -3218,7 +3218,7 @@ def meta_train_v12(config,
       domain = np.random.choice(len(meta_train_data_flows),1)[0]      
       ##inner loop
       for _ in range(inner_loop_numb[domain]):
-        loss, num_word_examples = next(meta_train_data_flow[domain])  
+        loss, num_word_examples = next(meta_train_data_flows[domain])  
         _loss[domain].append(loss)  
         _num_word_examples.append(num_word_examples)
         _inner_train_step()
