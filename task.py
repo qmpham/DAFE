@@ -26,7 +26,7 @@ from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
 from utils.utils_ import average_checkpoints
-
+from utils.dataprocess import count_lines
 def update(v,g,lr=1.0):
   if isinstance(g, tf.IndexedSlices):
     return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
@@ -3209,6 +3209,8 @@ def meta_train_v12(config,
   import time
   start = time.time()  
   #print("meta_train_data_flows: ", meta_train_data_flows)
+  datasets_size = [count_lines(src) for src in source_file]
+  picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = [[]] * len(meta_train_data_flows)
   _num_word_examples = []
@@ -3217,9 +3219,8 @@ def meta_train_v12(config,
     while True:  
       ##save current value of variables
       snapshots = [v.value() for v in model.trainable_variables]    
-      domain = np.random.choice(len(meta_train_data_flows),1)[0]      
+      domain = np.random.choice(len(meta_train_data_flows),1,p=picking_prob)[0]      
       ##inner loop
-      #print("domain_: ", domain)
       for _ in range(inner_loop_numb[domain]):
         loss, num_word_examples = next(meta_train_data_flows[domain])  
         _loss[domain].append(loss)  
