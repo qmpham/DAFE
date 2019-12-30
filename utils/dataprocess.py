@@ -369,18 +369,19 @@ def create_multi_domain_meta_trainining_dataset_v2(strategy, model, domain, sour
   meta_train_datasets = [] 
   meta_train_base_datasets = []
   print("batch_type: ", batch_type)
-  with strategy.scope():
-    for i, src, tgt in zip(domain, source_file, target_file):
-      meta_train_dataset = model.examples_inputter.make_training_dataset(src, tgt,
-                batch_size=batch_meta_train_size,
-                batch_type=batch_type,
-                batch_multiplier=1,
-                domain=i,
-                shuffle_buffer_size=shuffle_buffer_size,
-                length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
-                maximum_features_length=maximum_length,
-                maximum_labels_length=maximum_length)    
-        
+  
+  for i, src, tgt in zip(domain, source_file, target_file):
+    meta_train_dataset = model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size=batch_meta_train_size,
+              batch_type=batch_type,
+              batch_multiplier=1,
+              domain=i,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length)  
+                
+    with strategy.scope():  
       meta_train_base_dataset = meta_train_dataset      
       meta_train_dataset = strategy.experimental_distribute_datasets_from_function(
           lambda _: meta_train_base_dataset)

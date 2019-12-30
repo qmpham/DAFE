@@ -3208,6 +3208,7 @@ def meta_train_v12(config,
   # Runs the training loop.
   import time
   start = time.time()  
+  print("meta_train_data_flows: ", meta_train_data_flows)
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = [[]] * len(meta_train_data_flows)
   _num_word_examples = []
