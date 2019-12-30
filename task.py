@@ -3149,7 +3149,7 @@ def meta_train_v12(config,
     _outer_gradient_accumulator(gradients)
     _inner_gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
-    tf.print("domain:",source["domain"][0])
+    #tf.print("domain:",source["domain"][0])
     return reported_loss, num_examples
 
   def _apply_inner_gradients():
@@ -3208,7 +3208,7 @@ def meta_train_v12(config,
   # Runs the training loop.
   import time
   start = time.time()  
-  print("meta_train_data_flows: ", meta_train_data_flows)
+  #print("meta_train_data_flows: ", meta_train_data_flows)
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = [[]] * len(meta_train_data_flows)
   _num_word_examples = []
@@ -3219,7 +3219,7 @@ def meta_train_v12(config,
       snapshots = [v.value() for v in model.trainable_variables]    
       domain = np.random.choice(len(meta_train_data_flows),1)[0]      
       ##inner loop
-      print("domain_: ", domain)
+      #print("domain_: ", domain)
       for _ in range(inner_loop_numb[domain]):
         loss, num_word_examples = next(meta_train_data_flows[domain])  
         _loss[domain].append(loss)  
