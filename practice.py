@@ -363,6 +363,7 @@ def main():
     task.translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
   elif args.run == "translatev1":
+    model.build(None)
     translate_config_file = args.src
     with open(translate_config_file, "r") as stream:
       translate_config = yaml.load(stream)
