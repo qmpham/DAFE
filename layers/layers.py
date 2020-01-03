@@ -423,6 +423,76 @@ class Multi_domain_FeedForwardNetwork_v1(tf.keras.layers.Layer):
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     return outputs
 
+class Multi_domain_Gate(tf.keras.layers.Layer):
+
+  def __init__(self,
+               input_dim, 
+               output_dim,
+               domain_numb=6,
+               dropout=0.1,
+               activation=tf.nn.sigmoid,
+               **kwargs):
+    
+    super(Multi_domain_Gate, self).__init__(**kwargs)
+    self.dropout = dropout
+    self.domain_numb = domain_numb
+    self.input_dim = input_dim
+    self.output_dim = output_dim
+    self.layer_norm = common.LayerNorm()
+    self.inner_layer_norm = common.LayerNorm()
+    self.outer_transpose = False
+    self.outer_use_bias = True
+    self.outer_activation = activation
+  
+  def build(self, input_shape):
+    super(Multi_domain_Gate, self).build(input_shape)
+    scope_name = self.name_scope()
+    self.outer_kernel = self.add_weight("%s_outer_weight"%scope_name, shape=[self.domain_numb, self.input_dim*self.output_dim])
+    self.outer_bias = self.add_weight("%s_outer_bias"%scope_name, shape=[self.domain_numb, self.output_dim])
+    
+  def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
+    """Runs the layer."""
+    shape = shape_list(inputs)
+    rank = len(shape)      
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    dom_outer_kernel = tf.nn.embedding_lookup(self.outer_kernel, domain)
+    dom_outer_bias = tf.nn.embedding_lookup(self.outer_bias, domain)
+    dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
+    outputs = tf.matmul(inputs, dom_outer_kernel, transpose_b=self.outer_transpose)
+    if self.outer_use_bias:
+      outputs = tf.nn.bias_add(outputs, dom_outer_bias)
+    outputs = self.layer_norm(outputs)
+    if self.outer_activation is not None:
+      outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
+    return outputs
+
+  def forward_fn(self, inputs, args_dict, domain, mask=None, training=None):  # pylint: disable=arguments-differ
+    """Runs the layer."""
+    
+    outer_kernel = args_dict[self.outer_kernel.name]
+    outer_bias = args_dict[self.outer_bias.name]
+    inputs = self.layer_norm(inputs)
+    ##### inner layer
+    shape = shape_list(inputs)
+    rank = len(shape)      
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    dom_outer_kernel = tf.nn.embedding_lookup(outer_kernel, domain)
+    dom_outer_bias = tf.nn.embedding_lookup(outer_bias, domain)
+    dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
+    outputs = tf.matmul(inputs, dom_outer_kernel, transpose_b=self.outer_transpose)
+    if self.outer_use_bias:
+      outputs = tf.nn.bias_add(outputs, dom_outer_bias)
+    outputs = self.layer_norm(outputs)
+    if self.outer_activation is not None:
+      outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
+    return outputs
+
 class DAFE(tf.keras.layers.Layer):
 
   def __init__(self,
