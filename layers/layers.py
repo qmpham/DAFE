@@ -427,10 +427,12 @@ class Multi_domain_Gate(tf.keras.layers.Layer):
 
   def __init__(self,
                input_dim, 
+               inner_dim,
                output_dim,
                domain_numb=6,
                dropout=0.1,
                activation=tf.nn.sigmoid,
+               outer_activation=None,
                **kwargs):
     
     super(Multi_domain_Gate, self).__init__(**kwargs)
