@@ -244,10 +244,11 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
       self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
-    
+    """
     if not training:
       tf.print("###", self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_max_abs_pooling: ", 
-                tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, "###", sep="|")    
+                tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, "###", sep="|") 
+    """   
     return outputs
 
   def forward_fn(self, inputs, args_dict, domain, mask=None, training=None):  # pylint: disable=arguments-differ
@@ -493,6 +494,10 @@ class Multi_domain_Gate(tf.keras.layers.Layer):
       outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
+    if not training:
+      tf.print("###", self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_gate_max_abs_pooling: ", 
+                tf.reduce_max(tf.abs(outputs)), "ADAP_gate_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, "###", sep="|")
+
     return outputs
 
 class DAFE(tf.keras.layers.Layer):

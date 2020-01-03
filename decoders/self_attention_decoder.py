@@ -1855,7 +1855,7 @@ class Multi_domain_SelfAttentionDecoder_v7(Decoder):
             ffn_activation=ffn_activation)
         for i in range(num_layers)]
     self.multi_domain_layers = [
-        multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
+        multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains,  name="ADAP_%d"%i)
         for i in range(num_layers)]
     self.multi_domain_gates = [
         multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_gate_%d"%i)
