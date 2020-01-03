@@ -362,6 +362,16 @@ def main():
     print("translate in domain %d"%(int(args.domain)))
     task.translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
+  elif args.run == "translatev1":
+    translate_config_file = args.src
+    with open(translate_config_file, "r") as stream:
+      translate_config = yaml.load(stream)
+    for src_file, domain in zip(translate_config["src"], translate_config["domain"]):
+      output_file = "%s.trans"%src_file.strip().split("/")[-1]
+      print("translating %s in domain %d"%(src_file, domain))
+      print("output_file: ", output_file)
+      task.translate(src_file, None, model, checkpoint_manager,
+              checkpoint, int(domain), output_file, length_penalty=0.6, experiment=experiment)
   elif args.run=="translatev2":
     model.create_variables()
     print("translate in domain %d"%(int(args.domain)))
