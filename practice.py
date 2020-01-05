@@ -53,7 +53,9 @@ def main():
   experiment = config.get("experiment","residual")
   print("running experiment: ", experiment)
   ADAP_layer_stopping_gradient = config.get("ADAP_layer_stopping_gradient",False)
+  ADAP_gate_stopping_gradient = config.get("ADAP_gate_stopping_gradient",False)
   print("ADAP_layer_stopping_gradient: ", ADAP_layer_stopping_gradient)
+  print("ADAP_gate_stopping_gradient: ", ADAP_gate_stopping_gradient)
   num_domain_units = config.get("num_domain_units",128)
   num_domains = config.get("num_domains", 6)
   if experiment=="residual":
@@ -142,6 +144,7 @@ def main():
         num_domains=num_domains,
         num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
         num_units=512,
         num_heads=8,
         ffn_inner_dim=2048,
@@ -154,6 +157,7 @@ def main():
         num_domains=num_domains,
         num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
         num_units=512,
         num_heads=8,
         ffn_inner_dim=2048,
