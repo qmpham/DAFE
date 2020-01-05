@@ -462,13 +462,20 @@ class Multi_domain_Gate(tf.keras.layers.Layer):
     dom_outer_bias = tf.nn.embedding_lookup(self.outer_bias, domain)
     dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
     outputs = tf.matmul(inputs, dom_outer_kernel, transpose_b=self.outer_transpose)
+    
     if self.outer_use_bias:
       outputs = tf.nn.bias_add(outputs, dom_outer_bias)
     outputs = self.layer_norm(outputs)
+
     if self.outer_activation is not None:
       outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
+    
+    if not training:
+      tf.print("###", self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_gate_max_abs_pooling: ", 
+                tf.reduce_max(tf.abs(outputs)), "ADAP_gate_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, "###", sep="|")
+
     return outputs
 
   def forward_fn(self, inputs, args_dict, domain, mask=None, training=None):  # pylint: disable=arguments-differ
