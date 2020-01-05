@@ -1498,6 +1498,7 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
                num_domains,
                num_domain_units=128,
                ADAP_layer_stopping_gradient=False,
+               ADAP_gate_stopping_gradient=False,
                num_units=512,
                num_heads=8,
                ffn_inner_dim=2048,
@@ -1538,6 +1539,7 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
         multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_gate_%d"%i)
         for i in range(num_layers)]
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
+    self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution==None:
       ADAP_contribution =[1.0] * num_layers
 
@@ -1664,7 +1666,10 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      g = multi_domain_gate(inputs, domain, mask=mask, training=training)
+      if self.ADAP_gate_stopping_gradient:
+        g = multi_domain_gate(tf.stop_gradient(inputs), domain, mask=mask, training=training)
+      else:
+        g = multi_domain_gate(inputs, domain, mask=mask, training=training)
       if self.ADAP_layer_stopping_gradient:
         inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) * g + inputs * (1-g)
       else:
