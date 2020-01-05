@@ -85,7 +85,6 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
     m += self.outer.map_v1_weights(weights["conv1d_1"])
     return m
 
-
 class MultiHeadAttention(tf.keras.layers.Layer):
 
   def __init__(self,
@@ -229,7 +228,6 @@ class MultiHeadAttention(tf.keras.layers.Layer):
       return outputs, cache, attn
     return outputs, cache
 
-
 class TransformerLayerWrapper(common.LayerWrapper):
   
   def __init__(self, layer, output_dropout, **kwargs):
@@ -246,7 +244,6 @@ class TransformerLayerWrapper(common.LayerWrapper):
     m += self.input_layer_norm.map_v1_weights(weights["LayerNorm"])
     m += self.layer.map_v1_weights(weights)
     return m
-
 
 class SelfAttentionEncoderLayer(tf.keras.layers.Layer):
   """Implements one self-attention encoding layer."""
@@ -291,7 +288,6 @@ class SelfAttentionEncoderLayer(tf.keras.layers.Layer):
     m += self.self_attention.map_v1_weights(weights["multi_head"])
     m += self.ffn.map_v1_weights(weights["ffn"])
     return m
-
 
 class SelfAttentionDecoderLayer(tf.keras.layers.Layer):
   """Implements one self-attention decoding layer."""
