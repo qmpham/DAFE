@@ -32,7 +32,7 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "trainv3", "metatrainv12", "trainv2", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "trainv3", "metatrainv12", "trainv2", "trainv12", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
   parser.add_argument("--output", default="trans")
@@ -53,7 +53,9 @@ def main():
   experiment = config.get("experiment","residual")
   print("running experiment: ", experiment)
   ADAP_layer_stopping_gradient = config.get("ADAP_layer_stopping_gradient",False)
+  ADAP_gate_stopping_gradient = config.get("ADAP_gate_stopping_gradient",False)
   print("ADAP_layer_stopping_gradient: ", ADAP_layer_stopping_gradient)
+  print("ADAP_gate_stopping_gradient: ", ADAP_gate_stopping_gradient)
   num_domain_units = config.get("num_domain_units",128)
   num_domains = config.get("num_domains", 6)
   if experiment=="residual":
@@ -142,6 +144,7 @@ def main():
         num_domains=num_domains,
         num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
         num_units=512,
         num_heads=8,
         ffn_inner_dim=2048,
@@ -154,6 +157,7 @@ def main():
         num_domains=num_domains,
         num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
         num_units=512,
         num_heads=8,
         ffn_inner_dim=2048,
@@ -367,6 +371,8 @@ def main():
     task.meta_train_v11(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "metatrainv12":
     task.meta_train_v12(config, meta_train_optimizer, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
+  elif args.run == "trainv12":
+    task.train_v12(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "metatrainv9":
     task.meta_train_v9(config, meta_test_optimizer, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "metatrainv6":
@@ -412,7 +418,8 @@ def main():
     with open(translate_config_file, "r") as stream:
       translate_config = yaml.load(stream)
     for src_file, domain in zip(translate_config["src"], translate_config["domain"]):
-      output_file = "%s.trans"%src_file.strip().split("/")[-1]
+      #name = "%s.trans"%src_file.strip().split("/")[-1]
+      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src_file) + ".trans.")
       print("translating %s in domain %d"%(src_file, domain))
       print("output_file: ", output_file)
       task.averaged_checkpoint_translate(config, src_file, None, model, checkpoint_manager,
