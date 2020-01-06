@@ -343,8 +343,9 @@ def main():
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
   elif experiment=="pretrain":
     return
-  
-  learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=4000), step_duration= config.get("step_duration",16))
+  warmup_steps = config.get("warmup_steps",4000)
+  print("warmup_steps: ", warmup_steps)
+  learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
   meta_train_optimizer = tf.keras.optimizers.SGD(0.0001)
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=meta_test_optimizer)   
