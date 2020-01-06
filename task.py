@@ -3539,9 +3539,14 @@ def train_v12(config,
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = [[]] * len(train_data_flows)
   _num_word_examples = []
+  step = 0
+  warm_up_step = config.get("warm_up_step",8000)
   with _summary_writer.as_default():
-    while True:  
-      domain = np.random.choice(len(train_data_flows),1,p=picking_prob)[0]      
+    while True: 
+      if step < warm_up_step/2:
+        domain = np.random.choice(len(train_data_flows),1)[0]      
+      else:
+        domain = np.random.choice(len(train_data_flows),1,p=picking_prob)[0] 
       loss, num_word_examples = next(train_data_flows[domain])  
       _loss[domain].append(loss)  
       _num_word_examples.append(num_word_examples)
