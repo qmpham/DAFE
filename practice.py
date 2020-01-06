@@ -420,7 +420,7 @@ def main():
       translate_config = yaml.load(stream)
     for src_file, domain in zip(translate_config["src"], translate_config["domain"]):
       #name = "%s.trans"%src_file.strip().split("/")[-1]
-      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src_file) + ".trans.")
+      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src_file) + ".trans")
       print("translating %s in domain %d"%(src_file, domain))
       print("output_file: ", output_file)
       task.averaged_checkpoint_translate(config, src_file, None, model, checkpoint_manager,
