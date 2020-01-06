@@ -3508,7 +3508,7 @@ def train_v12(config,
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
-    tf.print("accumulated_gradients: ",gradient_accumulator.step)
+    #tf.print("accumulated_gradients: ",gradient_accumulator.step)
     gradient_accumulator.reset()
 
   @tf.function

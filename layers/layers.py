@@ -441,6 +441,7 @@ class Multi_domain_Gate(tf.keras.layers.Layer):
     self.input_dim = input_dim
     self.output_dim = output_dim
     self.layer_norm = common.LayerNorm()
+    #self.input_norm = common.LayerNorm()
     self.inner_layer_norm = common.LayerNorm()
     self.outer_transpose = False
     self.outer_use_bias = True
@@ -458,6 +459,7 @@ class Multi_domain_Gate(tf.keras.layers.Layer):
     rank = len(shape)      
     if rank > 2:
       inputs = tf.reshape(inputs, [-1, shape[-1]])
+    #inputs = self.input_norm(inputs)
     dom_outer_kernel = tf.nn.embedding_lookup(self.outer_kernel, domain)
     dom_outer_bias = tf.nn.embedding_lookup(self.outer_bias, domain)
     dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
@@ -472,11 +474,11 @@ class Multi_domain_Gate(tf.keras.layers.Layer):
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
     
-    if not training:
-      tf.print("###", self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_gate_max_abs_pooling: ", 
-                tf.reduce_max(tf.abs(outputs)), "ADAP_gate_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "ADAP_gate_avg_abs_pooling: ", tf.reduce_mean(tf.abs(outputs)), "domain: ", domain, "###", sep="|")
+    #if not training:
+      #tf.print("###", self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_gate_max_abs_pooling: ", 
+      #          tf.reduce_max(tf.abs(outputs)), "ADAP_gate_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "ADAP_gate_avg_abs_pooling: ", tf.reduce_mean(tf.abs(outputs)), "domain: ", domain, "###", sep="|")
       
-      tf.print("###", self.name_scope(), "ADAP_gate: ", outputs[0:2,tf.math.floordiv(tf.shape(outputs)[1],2),:], summarize=2048)
+    #  tf.print("###", self.name_scope(), "ADAP_gate: ", outputs[0:2,tf.math.floordiv(tf.shape(outputs)[1],2),:], summarize=2048)
 
     return outputs
 
