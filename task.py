@@ -3541,9 +3541,10 @@ def train_v12(config,
   _num_word_examples = []
   step = 0
   warmup_steps = config.get("warmup_steps",4000)
+  step_duration = config.get("step_duration",16)
   with _summary_writer.as_default():
     while True: 
-      if step < warmup_steps/2:
+      if step < warmup_steps*step_duration/2:
         domain = np.random.choice(len(train_data_flows),1)[0]      
       else:
         domain = np.random.choice(len(train_data_flows),1,p=picking_prob)[0] 
