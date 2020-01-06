@@ -475,7 +475,8 @@ class Multi_domain_Gate(tf.keras.layers.Layer):
     if not training:
       tf.print("###", self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_gate_max_abs_pooling: ", 
                 tf.reduce_max(tf.abs(outputs)), "ADAP_gate_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "ADAP_gate_avg_abs_pooling: ", tf.reduce_mean(tf.abs(outputs)), "domain: ", domain, "###", sep="|")
-      tf.print("###", self.name_scope(), "ADAP_gate: ", outputs[0,10,:])
+      
+      tf.print("###", self.name_scope(), "ADAP_gate: ", outputs[0,tf.shape(outputs)[1]/2,:])
 
     return outputs
 
