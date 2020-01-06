@@ -3508,6 +3508,7 @@ def train_v12(config,
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
+    tf.print("accumulated_gradients: ",gradient_accumulator.step)
     gradient_accumulator.reset()
 
   @tf.function
@@ -3542,15 +3543,22 @@ def train_v12(config,
   step = 0
   warmup_steps = config.get("warmup_steps",4000)
   step_duration = config.get("step_duration",16)
+  prefinetuning_steps = config.get("prefinetuning_steps",200000)
   with _summary_writer.as_default():
     while True: 
       if step < warmup_steps*step_duration/2:
         domain = np.random.choice(len(train_data_flows),1)[0]      
       else:
         domain = np.random.choice(len(train_data_flows),1,p=picking_prob)[0] 
-      loss, num_word_examples = next(train_data_flows[domain])  
-      _loss[domain].append(loss)  
-      _num_word_examples.append(num_word_examples)
+      if step < prefinetuning_steps:
+        loss, num_word_examples = next(train_data_flows[domain])  
+        _loss[domain].append(loss)  
+        _num_word_examples.append(num_word_examples)
+      else:
+        for domain in range(len(train_data_flows)):
+          loss, num_word_examples = next(train_data_flows[domain])  
+          _loss[domain].append(loss)  
+          _num_word_examples.append(num_word_examples)
       train_step()
       ####      
       step = optimizer.iterations.numpy()
