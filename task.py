@@ -3497,7 +3497,7 @@ def train_v12(config,
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
-    tf.print("domain:",source["domain"][0])
+    #tf.print("domain:",source["domain"][0])
     return reported_loss, num_examples
 
   def _apply_gradients():
