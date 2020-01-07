@@ -441,7 +441,6 @@ class Multi_domain_Gate(tf.keras.layers.Layer):
     self.input_dim = input_dim
     self.output_dim = output_dim
     self.layer_norm = common.LayerNorm()
-    #self.input_norm = common.LayerNorm()
     self.inner_layer_norm = common.LayerNorm()
     self.outer_transpose = False
     self.outer_use_bias = True
@@ -459,7 +458,6 @@ class Multi_domain_Gate(tf.keras.layers.Layer):
     rank = len(shape)      
     if rank > 2:
       inputs = tf.reshape(inputs, [-1, shape[-1]])
-    #inputs = self.input_norm(inputs)
     dom_outer_kernel = tf.nn.embedding_lookup(self.outer_kernel, domain)
     dom_outer_bias = tf.nn.embedding_lookup(self.outer_bias, domain)
     dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
