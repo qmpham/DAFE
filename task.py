@@ -3549,14 +3549,17 @@ def train_v12(config,
   last_bleu_scores = [0] * len(train_data_flows)
   current_bleu_scores = [0] * len(train_data_flows)
   last_training_loss = [20.0] * len(train_data_flows)
-  current_training_loss = [[]] * len(train_data_flows)
+  current_training_loss = [0.0] * len(train_data_flows)
+  count = [0] * len(train_data_flows)
+  count_ = [0] * len(train_data_flows)
   with _summary_writer.as_default():
     while True: 
       picking_prob = [importance/sum(importances) for importance in importances]
       domain = np.random.choice(len(train_data_flows),1,p=picking_prob)[0] 
       print("domain_:", domain)
       loss, num_word_examples = next(train_data_flows[domain])  
-      _loss[domain].append(loss.numpy())  
+      _loss[domain] += loss.numpy()
+      count[domain] += 1
       print(_loss)
       _num_word_examples.append(num_word_examples)
       train_step()
@@ -3566,20 +3569,23 @@ def train_v12(config,
         elapsed = time.time() - start
         tf.get_logger().info(
             "Step = %d ; Learning rate = %f ; Loss = %s; num_word_examples = %d; after %f seconds; Importance = %s",
-            step, learning_rate(step), " ".join([str(np.mean(losses)) for losses in _loss]), np.sum(_num_word_examples), elapsed, " ".join([str(p) for p in picking_prob]))
+            step, learning_rate(step), " ".join([str(_loss[i]/count[i]) for i in range(len(_loss))]), np.sum(_num_word_examples), elapsed, " ".join([str(p) for p in picking_prob]))
         
         for i in range(len(_loss)):
-          current_training_loss[i].extend(_loss[i])
-        _loss = [[]] * len(train_data_flows)
+          current_training_loss[i] += _loss[i]/count[i]
+          count_[i] += 1
+        _loss = [0.0] * len(train_data_flows)
+        count = [0] * len(train_data_flows)
         _num_word_examples = []
         start = time.time()
 
-      if step % importance_recalculate:
+      if step % importance_recalculate:        
         for i in range(len(importances)):
-          if last_training_loss[i] < np.mean(current_training_loss[i]):
+          if last_training_loss[i] < current_training_loss[i]:
             importances[i] = importances[i] * 2
-          last_training_loss[i] = np.mean(current_training_loss[i])
-          current_training_loss[i] = []
+          last_training_loss[i] = current_training_loss[i]
+          current_training_loss[i] = 0.0
+          count_[i] = 0
 
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
