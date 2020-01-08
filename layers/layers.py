@@ -516,7 +516,6 @@ class Multi_domain_FeedForwardNetwork_v0(tf.keras.layers.Layer):
     inner_bias = args_dict[self.inner_bias.name]
     outer_bias = args_dict[self.outer_bias.name]
 
-    inputs = self.layer_norm(inputs)
     ##### inner layer
     shape = shape_list(inputs)
     rank = len(shape)      
