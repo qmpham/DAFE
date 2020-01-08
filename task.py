@@ -3558,6 +3558,7 @@ def train_v12(config,
       if step < prefinetuning_steps:
         loss, num_word_examples = next(train_data_flows[domain])  
         _loss[domain].append(loss)  
+        print(_loss)
         _num_word_examples.append(num_word_examples)
       else:
         for domain in range(len(train_data_flows)):
