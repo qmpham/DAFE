@@ -3555,16 +3555,10 @@ def train_v12(config,
       picking_prob = [importance/sum(importances) for importance in importances]
       domain = np.random.choice(len(train_data_flows),1,p=picking_prob)[0] 
       print("domain_:", domain)
-      if step < prefinetuning_steps:
-        loss, num_word_examples = next(train_data_flows[domain])  
-        _loss[domain].append(loss)  
-        print(_loss)
-        _num_word_examples.append(num_word_examples)
-      else:
-        for domain in range(len(train_data_flows)):
-          loss, num_word_examples = next(train_data_flows[domain])  
-          _loss[domain].append(loss)  
-          _num_word_examples.append(num_word_examples)
+      loss, num_word_examples = next(train_data_flows[domain])  
+      _loss[domain].append(loss.numpy())  
+      print(_loss)
+      _num_word_examples.append(num_word_examples)
       train_step()
       ####      
       step = optimizer.iterations.numpy()
