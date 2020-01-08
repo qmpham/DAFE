@@ -3570,7 +3570,7 @@ def train_v12(config,
         elapsed = time.time() - start
         tf.get_logger().info(
             "Step = %d ; Learning rate = %f ; Loss = %s; num_word_examples = %d; after %f seconds; Importance = %s",
-            step, learning_rate(step), " ".join([str(np.mean(losses)) for losses in _loss]), np.sum(_num_word_examples), elapsed, " ".join([str(p) in picking_prob]))
+            step, learning_rate(step), " ".join([str(np.mean(losses)) for losses in _loss]), np.sum(_num_word_examples), elapsed, " ".join([str(p) for p in picking_prob]))
         
         for i in range(_loss):
           current_training_loss[i].extend(_loss[i])
