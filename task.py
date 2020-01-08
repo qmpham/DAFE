@@ -3539,7 +3539,7 @@ def train_v12(config,
   importances = [1.0] * len(train_data_flows)
   #picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
-  _loss = [[]] * len(train_data_flows)
+  _loss = [0.0] * len(train_data_flows)
   _num_word_examples = []
   step = 0
   importance_recalculate = config.get("importance_recalculate", 500)
