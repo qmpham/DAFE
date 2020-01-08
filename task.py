@@ -3497,7 +3497,7 @@ def train_v12(config,
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
-    #tf.print("domain:",source["domain"][0])
+    tf.print("domain:",source["domain"][0])
     return reported_loss, num_examples
 
   def _apply_gradients():
@@ -3554,6 +3554,7 @@ def train_v12(config,
     while True: 
       picking_prob = [importance/sum(importances) for importance in importances]
       domain = np.random.choice(len(train_data_flows),1,p=picking_prob)[0] 
+      print("domain_:", domain)
       if step < prefinetuning_steps:
         loss, num_word_examples = next(train_data_flows[domain])  
         _loss[domain].append(loss)  
