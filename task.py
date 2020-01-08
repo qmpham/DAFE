@@ -3536,20 +3536,24 @@ def train_v12(config,
   import time
   start = time.time()  
   datasets_size = [count_lines(src) for src in source_file]
-  picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+  importances = [1.0] * len(train_data_flows)
+  #picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = [[]] * len(train_data_flows)
   _num_word_examples = []
   step = 0
+  importance_recalculate = config.get("importance_recalculate", 500)
   warmup_steps = config.get("warmup_steps",4000)
   step_duration = config.get("step_duration",16)
   prefinetuning_steps = config.get("prefinetuning_steps",200000)
+  last_bleu_scores = [0] * len(train_data_flows)
+  current_bleu_scores = [0] * len(train_data_flows)
+  last_training_loss = [20.0] * len(train_data_flows)
+  current_training_loss = [[]] * len(train_data_flows)
   with _summary_writer.as_default():
     while True: 
-      if step < warmup_steps*step_duration/2:
-        domain = np.random.choice(len(train_data_flows),1)[0]      
-      else:
-        domain = np.random.choice(len(train_data_flows),1,p=picking_prob)[0] 
+      picking_prob = [importance/sum(importances) for importance in importances]
+      domain = np.random.choice(len(train_data_flows),1,p=picking_prob)[0] 
       if step < prefinetuning_steps:
         loss, num_word_examples = next(train_data_flows[domain])  
         _loss[domain].append(loss)  
@@ -3565,14 +3569,26 @@ def train_v12(config,
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; num_word_examples = %d; after %f seconds",
-            step, learning_rate(step), np.mean([np.mean(losses) for losses in _loss]), np.sum(_num_word_examples), elapsed)
+            "Step = %d ; Learning rate = %f ; Loss = %s; num_word_examples = %d; after %f seconds; Importance = %s",
+            step, learning_rate(step), " ".join([str(np.mean(losses)) for losses in _loss]), np.sum(_num_word_examples), elapsed, " ".join([str(p) in picking_prob]))
+        
+        for i in range(_loss):
+          current_training_loss[i].extend(_loss[i])
         _loss = [[]] * len(train_data_flows)
         _num_word_examples = []
         start = time.time()
+
+      if step % importance_recalculate:
+        for i in range(len(importances)):
+          if last_training_loss[i] < np.mean(current_training_loss[i]):
+            importances[i] = importances[i] * 2
+          last_training_loss[i] = np.mean(current_training_loss[i])
+          current_training_loss[i] = []
+
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
+
       if step % eval_every == 0:
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
@@ -3580,6 +3596,10 @@ def train_v12(config,
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
           score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+
+        for i in range(len(importances)):
+          if last_bleu_scores[i] > current_bleu_scores[i]:
+            importances[i] = importances[i] / 2
       if step > train_steps:
         break
 
