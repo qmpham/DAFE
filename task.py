@@ -3598,10 +3598,12 @@ def train_v12(config,
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
           score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
-
+          current_bleu_scores[i] = score
+        
         for i in range(len(importances)):
           if last_bleu_scores[i] > current_bleu_scores[i]:
             importances[i] = importances[i] / 2
+          last_bleu_scores[i] = current_bleu_scores[i]
       if step > train_steps:
         break
 
