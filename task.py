@@ -3562,7 +3562,7 @@ def train_v12(config,
   current_bleu_scores = [0] * domain_num
   current_training_loss = [0.0] * domain_num
   count = [0] * domain_num
-  count_ = [0] * domain_num
+  count_ = [1.0] * domain_num
   with _summary_writer.as_default():
     while True: 
       picking_prob = [importance/sum(stats["importances"]) for importance in stats["importances"]]
@@ -3597,7 +3597,7 @@ def train_v12(config,
             stats["importances"][i] = stats["importances"][i] * 2
           stats["last_training_loss"][i] = current_training_loss[i]
           current_training_loss[i] = 0.0
-          count_[i] = 0
+          count_[i] = 1.0
 
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
