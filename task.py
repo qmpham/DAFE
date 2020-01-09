@@ -3609,9 +3609,9 @@ def train_v12(config,
 
         for i in range(domain_num):
           if stats["last_bleu_scores"][i] > current_bleu_scores[i]:
-            stats["consecutive_eval_drops"] +=1
+            stats["consecutive_eval_drops"][i] +=1
           else:
-            stats["consecutive_eval_drops"] = 0
+            stats["consecutive_eval_drops"][i] = 0
           
           if stats["consecutive_eval_drops"][i] > 2:
             stats["overfitting"][i] = True
