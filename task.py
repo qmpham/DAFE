@@ -3606,6 +3606,7 @@ def train_v12(config,
           score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
           current_bleu_scores[i] = score
+<<<<<<< HEAD
 
         for i in range(domain_num):
           if stats["last_bleu_scores"][i] > current_bleu_scores[i]:
@@ -3619,6 +3620,13 @@ def train_v12(config,
           if stats["overfitting"][i]:
             stats["importances"][i] = stats["importances"][i] / 2
           
+=======
+        
+        for i in range(len(importances)):
+          if last_bleu_scores[i] > current_bleu_scores[i]:
+            importances[i] = importances[i] / 2
+          last_bleu_scores[i] = current_bleu_scores[i]
+>>>>>>> fbb06a4a91e8055e6f66530731cfdd9b5186ea0d
       if step > train_steps:
         break
 
