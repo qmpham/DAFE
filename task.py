@@ -3547,7 +3547,12 @@ def train_v12(config,
   # warmup_steps = config.get("warmup_steps",4000)
   # step_duration = config.get("step_duration",16)
   # prefinetuning_steps = config.get("prefinetuning_steps",200000)
-  stats = {"consecutive_eval_drops": [0] * len(train_data_flows),
+  stats_path = os.path.join(config["model_dir"],"stats")
+  if os.path.exists(stats_path):
+    print("load %s"%stats_path)
+    stats = np.load(stats_path)
+  else:
+    stats = {"consecutive_eval_drops": [0] * len(train_data_flows),
           "last_bleu_scores": [0] * len(train_data_flows),
           "last_training_loss": [20.0] * len(train_data_flows),
           "overfitting": [False] * len(train_data_flows),
