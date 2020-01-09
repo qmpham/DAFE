@@ -245,9 +245,9 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
     
-    if not training:
-      tf.print("###", self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_max_abs_pooling: ", 
-                tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, "###", sep="|")    
+    # if not training:
+    #   tf.print("###", self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_max_abs_pooling: ", 
+    #             tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, "###", sep="|")    
     return outputs
 
   def forward_fn(self, inputs, args_dict, domain, mask=None, training=None):  # pylint: disable=arguments-differ
@@ -713,7 +713,7 @@ class Multi_domain_Gate_v1(tf.keras.layers.Layer):
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     return outputs
 
-class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
+class Multi_domain_FeedForwardNetwork_v4(tf.keras.layers.Layer):
 
   def __init__(self,
                input_dim, 
@@ -725,7 +725,7 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
                outer_activation=None,
                **kwargs):
     
-    super(Multi_domain_FeedForwardNetwork_v3, self).__init__(**kwargs)
+    super(Multi_domain_FeedForwardNetwork_v4, self).__init__(**kwargs)
     self.dropout = dropout
     self.domain_numb = domain_numb
     self.input_dim = input_dim
@@ -741,7 +741,7 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
     self.outer_activation = outer_activation
   
   def build(self, input_shape):
-    super(Multi_domain_FeedForwardNetwork_v3, self).build(input_shape)
+    super(Multi_domain_FeedForwardNetwork_v4, self).build(input_shape)
     scope_name = self.name_scope()
     self.inner_kernel = self.add_weight("%s_inner_weight"%scope_name, shape=[self.domain_numb, self.input_dim*self.inner_dim])
     self.inner_bias = self.add_weight("%s_inner_bias"%scope_name, shape=[self.domain_numb, self.inner_dim])
