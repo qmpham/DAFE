@@ -3575,7 +3575,7 @@ def train_v12(config,
             "Step = %d ; Learning rate = %f ; Loss = %s; num_word_examples = %d; after %f seconds; Importance = %s",
             step, learning_rate(step), " ".join([str(_loss[i]/count[i]) for i in range(len(_loss))]), np.sum(_num_word_examples), elapsed, " ".join([str(p) for p in picking_prob]))
         
-        for i in range(len(_loss)):
+        for i in range(domain_num):
           current_training_loss[i] += _loss[i]/count[i]
           count_[i] += 1
         _loss = [0.0] * len(train_data_flows)
