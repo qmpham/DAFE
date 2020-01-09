@@ -3584,6 +3584,9 @@ def train_v12(config,
         start = time.time()
 
       if step % importance_recalculate:        
+        current_training_loss = [current_training_loss[i]/count_[i] for i in range(len(current_training_loss))]
+        print("last_training_loss:",stats["last_training_loss"])
+        print("current_training_loss:",current_training_loss)
         for i in range(domain_num):
           if stats["last_training_loss"][i] < current_training_loss[i]:
             stats["importances"][i] = stats["importances"][i] * 2
