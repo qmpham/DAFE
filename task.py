@@ -3561,7 +3561,7 @@ def train_v12(config,
   
   current_bleu_scores = [0] * domain_num
   current_training_loss = [0.0] * domain_num
-  count = [0] * domain_num
+  count = [1.0] * domain_num
   count_ = [1.0] * domain_num
   with _summary_writer.as_default():
     while True: 
@@ -3570,6 +3570,8 @@ def train_v12(config,
       loss, num_word_examples = next(train_data_flows[domain])  
       _loss[domain] += loss.numpy()
       count[domain] += 1
+      current_training_loss[domain] += loss.numpy()
+      count_[domain] += 1
       _num_word_examples.append(num_word_examples)
       train_step()
       ####      
@@ -3579,12 +3581,8 @@ def train_v12(config,
         tf.get_logger().info(
             "Step = %d ; Learning rate = %f ; Loss = %s; num_word_examples = %d; after %f seconds; Importance = %s",
             step, learning_rate(step), " ".join([str(_loss[i]/count[i]) for i in range(len(_loss))]), np.sum(_num_word_examples), elapsed, " ".join([str(p) for p in picking_prob]))
-        
-        for i in range(domain_num):
-          current_training_loss[i] += _loss[i]/count[i]
-          count_[i] += 1
         _loss = [0.0] * len(train_data_flows)
-        count = [0] * len(train_data_flows)
+        count = [1.0] * len(train_data_flows)
         _num_word_examples = []
         start = time.time()
 
