@@ -3541,7 +3541,7 @@ def train_v12(config,
   _loss = [0.0] * len(train_data_flows)
   _num_word_examples = []
   step = 0
-  importance_recalculate = config.get("importance_recalculate", 500)
+  importance_recalculate = config.get("importance_recalculate", 2000)
   save_stats = config.get("save_stats", 5000)
   domain_num = len(train_data_flows)
   # warmup_steps = config.get("warmup_steps",4000)
@@ -3567,10 +3567,11 @@ def train_v12(config,
     while True: 
       picking_prob = [importance/sum(stats["importances"]) for importance in stats["importances"]]
       domain = np.random.choice(domain_num,1,p=picking_prob)[0] 
-      loss, num_word_examples = next(train_data_flows[domain])  
-      _loss[domain] += loss.numpy()
+      loss, num_word_examples = next(train_data_flows[domain])
+      loss = loss.numpy()  
+      _loss[domain] += loss
       count[domain] += 1
-      current_training_loss[domain] += loss.numpy()
+      current_training_loss[domain] += loss
       count_[domain] += 1
       _num_word_examples.append(num_word_examples)
       train_step()
