@@ -3574,6 +3574,7 @@ def train_v12(config,
       count_[domain] += 1
       _num_word_examples.append(num_word_examples)
       train_step()
+      print("current_training_loss:",current_training_loss)
       ####      
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
@@ -3581,13 +3582,13 @@ def train_v12(config,
         tf.get_logger().info(
             "Step = %d ; Learning rate = %f ; Loss = %s; num_word_examples = %d; after %f seconds; Importance = %s",
             step, learning_rate(step), " ".join([str(_loss[i]/count[i]) for i in range(len(_loss))]), np.sum(_num_word_examples), elapsed, " ".join([str(p) for p in picking_prob]))
-        _loss = [0.0] * len(train_data_flows)
-        count = [1.0] * len(train_data_flows)
+        _loss = [0.0] * domain_num
+        count = [1.0] * domain_num
         _num_word_examples = []
         start = time.time()
 
       if step % importance_recalculate:        
-        current_training_loss = [current_training_loss[i]/count_[i] for i in range(len(current_training_loss))]
+        current_training_loss = [current_training_loss[i]/count_[i] for i in range(domain_num)]
         print("last_training_loss:",stats["last_training_loss"])
         print("current_training_loss:",current_training_loss)
         for i in range(domain_num):
