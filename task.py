@@ -3535,32 +3535,36 @@ def train_v12(config,
   # Runs the training loop.
   import time
   start = time.time()  
-  datasets_size = [count_lines(src) for src in source_file]
-  importances = [1.0] * len(train_data_flows)
+  #datasets_size = [count_lines(src) for src in source_file]
   #picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = [0.0] * len(train_data_flows)
   _num_word_examples = []
   step = 0
   importance_recalculate = config.get("importance_recalculate", 500)
-  warmup_steps = config.get("warmup_steps",4000)
-  step_duration = config.get("step_duration",16)
-  prefinetuning_steps = config.get("prefinetuning_steps",200000)
-  last_bleu_scores = [0] * len(train_data_flows)
-  current_bleu_scores = [0] * len(train_data_flows)
-  last_training_loss = [20.0] * len(train_data_flows)
-  current_training_loss = [0.0] * len(train_data_flows)
-  count = [0] * len(train_data_flows)
-  count_ = [0] * len(train_data_flows)
+  save_stats = config.get("save_stats", 5000)
+  domain_num = len(train_data_flows)
+  # warmup_steps = config.get("warmup_steps",4000)
+  # step_duration = config.get("step_duration",16)
+  # prefinetuning_steps = config.get("prefinetuning_steps",200000)
+  stats = {"consecutive_eval_drops": [0] * len(train_data_flows),
+          "last_bleu_scores": [0] * len(train_data_flows),
+          "last_training_loss": [20.0] * len(train_data_flows),
+          "overfitting": [False] * len(train_data_flows),
+          "consecutive_eval_drops:": [0] * len(train_data_flows),
+          "importances": [1.0] * len(train_data_flows)}
+  
+  current_bleu_scores = [0] * domain_num
+  current_training_loss = [0.0] * domain_num
+  count = [0] * domain_num
+  count_ = [0] * domain_num
   with _summary_writer.as_default():
     while True: 
-      picking_prob = [importance/sum(importances) for importance in importances]
-      domain = np.random.choice(len(train_data_flows),1,p=picking_prob)[0] 
-      #print("domain_:", domain)
+      picking_prob = [importance/sum(stats["importances"]) for importance in stats["importances"]]
+      domain = np.random.choice(domain_num,1,p=picking_prob)[0] 
       loss, num_word_examples = next(train_data_flows[domain])  
       _loss[domain] += loss.numpy()
       count[domain] += 1
-      #print(_loss)
       _num_word_examples.append(num_word_examples)
       train_step()
       ####      
@@ -3580,17 +3584,20 @@ def train_v12(config,
         start = time.time()
 
       if step % importance_recalculate:        
-        for i in range(len(importances)):
-          if last_training_loss[i] < current_training_loss[i]:
-            importances[i] = importances[i] * 2
-          last_training_loss[i] = current_training_loss[i]
+        for i in range(domain_num):
+          if stats["last_training_loss"][i] < current_training_loss[i]:
+            stats["importances"][i] = stats["importances"][i] * 2
+          stats["last_training_loss"][i] = current_training_loss[i]
           current_training_loss[i] = 0.0
           count_[i] = 0
 
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
-
+      
+      if step % save_stats == 0:
+        np.savez(os.path.join(config["model_dir"],"stats"), **stats)
+      
       if step % eval_every == 0:
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
@@ -3598,10 +3605,20 @@ def train_v12(config,
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
           score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+          current_bleu_scores[i] = score
 
-        for i in range(len(importances)):
-          if last_bleu_scores[i] > current_bleu_scores[i]:
-            importances[i] = importances[i] / 2
+        for i in range(domain_num):
+          if stats["last_bleu_scores"][i] > current_bleu_scores[i]:
+            stats["consecutive_eval_drops"] +=1
+          else:
+            stats["consecutive_eval_drops"] = 0
+          
+          if stats["consecutive_eval_drops"][i] > 2:
+            stats["overfitting"][i] = True
+
+          if stats["overfitting"][i]:
+            stats["importances"][i] = stats["importances"][i] / 2
+          
       if step > train_steps:
         break
 
