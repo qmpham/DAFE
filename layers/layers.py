@@ -713,7 +713,7 @@ class Multi_domain_Gate_v1(tf.keras.layers.Layer):
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     return outputs
 
-class Multi_domain_FeedForwardNetwork_v4(tf.keras.layers.Layer):
+class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
 
   def __init__(self,
                input_dim, 
@@ -725,12 +725,12 @@ class Multi_domain_FeedForwardNetwork_v4(tf.keras.layers.Layer):
                outer_activation=None,
                **kwargs):
     
-    super(Multi_domain_FeedForwardNetwork_v4, self).__init__(**kwargs)
+    super(Multi_domain_FeedForwardNetwork_v5, self).__init__(**kwargs)
     self.dropout = dropout
     self.domain_numb = domain_numb
     self.input_dim = input_dim
     self.inner_dim = inner_dim
-    self.output_dim = output_dim
+    self.output_dim = [output_dim] * domain_numb
     self.layer_norm = common.LayerNorm()
     self.inner_layer_norm = common.LayerNorm()
     self.inner_transpose = False
@@ -741,19 +741,39 @@ class Multi_domain_FeedForwardNetwork_v4(tf.keras.layers.Layer):
     self.outer_activation = outer_activation
   
   def build(self, input_shape):
-    super(Multi_domain_FeedForwardNetwork_v4, self).build(input_shape)
+    super(Multi_domain_FeedForwardNetwork_v5, self).build(input_shape)
     scope_name = self.name_scope()
-    self.inner_kernel = self.add_weight("%s_inner_weight"%scope_name, shape=[self.domain_numb, self.input_dim*self.inner_dim])
-    self.inner_bias = self.add_weight("%s_inner_bias"%scope_name, shape=[self.domain_numb, self.inner_dim])
-    self.outer_kernel = self.add_weight("%s_outer_weight"%scope_name, shape=[self.domain_numb, self.inner_dim*self.output_dim])
-    self.outer_bias = self.add_weight("%s_outer_bias"%scope_name, shape=[self.domain_numb, self.output_dim])
-    
+    self.inner_kernel = self.add_weight("%s_inner_weight"%scope_name, shape=[self.input_dim * inner_dim for inner_dim in self.inner_dim])
+    self.inner_bias = self.add_weight("%s_inner_bias"%scope_name, shape=[inner_dim for inner_dim in self.inner_dim])
+    self.outer_kernel = self.add_weight("%s_outer_weight"%scope_name, shape=[inner_dim * self.output_dim for inner_dim in self.inner_dim])
+    self.outer_bias = self.add_weight("%s_outer_bias"%scope_name, shape=[output_dim for output_dim in self.output_dim])
+
+  def add_weight(self, name, *args, **kwargs):  # pylint: disable=arguments-differ    
+    if "inner_weight" in name or "outer_weight" in name or "inner_bias" in name:
+      weights = []
+      for i in range(self.domain_numb):
+        shape = kwargs["shape"][i]
+        weights.append(tf.RaggedTensor.from_tensor(tf.Variable(shape=[1, shape], trainable=True)))
+      return tf.concat(weights,name=name)
+    elif "outer_bias" in name:
+      weights = []
+      for i in range(self.domain_numb):
+        shape = kwargs["shape"][i]
+        weights.append(tf.Variable(shape=[1, shape], trainable=True))
+      return tf.concat(weights,name=name)
+    return super(Multi_domain_FeedForwardNetwork_v5, self).add_weight(name, *args, **kwargs)
+
   def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
     if not(mask is None):
       mask=tf.cast(mask,tf.float32)
     mask=None
     inputs = self.layer_norm(inputs)
+    #####
+    print(self.inner_kernel)
+    print(self.inner_bias)
+    print(self.outer_kernel)
+    print(self.outer_bias)
     ##### inner layer
     shape = shape_list(inputs)
     rank = len(shape)      
