@@ -729,8 +729,8 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     self.dropout = dropout
     self.domain_numb = domain_numb
     self.input_dim = input_dim
-    self.inner_dim = inner_dim
-    self.inner_dim_ = tf.constant(inner_dim)
+    self.inner_dim = tf.constant(inner_dim)
+    self.inner_dim_max = 1024
     self.output_dim = output_dim
     self.layer_norm = common.LayerNorm()
     self.inner_layer_norm = common.LayerNorm()
@@ -744,47 +744,27 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v5, self).build(input_shape)
     scope_name = self.name_scope()
-    self.inner_kernel = self.add_weight_("%s_inner_weight"%scope_name, shape=[self.input_dim * inner_dim for inner_dim in self.inner_dim])
-    self.inner_bias = self.add_weight_("%s_inner_bias"%scope_name, shape=[inner_dim for inner_dim in self.inner_dim])
-    self.outer_kernel = self.add_weight_("%s_outer_weight"%scope_name, shape=[inner_dim * self.output_dim for inner_dim in self.inner_dim])
-    self.outer_bias = self.add_weight_("%s_outer_bias"%scope_name, shape=[self.output_dim] * self.domain_numb)
-
-  def add_weight_(self, name, *args, **kwargs):  # pylint: disable=arguments-differ    
-    if "inner_weight" in name or "outer_weight" in name or "inner_bias" in name:
-      weights = []
-      for i in range(self.domain_numb):
-        shape_ = kwargs["shape"][i]
-        print("%s %d shape_:"%(name,i), shape_)
-        weights.append(tf.RaggedTensor.from_tensor(self.add_weight(shape=[1,shape_])))
-      return tf.concat(weights,name=name, axis=0)
-    elif "outer_bias" in name:
-      weights = []
-      for i in range(self.domain_numb):
-        shape_ = kwargs["shape"][i]
-        print("%s %d shape_:"%(name,i), shape_)
-        weights.append(self.add_weight(shape=[1, shape_], trainable=True))
-      return tf.concat(weights,name=name, axis=0)
-    return super(Multi_domain_FeedForwardNetwork_v5, self).add_weight(name, *args, **kwargs)
-
+    self.inner_kernel = self.add_weight("%s_inner_weight"%scope_name, shape=[self.domain_numb * self.input_dim * self.inner_dim_max])
+    self.inner_bias = self.add_weight("%s_inner_bias"%scope_name, shape=[self.domain_numb * self.inner_dim_max])
+    self.outer_kernel = self.add_weight("%s_outer_weight"%scope_name, shape=[self.domain_numb * self.inner_dim_max * self.output_dim])
+    self.outer_bias = self.add_weight("%s_outer_bias"%scope_name, shape=[self.domain_numb, self.output_dim])
+  
   def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
     if not(mask is None):
       mask=tf.cast(mask,tf.float32)
     mask=None
     inputs = self.layer_norm(inputs)
-    #####
-    #print(self.inner_kernel)
-    #print(self.inner_bias)
-    #print(self.outer_kernel)
-    #print(self.outer_bias)
     ##### inner layer
     shape = shape_list(inputs)
     rank = len(shape)      
     if rank > 2:
       inputs = tf.reshape(inputs, [-1, shape[-1]])
-    #domain = tf.expand_dims(domain,0)
-    dom_inner_kernel = self.inner_kernel[domain,:] #tf.ragged.map_flat_values(tf.nn.embedding_lookup, self.inner_kernel, domain)
-    dom_inner_bias = self.inner_bias[domain,:] #tf.ragged.map_flat_values(tf.nn.embedding_lookup, self.inner_bias, domain)
+    
+    inner_dim = self.inner_dim[domain]
+
+    dom_inner_kernel = self.inner_kernel[domain * self.input_dim * self.inner_dim_max: domain * self.input_dim * self.inner_dim_max + self.input_dim * inner_dim] #tf.nn.embedding_lookup(self.inner_kernel, domain)
+    dom_inner_bias = self.inner_bias[domain * self.inner_dim_max : domain * self.inner_dim_max + inner_dim] #tf.nn.embedding_lookup(self.inner_bias, domain)
     dom_inner_kernel = tf.reshape(dom_inner_kernel, [self.input_dim, -1])
     inner = tf.matmul(inputs, dom_inner_kernel, transpose_b=self.inner_transpose)
     if self.inner_use_bias:
@@ -793,15 +773,15 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
       inner = self.inner_layer_norm(inner)
       inner = self.inner_activation(inner)  # pylint: disable=not-callable
     if rank > 2:
-      inner = tf.reshape(inner, shape[:-1] + [self.inner_dim_[domain]])
+      inner = tf.reshape(inner, shape[:-1] + [inner_dim])
     ##### output layer
     inner = common.dropout(inner, self.dropout, training=training)
     shape = shape_list(inner)
     rank = len(shape)      
     if rank > 2:
       inner = tf.reshape(inner, [-1, shape[-1]])
-    dom_outer_kernel = self.outer_kernel[domain,:] #tf.ragged.map_flat_values(tf.nn.embedding_lookup, self.outer_kernel, domain)
-    dom_outer_bias = self.outer_bias[domain,:] #tf.nn.embedding_lookup(self.outer_bias, domain)
+    dom_outer_kernel = self.outer_kernel[domain * self.output_dim * self.inner_dim_max : domain * self.output_dim * self.inner_dim_max + self.output_dim * inner_dim] #tf.nn.embedding_lookup(self.outer_kernel, domain)
+    dom_outer_bias = tf.nn.embedding_lookup(self.outer_bias, domain)
     dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
     outputs = tf.matmul(inner, dom_outer_kernel, transpose_b=self.outer_transpose)
     if self.outer_use_bias:
