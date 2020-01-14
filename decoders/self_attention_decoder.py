@@ -1810,7 +1810,12 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      g = multi_domain_gate.forward_fn(inputs, args_dict, domain, mask=mask, training=training)
+      
+      if self.ADAP_gate_stopping_gradient:
+        g = multi_domain_gate.forward_fn(tf.stop_gradient(inputs), args_dict, domain, mask=mask, training=training)
+      else:
+        g = multi_domain_gate.forward_fn(inputs, args_dict, domain, mask=mask, training=training)
+        
       if self.ADAP_layer_stopping_gradient:
         inputs = multi_domain_layer.forward_fn(tf.stop_gradient(inputs), args_dict, domain, mask=mask, training=training) * g + inputs * (1-g)
       else:

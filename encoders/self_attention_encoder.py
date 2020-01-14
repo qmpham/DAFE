@@ -428,7 +428,12 @@ class Multi_domain_SelfAttentionEncoder_v1(Encoder):
     mask = self.build_mask(inputs, sequence_length=sequence_length)
     for layer, multi_domain_layer, multi_domain_gate in zip(self.layers,self.multi_domain_layers,self.multi_domain_gates):
       inputs = layer.forward_fn(inputs, args_dict, mask=mask, training=training)
-      g = multi_domain_gate.forward_fn(inputs, domain, mask=mask, training=training)
+      
+      if self.ADAP_gate_stopping_gradient:
+        g = multi_domain_gate.forward_fn(tf.stop_gradient(inputs), args_dict, domain, mask=mask, training=training)
+      else:
+        g = multi_domain_gate.forward_fn(inputs, args_dict, domain, mask=mask, training=training)
+        
       if self.ADAP_layer_stopping_gradient:
         inputs = multi_domain_layer.forward_fn(tf.stop_gradient(inputs), args_dict, domain, mask=mask, training=training) * g + inputs * (1-g)
       else:
