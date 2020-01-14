@@ -754,13 +754,13 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
       for i in range(self.domain_numb):
         shape = kwargs["shape"][i]
         weights.append(tf.RaggedTensor.from_tensor(self.add_weight(shape=[1,shape])))
-      return tf.concat(weights,name=name)
+      return tf.concat(weights,name=name, axis=0)
     elif "outer_bias" in name:
       weights = []
       for i in range(self.domain_numb):
         shape = kwargs["shape"][i]
         weights.append(self.add_weight(shape=[1, shape], trainable=True))
-      return tf.concat(weights,name=name)
+      return tf.concat(weights,name=name, axis=0)
     return super(Multi_domain_FeedForwardNetwork_v5, self).add_weight(name, *args, **kwargs)
 
   def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
