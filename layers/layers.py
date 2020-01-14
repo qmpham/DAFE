@@ -730,7 +730,7 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     self.domain_numb = domain_numb
     self.input_dim = input_dim
     self.inner_dim = inner_dim
-    self.output_dim = [output_dim] * domain_numb
+    self.output_dim = output_dim
     self.layer_norm = common.LayerNorm()
     self.inner_layer_norm = common.LayerNorm()
     self.inner_transpose = False
@@ -746,8 +746,7 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     self.inner_kernel = self.add_weight_("%s_inner_weight"%scope_name, shape=[self.input_dim * inner_dim for inner_dim in self.inner_dim])
     self.inner_bias = self.add_weight_("%s_inner_bias"%scope_name, shape=[inner_dim for inner_dim in self.inner_dim])
     self.outer_kernel = self.add_weight_("%s_outer_weight"%scope_name, shape=[inner_dim * self.output_dim for inner_dim in self.inner_dim])
-    print("self.output_dim: ", self.output_dim)
-    self.outer_bias = self.add_weight_("%s_outer_bias"%scope_name, shape=[output_dim for output_dim in self.output_dim])
+    self.outer_bias = self.add_weight_("%s_outer_bias"%scope_name, shape=[self.output_dim] * self.domain_numb)
 
   def add_weight_(self, name, *args, **kwargs):  # pylint: disable=arguments-differ    
     if "inner_weight" in name or "outer_weight" in name or "inner_bias" in name:
@@ -784,7 +783,7 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
       inputs = tf.reshape(inputs, [-1, shape[-1]])
     dom_inner_kernel = tf.nn.embedding_lookup(self.inner_kernel, domain)
     dom_inner_bias = tf.nn.embedding_lookup(self.inner_bias, domain)
-    dom_inner_kernel = tf.reshape(dom_inner_kernel, [-1, self.inner_dim])
+    dom_inner_kernel = tf.reshape(dom_inner_kernel, [self.input_dim, -1])
     inner = tf.matmul(inputs, dom_inner_kernel, transpose_b=self.inner_transpose)
     if self.inner_use_bias:
       inner = tf.nn.bias_add(inner, dom_inner_bias)
