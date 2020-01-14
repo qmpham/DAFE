@@ -303,7 +303,7 @@ class Multi_LayerNorm(tf.keras.layers.Layer):
   
   def __init__(self, domain_numb, input_dims, epsilon=1e-6, **kwargs):
     
-    super(LayerNorm, self).__init__(**kwargs)
+    super(Multi_LayerNorm, self).__init__(**kwargs)
     self.epsilon = epsilon
     self.input_dims = tf.constant(input_dims)
     self.input_dims_max = 1024
