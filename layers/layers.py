@@ -730,7 +730,7 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     self.domain_numb = domain_numb
     self.input_dim = input_dim
     self.inner_dim = inner_dim
-    self.inner_dim_ = tf.Variable(inner_dim)
+    self.inner_dim_ = tf.constant(inner_dim)
     self.output_dim = output_dim
     self.layer_norm = common.LayerNorm()
     self.inner_layer_norm = common.LayerNorm()
