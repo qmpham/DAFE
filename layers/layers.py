@@ -781,6 +781,7 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     rank = len(shape)      
     if rank > 2:
       inputs = tf.reshape(inputs, [-1, shape[-1]])
+    domain = tf.expand_dims(domain,0)
     dom_inner_kernel = tf.ragged.map_flat_values(tf.nn.embedding_lookup, self.inner_kernel, domain)
     dom_inner_bias = tf.ragged.map_flat_values(tf.nn.embedding_lookup, self.inner_bias, domain)
     dom_inner_kernel = tf.reshape(dom_inner_kernel, [self.input_dim, -1])
