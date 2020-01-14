@@ -752,14 +752,16 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     if "inner_weight" in name or "outer_weight" in name or "inner_bias" in name:
       weights = []
       for i in range(self.domain_numb):
-        shape = kwargs["shape"][i]
-        weights.append(tf.RaggedTensor.from_tensor(self.add_weight(shape=[1,shape])))
+        shape_ = kwargs["shape"][i]
+        print("shape_:",shape_)
+        weights.append(tf.RaggedTensor.from_tensor(self.add_weight(shape=[1,shape_])))
       return tf.concat(weights,name=name, axis=0)
     elif "outer_bias" in name:
       weights = []
       for i in range(self.domain_numb):
-        shape = kwargs["shape"][i]
-        weights.append(self.add_weight(shape=[1, shape], trainable=True))
+        shape_ = kwargs["shape"][i]
+        print("shape_:",shape_)
+        weights.append(self.add_weight(shape=[1, shape_], trainable=True))
       return tf.concat(weights,name=name, axis=0)
     return super(Multi_domain_FeedForwardNetwork_v5, self).add_weight(name, *args, **kwargs)
 
