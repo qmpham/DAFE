@@ -753,14 +753,14 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
       weights = []
       for i in range(self.domain_numb):
         shape_ = kwargs["shape"][i]
-        print("%s shape_:"%name, shape_)
+        print("%s %d shape_:"%(name,i), shape_)
         weights.append(tf.RaggedTensor.from_tensor(self.add_weight(shape=[1,shape_])))
       return tf.concat(weights,name=name, axis=0)
     elif "outer_bias" in name:
       weights = []
       for i in range(self.domain_numb):
         shape_ = kwargs["shape"][i]
-        print("%s shape_:"%name,shape_)
+        print("%s %d shape_:"%(name,i), shape_)
         weights.append(self.add_weight(shape=[1, shape_], trainable=True))
       return tf.concat(weights,name=name, axis=0)
     return super(Multi_domain_FeedForwardNetwork_v5, self).add_weight(name, *args, **kwargs)
