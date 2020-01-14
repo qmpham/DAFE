@@ -743,23 +743,23 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v5, self).build(input_shape)
     scope_name = self.name_scope()
-    self.inner_kernel = self.add_weight("%s_inner_weight"%scope_name, shape=[self.input_dim * inner_dim for inner_dim in self.inner_dim])
-    self.inner_bias = self.add_weight("%s_inner_bias"%scope_name, shape=[inner_dim for inner_dim in self.inner_dim])
-    self.outer_kernel = self.add_weight("%s_outer_weight"%scope_name, shape=[inner_dim * self.output_dim for inner_dim in self.inner_dim])
-    self.outer_bias = self.add_weight("%s_outer_bias"%scope_name, shape=[output_dim for output_dim in self.output_dim])
+    self.inner_kernel = self.add_weight_("%s_inner_weight"%scope_name, shape=[self.input_dim * inner_dim for inner_dim in self.inner_dim])
+    self.inner_bias = self.add_weight_("%s_inner_bias"%scope_name, shape=[inner_dim for inner_dim in self.inner_dim])
+    self.outer_kernel = self.add_weight_("%s_outer_weight"%scope_name, shape=[inner_dim * self.output_dim for inner_dim in self.inner_dim])
+    self.outer_bias = self.add_weight_("%s_outer_bias"%scope_name, shape=[output_dim for output_dim in self.output_dim])
 
-  def add_weight(self, name, *args, **kwargs):  # pylint: disable=arguments-differ    
+  def add_weight_(self, name, *args, **kwargs):  # pylint: disable=arguments-differ    
     if "inner_weight" in name or "outer_weight" in name or "inner_bias" in name:
       weights = []
       for i in range(self.domain_numb):
         shape = kwargs["shape"][i]
-        weights.append(tf.RaggedTensor.from_tensor(tf.Variable(shape=[1, shape], trainable=True)))
+        weights.append(tf.RaggedTensor.from_tensor(self.add_weight(shape=[1,shape])))
       return tf.concat(weights,name=name)
     elif "outer_bias" in name:
       weights = []
       for i in range(self.domain_numb):
         shape = kwargs["shape"][i]
-        weights.append(tf.Variable(shape=[1, shape], trainable=True))
+        weights.append(self.add_weight(shape=[1, shape], trainable=True))
       return tf.concat(weights,name=name)
     return super(Multi_domain_FeedForwardNetwork_v5, self).add_weight(name, *args, **kwargs)
 
