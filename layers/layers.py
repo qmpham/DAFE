@@ -781,9 +781,9 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     rank = len(shape)      
     if rank > 2:
       inputs = tf.reshape(inputs, [-1, shape[-1]])
-    domain = tf.expand_dims(domain,0)
-    dom_inner_kernel = tf.ragged.map_flat_values(tf.nn.embedding_lookup, self.inner_kernel, domain)
-    dom_inner_bias = tf.ragged.map_flat_values(tf.nn.embedding_lookup, self.inner_bias, domain)
+    #domain = tf.expand_dims(domain,0)
+    dom_inner_kernel = self.inner_kernel[domain,:] #tf.ragged.map_flat_values(tf.nn.embedding_lookup, self.inner_kernel, domain)
+    dom_inner_bias = self.inner_bias[domain,:] #tf.ragged.map_flat_values(tf.nn.embedding_lookup, self.inner_bias, domain)
     dom_inner_kernel = tf.reshape(dom_inner_kernel, [self.input_dim, -1])
     inner = tf.matmul(inputs, dom_inner_kernel, transpose_b=self.inner_transpose)
     if self.inner_use_bias:
@@ -799,8 +799,8 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     rank = len(shape)      
     if rank > 2:
       inner = tf.reshape(inner, [-1, shape[-1]])
-    dom_outer_kernel = tf.ragged.map_flat_values(tf.nn.embedding_lookup, self.outer_kernel, domain)
-    dom_outer_bias = tf.nn.embedding_lookup(self.outer_bias, domain)
+    dom_outer_kernel = self.outer_kernel[domain,:] #tf.ragged.map_flat_values(tf.nn.embedding_lookup, self.outer_kernel, domain)
+    dom_outer_bias = self.outer_bias[domain,:] #tf.nn.embedding_lookup(self.outer_bias, domain)
     dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
     outputs = tf.matmul(inner, dom_outer_kernel, transpose_b=self.outer_transpose)
     if self.outer_use_bias:
