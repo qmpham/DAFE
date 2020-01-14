@@ -733,7 +733,7 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     self.inner_dim_max = 1024
     self.output_dim = output_dim
     self.layer_norm = common.LayerNorm()
-    self.inner_layer_norm = common.LayerNorm()
+    self.inner_layer_norm = common.Multi_LayerNorm(domain_numb, inner_dim)
     self.inner_transpose = False
     self.outer_transpose = False
     self.inner_use_bias = True
@@ -770,7 +770,7 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     if self.inner_use_bias:
       inner = tf.nn.bias_add(inner, dom_inner_bias)
     if self.inner_activation is not None:
-      inner = self.inner_layer_norm(inner)
+      inner = self.inner_layer_norm(inner, domain)
       inner = self.inner_activation(inner)  # pylint: disable=not-callable
     if rank > 2:
       inner = tf.reshape(inner, shape[:-1] + [inner_dim])
@@ -809,21 +809,21 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     outer_kernel = args_dict[self.outer_kernel.name]
     inner_bias = args_dict[self.inner_bias.name]
     outer_bias = args_dict[self.outer_bias.name]
-
     inputs = self.layer_norm(inputs)
     ##### inner layer
     shape = shape_list(inputs)
     rank = len(shape)      
     if rank > 2:
       inputs = tf.reshape(inputs, [-1, shape[-1]])
-    dom_inner_kernel = tf.nn.embedding_lookup(inner_kernel, domain)
-    dom_inner_bias = tf.nn.embedding_lookup(inner_bias, domain)
-    dom_inner_kernel = tf.reshape(dom_inner_kernel, [-1, self.inner_dim])
+    inner_dim = self.inner_dim[domain]
+    dom_inner_kernel = inner_kernel[domain * self.input_dim * self.inner_dim_max: domain * self.input_dim * self.inner_dim_max + self.input_dim * inner_dim] #tf.nn.embedding_lookup(inner_kernel, domain)
+    dom_inner_bias = inner_bias[domain * self.inner_dim_max : domain * self.inner_dim_max + inner_dim] #tf.nn.embedding_lookup(inner_bias, domain)
+    dom_inner_kernel = tf.reshape(dom_inner_kernel, [self.input_dim, -1])
     inner = tf.matmul(inputs, dom_inner_kernel, transpose_b=self.inner_transpose)
     if self.inner_use_bias:
       inner = tf.nn.bias_add(inner, dom_inner_bias)
     if self.inner_activation is not None:
-      inner = self.inner_layer_norm(inner)
+      inner = self.inner_layer_norm(inner, domain)
       inner = self.inner_activation(inner)  # pylint: disable=not-callable
     if rank > 2:
       inner = tf.reshape(inner, shape[:-1] + [self.inner_dim])
@@ -833,7 +833,7 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     rank = len(shape)      
     if rank > 2:
       inner = tf.reshape(inner, [-1, shape[-1]])
-    dom_outer_kernel = tf.nn.embedding_lookup(outer_kernel, domain)
+    dom_outer_kernel = outer_kernel[domain * self.output_dim * self.inner_dim_max : domain * self.output_dim * self.inner_dim_max + self.output_dim * inner_dim] #tf.nn.embedding_lookup(outer_kernel, domain)
     dom_outer_bias = tf.nn.embedding_lookup(outer_bias, domain)
     dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
     outputs = tf.matmul(inner, dom_outer_kernel, transpose_b=self.outer_transpose)

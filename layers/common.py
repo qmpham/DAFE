@@ -299,3 +299,52 @@ class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
       outputs = tf.reshape(outputs, shape[:-1] + [self.units])
     return outputs
 
+class Multi_LayerNorm(tf.keras.layers.Layer):
+  
+  def __init__(self, domain_numb, input_dims, epsilon=1e-6, **kwargs):
+    
+    super(LayerNorm, self).__init__(**kwargs)
+    self.epsilon = epsilon
+    self.input_dims = tf.constant(input_dims)
+    self.input_dims_max = 1024
+    self.domain_numb = domain_numb
+
+  def build(self, input_shape):
+    """Creates the variables."""
+    #depth = input_shape[-1]
+    depth = self.input_dims_max
+    self.beta = self.add_weight(
+        "beta", [self.domain_numb, depth], initializer=tf.keras.initializers.Constant(0))
+    self.gamma = self.add_weight(
+        "gamma", [self.domain_numb, depth], initializer=tf.keras.initializers.Constant(1))
+    super(Multi_LayerNorm, self).build(input_shape)
+
+  def call(self, x, domain):  # pylint: disable=arguments-differ
+    """Normalizes :obj:`x`."""
+    mean = tf.reduce_mean(x, axis=[-1], keepdims=True)
+    variance = tf.reduce_mean(tf.square(x - mean), axis=[-1], keepdims=True)
+    norm_x = (x - mean) * tf.math.rsqrt(variance + self.epsilon)
+    dims = self.input_dims[domain]
+    gamma = tf.nn.embedding_lookup(self.gamma, domain)[:dims]
+    beta = tf.nn.embedding_lookup(self.beta, domain)[:dims]
+    return norm_x * gamma + beta
+
+  def forward_fn(self, x, args_dict, domain):  # pylint: disable=arguments-differ
+    """Normalizes :obj:`x`."""
+    dims = self.input_dims[domain]
+    gamma = args_dict[self.gamma.name]
+    gamma = tf.nn.embedding_lookup(gamma, domain)[:dims]
+    beta = args_dict[self.beta.name]
+    beta = tf.nn.embedding_lookup(beta, domain)[:dims]
+    mean = tf.reduce_mean(x, axis=[-1], keepdims=True)
+    variance = tf.reduce_mean(tf.square(x - mean), axis=[-1], keepdims=True)
+    norm_x = (x - mean) * tf.math.rsqrt(variance + self.epsilon)
+    return norm_x * gamma + beta
+
+  def map_v1_weights(self, weights):
+    return [
+        (self.beta, weights["beta"]),
+        (self.gamma, weights["gamma"])
+    ]
+
+
