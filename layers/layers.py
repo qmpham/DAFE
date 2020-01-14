@@ -746,6 +746,7 @@ class Multi_domain_FeedForwardNetwork_v5(tf.keras.layers.Layer):
     self.inner_kernel = self.add_weight_("%s_inner_weight"%scope_name, shape=[self.input_dim * inner_dim for inner_dim in self.inner_dim])
     self.inner_bias = self.add_weight_("%s_inner_bias"%scope_name, shape=[inner_dim for inner_dim in self.inner_dim])
     self.outer_kernel = self.add_weight_("%s_outer_weight"%scope_name, shape=[inner_dim * self.output_dim for inner_dim in self.inner_dim])
+    print("self.output_dim: ", self.output_dim)
     self.outer_bias = self.add_weight_("%s_outer_bias"%scope_name, shape=[output_dim for output_dim in self.output_dim])
 
   def add_weight_(self, name, *args, **kwargs):  # pylint: disable=arguments-differ    
