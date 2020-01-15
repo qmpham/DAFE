@@ -3,7 +3,7 @@ import numpy as np
 from layers import common
 from opennmt.utils import misc
 from opennmt.utils.misc import shape_list
-
+import sys
 class Multi_domain_FeedForwardNetwork(tf.keras.layers.Layer):
 
   def __init__(self,
@@ -600,7 +600,7 @@ class Multi_domain_Gate(tf.keras.layers.Layer):
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
     
     if not training:
-      tf.print("###", self.name_scope(), "ADAP_gate_norm_L1: ", tf.reduce_sum(tf.abs(outputs),0), "ADAP_gate_min_abs_pooling: ", "domain: ", domain, "###", sep="|")
+      tf.print("###", self.name_scope(), "ADAP_gate_norm_L1: ", tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),0),0), "domain: ", domain, "###", sep="|", output_stream=sys.stdout)
       
       #tf.print("###", self.name_scope(), "ADAP_gate: ", outputs[0:2,tf.math.floordiv(tf.shape(outputs)[1],2),:], summarize=2048)
 
