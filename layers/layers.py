@@ -914,7 +914,7 @@ class Multi_domain_Gate_v2(tf.keras.layers.Layer):
     outputs = self.layer_norm.forward_fn(outputs, args_dict)
 
     if self.outer_activation is not None:
-      outputs = self.outer_activation.forward_fn(outputs, args_dict)  # pylint: disable=not-callable
+      outputs = self.outer_activation(outputs, args_dict)  # pylint: disable=not-callable
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim]) 
 
