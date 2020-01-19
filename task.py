@@ -62,7 +62,7 @@ def translate(source_file,
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
-    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv7","residualv8","residualv9","baselinev1"]:
+    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
       encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length)
     else:
       encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
@@ -79,7 +79,7 @@ def translate(source_file,
     decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
         memory_sequence_length=source_length)
-    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv7","residualv8","residualv9","baselinev1"]:
+    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
     elif experiment=="ldr":
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
@@ -1502,6 +1502,11 @@ def train(config,
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+    #tf.summary.experimental.set_step(step)
+    for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+      score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -3849,7 +3854,7 @@ def averaged_checkpoint_translate(config, source_file,
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
-    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv7","residualv8","residualv9","baselinev1"]:
+    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv11","residualv7","residualv8","residualv9","baselinev1"]:
       encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length)
     else:
       encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
@@ -3866,7 +3871,7 @@ def averaged_checkpoint_translate(config, source_file,
     decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
         memory_sequence_length=source_length)
-    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv7","residualv8","residualv9","baselinev1"]:
+    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv11","residualv7","residualv8","residualv9","baselinev1"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
     elif experiment=="ldr":
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
