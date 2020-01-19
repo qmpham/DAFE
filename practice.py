@@ -17,9 +17,9 @@ tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter
 from opennmt.models.sequence_to_sequence import SequenceToSequence
 from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
-from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder, Multi_domain_SelfAttentionEncoder_v1, Multi_domain_SelfAttentionEncoder_v5, Multi_domain_SelfAttentionEncoder_v2, Multi_domain_SelfAttentionEncoder_v0
-from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder, Multi_domain_SelfAttentionDecoder_v0, Multi_domain_SelfAttentionDecoder_v6, Multi_domain_SelfAttentionDecoder_v7, Multi_domain_SelfAttentionDecoder_v2, Multi_domain_SelfAttentionDecoder_v1, Multi_domain_SelfAttentionDecoder_v5
-from layers.layers import Multi_domain_FeedForwardNetwork_v3, Multi_domain_Gate, Multi_domain_Gate_v1, Multi_domain_FeedForwardNetwork_v5
+from encoders.self_attention_encoder import *
+from decoders.self_attention_decoder import *
+from layers.layers import *
 import numpy as np
 from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset
 from opennmt.utils import BLEUScorer
@@ -181,6 +181,36 @@ def main():
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3),
     decoder=Multi_domain_SelfAttentionDecoder_v6(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
+  elif experiment=="residualv11":
+    model = Multi_domain_SequenceToSequence(
+    source_inputter=My_inputter(embedding_size=512),
+    target_inputter=My_inputter(embedding_size=512),
+    encoder=Multi_domain_SelfAttentionEncoder_v6(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3),
+    decoder=Multi_domain_SelfAttentionDecoder_v9(
         num_layers=6,
         num_domains=num_domains,
         num_domain_units=num_domain_units,
