@@ -4013,7 +4013,8 @@ def train_v13(config,
         _loss.append(loss)
         _number_examples.append(num_examples)
       _step()  
-      #_adv_step()
+      if step > 100000:
+        _adv_step()
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
