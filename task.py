@@ -3922,8 +3922,7 @@ def train_v13(config,
   def _accumulate_adv_gradients(source, target):
     adv_domain = tf.reshape(tf.math.floormod(source["domain"][0] + \
       tf.cast(tf.reshape(tf.random.categorical(tf.expand_dims(tf.math.log([1.0/(domain_num-1)]*domain_num),0),1),[]) + 1,tf.int32), domain_num), [])
-    print("adv_domain", adv_domain)
-    print("source[domain].shape", tf.shape(source["domain"]))
+    print("domain:", source["domain"][0],"adv_domain:", adv_domain, sep="|")
     source["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(source["domain"]))
     target["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(target["domain"]))
     outputs, _ = model(
@@ -3996,36 +3995,14 @@ def train_v13(config,
     with strategy.scope():
       strategy.experimental_run_v2(_apply_adv_gradients)
 
-  def _set_weight(v, w):
-    v.assign(tf.cast(w,v.dtype))
-
-  @tf.function
-  def weight_reset(snapshots):
-    with strategy.scope():
-      for snap, var in zip(snapshots, model.trainable_variables):
-        strategy.extended.update(var, _set_weight, args=(snap, ))
-
   # Runs the training loop.
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  train_adv_data_flow = iter(_adv_train_forward())
-  _, _ = next(train_data_flow)
+  train_adv_data_flow = iter(_adv_train_forward())  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
-  _number_examples = []
-  step = optimizer.iterations.numpy()
-  if step <= 1:
-    initializer = config.get("initializer","default")
-    if initializer == "default":
-      print("Initializing variables by tensorflow default")      
-    elif initializer == "variance_scaling":
-      print("Initializing variables by tf.variance_scaling")
-      initial_value = []
-      for v in model.trainable_variables:
-        shape = tf.shape(v).numpy()
-        initial_value.append(variance_scaling_initialier(shape, scale=1.0, mode="fan_avg", distribution="uniform"))
-      weight_reset(initial_value)       
+  _number_examples = []    
 
   with _summary_writer.as_default():
     while True:
