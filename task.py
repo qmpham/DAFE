@@ -3923,9 +3923,9 @@ def train_v13(config,
     adv_domain = tf.reshape(tf.math.floormod(source["domain"][0] + \
       tf.cast(tf.reshape(tf.random.categorical(tf.expand_dims(tf.math.log([1.0/(domain_num-1)]*domain_num),0),1),[]) + 1,tf.int32), domain_num), [])
     print("adv_domain", adv_domain)
-    print("source[domain].shape", source["domain"].shape)
-    source["domain"] = tf.tile(tf.expand_dims(adv_domain,0), source["domain"].shape)
-    target["domain"] = tf.tile(tf.expand_dims(adv_domain,0), target["domain"].shape)
+    print("source[domain].shape", tf.shape(source["domain"]))
+    source["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(source["domain"]))
+    target["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(target["domain"]))
     outputs, _ = model(
         source,
         labels=target,
