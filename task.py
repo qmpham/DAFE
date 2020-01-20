@@ -3920,8 +3920,9 @@ def train_v13(config,
     return reported_loss, num_examples
 
   def _accumulate_adv_gradients(source, target):
-    adv_domain = tf.math.divide(source["domain"][0] + \
+    adv_domain = tf.math.floormod(source["domain"][0] + \
       tf.cast(tf.reshape(tf.random.categorical(tf.expand_dims(tf.math.log([1.0/(domain_num-1)]*domain_num),0),1),[]) + 1,tf.int32), domain_num)
+    print("adv_domain", adv_domain)
     source["domain"] = tf.tile(tf.expand_dims(adv_domain,0), source["domain"].shape)
     target["domain"] = tf.tile(tf.expand_dims(adv_domain,0), target["domain"].shape)
     outputs, _ = model(
