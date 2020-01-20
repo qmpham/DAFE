@@ -1500,6 +1500,7 @@ def train(config,
     batch_type = config.get("batch_type")
   #####
   if checkpoint_manager.latest_checkpoint is not None:
+    model.build(None)
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
     checkpoint_path = checkpoint_manager.latest_checkpoint
