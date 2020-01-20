@@ -4003,7 +4003,7 @@ def train_v13(config,
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   _number_examples = []    
-
+  step = 0
   with _summary_writer.as_default():
     while True:
       #####Training batch
