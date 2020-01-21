@@ -1,4 +1,4 @@
-from opennmt.inputters.text_inputter import WordEmbedder, _get_field
+from opennmt.inputters.text_inputter import WordEmbedder, _get_field, TextInputter
 import tensorflow as tf
 from opennmt import inputters
 from opennmt.models.sequence_to_sequence import _shift_target_sequence
@@ -8,7 +8,8 @@ from opennmt.utils import misc
 from utils.utils_ import make_domain_mask
 from opennmt.inputters.text_inputter import load_pretrained_embeddings
 from opennmt.layers import common
-class My_inputter(WordEmbedder):
+
+class My_inputter(TextInputter):
     def __init__(self, embedding_size=None, dropout=0.0, **kwargs):        
         super(My_inputter, self).__init__(**kwargs)
         self.embedding_size = embedding_size
@@ -16,7 +17,6 @@ class My_inputter(WordEmbedder):
         self.dropout = dropout
 
     def forward_fn(self, features, args_dict, training=None):
-        #print(self.embedding.name)
         embedding = args_dict[self.embedding.name]
         #print("where are we? ________________",embedding)
         outputs = tf.nn.embedding_lookup(embedding, features["ids"])
@@ -33,6 +33,26 @@ class My_inputter(WordEmbedder):
             self.trainable = embedding.get("trainable", True)
             self.embedding_file_with_header = embedding.get("with_header", True)
             self.case_insensitive_embeddings = embedding.get("case_insensitive", True)
+
+    def build(self, input_shape):
+        if self.embedding_file:
+            pretrained = load_pretrained_embeddings(
+                self.embedding_file,
+                self.vocabulary_file,
+                num_oov_buckets=self.num_oov_buckets,
+                with_header=self.embedding_file_with_header,
+                case_insensitive_embeddings=self.case_insensitive_embeddings)
+            self.embedding_size = pretrained.shape[-1]
+            initializer = tf.constant_initializer(value=pretrained.astype(self.dtype))
+        else:
+            initializer = None
+            scope_name = self.name_scope()
+            self.embedding = self.add_weight(
+                "%s_embedding"%scope_name,
+                [self.vocabulary_size, self.embedding_size],
+                initializer=initializer,
+                trainable=self.trainable)
+        super(My_inputter, self).build(input_shape)
             
     def make_features(self, element=None, features=None, domain=1, training=None):
         features = super(My_inputter, self).make_features(
