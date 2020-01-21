@@ -4009,11 +4009,11 @@ def train_v13(config,
       #####Training batch
       for _ in range(int(config.get("accumulation_step",1))):
         loss, num_examples = next(train_data_flow)
-        _, _ = next(train_adv_data_flow)    
         _loss.append(loss)
         _number_examples.append(num_examples)
       _step()  
       if step > 100000:
+        _, _ = next(train_adv_data_flow)
         _adv_step()
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
