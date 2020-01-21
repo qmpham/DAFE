@@ -144,6 +144,7 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
     domain = inputs[1]
     domain = domain[0]
     inputs = inputs[0]
+    print("inputs:.......", inputs)
     inputs *= self.num_units**0.5
 
     if self.position_encoder is not None:
