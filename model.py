@@ -35,6 +35,8 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
                target_inputter,
                encoder,
                decoder,
+               num_domains=6,
+               num_units=512,
                share_embeddings=EmbeddingsSharingLevel.NONE):
 
     if not isinstance(target_inputter, inputters.WordEmbedder):
@@ -57,7 +59,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     self.encoder = encoder
     self.decoder = decoder
     self.share_embeddings = share_embeddings
-    self.classification_layer = Classification_layer(encoder.num_units, domain_numb=encoder.num_domains, name="On_top_encoder_domain_classification")
+    self.classification_layer = Classification_layer(num_units, domain_numb=num_domains, name="On_top_encoder_domain_classification")
   def auto_config(self, num_replicas=1):
     config = super(Multi_domain_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
