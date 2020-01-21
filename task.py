@@ -4096,7 +4096,7 @@ def domain_classification_on_top_encoder(config,
     return training_loss, num_examples
 
   def _apply_gradients():
-    variables = model.trainable_variables
+    variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name]
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
