@@ -4054,7 +4054,7 @@ def domain_classification_on_top_encoder(config,
           save_every=5000,
           eval_every=15000,
           report_every=100):
-  classification_on_top_encoder
+  
   if config.get("train_steps",None)!=None:
     train_steps = config.get("train_steps")
   if config.get("batch_type",None)!=None:
@@ -4064,13 +4064,7 @@ def domain_classification_on_top_encoder(config,
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
     checkpoint_path = checkpoint_manager.latest_checkpoint
-    #tf.summary.experimental.set_step(step)
-    """
-    model.create_variables()
-    for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-      score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-    """
+    
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -4090,16 +4084,13 @@ def domain_classification_on_top_encoder(config,
     gradient_accumulator = optimizer_util.GradientAccumulator()  
 
   def _accumulate_gradients(source, target):
-    logits = model.classification_on_top_encoder(source,
-        training=True)
-    training_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], logits)
-    
+    logits = model.classification_on_top_encoder(source, training=True)
+    training_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], logits)    
     variables = model.trainable_variables
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
-    num_examples = tf.reduce_sum(target["length"])
-    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
+    num_examples = tf.reduce_sum(target["length"])    
     return training_loss, num_examples
 
   def _apply_gradients():
