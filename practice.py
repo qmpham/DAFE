@@ -32,7 +32,7 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "trainv3", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
   parser.add_argument("--output", default="trans")
@@ -539,6 +539,8 @@ def main():
     task.meta_train_v1(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run =="train":
     task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+  elif args.run =="dcote":
+    task.domain_classification_on_top_encoder(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run =="trainv2":
     task.train_v2(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "trainv3":
