@@ -4093,7 +4093,7 @@ def domain_classification_on_top_encoder(config,
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])    
-    return training_loss, num_examples
+    return tf.reduce_mean(training_loss), num_examples
 
   def _apply_gradients():
     variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name]
@@ -4160,9 +4160,8 @@ def domain_classification_on_top_encoder(config,
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".domain.prediction." + os.path.basename(checkpoint_path))
-          score = domain_predict(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+          output_file=""
+          domain_predict(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
       tf.summary.flush()
       if step > train_steps:
         break
