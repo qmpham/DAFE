@@ -4160,12 +4160,62 @@ def domain_classification_on_top_encoder(config,
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".domain.prediction." + os.path.basename(checkpoint_path))
+          score = domain_predict(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
       tf.summary.flush()
       if step > train_steps:
         break
+
+def domain_predict(source_file,
+              reference,
+              model,
+              checkpoint_manager,
+              checkpoint,
+              domain,
+              output_file,
+              length_penalty,
+              experiment="ldr",
+              score_type="MultiBLEU",
+              batch_size=10,
+              beam_size=5):
+  
+  # Create the inference dataset.
+  checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  tf.get_logger().info("Evaluating model %s", checkpoint_manager.latest_checkpoint)
+  print("In domain %d"%domain)
+  dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
+  iterator = iter(dataset)
+
+  # Create the mapping for target ids to tokens.
+
+  @tf.function
+  def predict_next():    
+    source = next(iterator)  
+    logits = model.classification_on_top_encoder(source, training=False)
+    return tf.argmax(logits,-1)
+
+  # Iterates on the dataset.
+  
+  print("output file: ", output_file)
+  with open(output_file, "w") as output_:
+    while True:    
+      try:
+        predictions = predict_next()
+        for d in predictions.numpy():          
+          print_bytes(sentence, d)
+      except tf.errors.OutOfRangeError:
+        break
+  scorer = classification_scorer
+  if reference!=None:
+    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
+    score = scorer(reference, output_file)
+    if score is None:
+      return 0.0
+    else:
+      return score
+
+def classification_scorer(reference, output_file):
 
 def averaged_checkpoint_translate(config, source_file,
               reference,
