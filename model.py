@@ -101,8 +101,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
   def call(self, features, labels=None, training=None, step=None):
     # Encode the source.
     assert isinstance(self.features_inputter, My_inputter)
-    assert isinstance(self.labels_inputter, My_inputter)
-    print("features:......", features)
+    assert isinstance(self.labels_inputter, My_inputter)    
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(

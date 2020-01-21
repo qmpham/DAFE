@@ -143,8 +143,7 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
   def call(self, inputs, sequence_length=None, training=None):
     domain = inputs[1]
     domain = domain[0]
-    inputs = inputs[0]
-    print("inputs:.......", inputs)
+    inputs = inputs[0]    
     inputs *= self.num_units**0.5
 
     if self.position_encoder is not None:
