@@ -4088,7 +4088,7 @@ def domain_classification_on_top_encoder(config,
     tf.print("logits: ", logits)
     training_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], logits)    
     print(model.trainable_variables)
-    variables = [var for var in model.trainable_variables if ""]
+    variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name]
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
