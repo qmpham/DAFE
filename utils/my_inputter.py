@@ -57,8 +57,11 @@ class My_inputter(TextInputter):
     def make_features(self, element=None, features=None, domain=1, training=None):
         features = super(My_inputter, self).make_features(
             element=element, features=features, training=training)
-        if "domain" in features:
-            return features
+            
+        if "ids" in features and "domain" in features:
+          return features
+
+        features["ids"] = self.tokens_to_ids.lookup(features["tokens"])
         features["domain"] = tf.constant(domain)
 
         return features
