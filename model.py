@@ -26,6 +26,7 @@ from utils.utils_ import make_domain_mask, masking
 from opennmt.layers import common
 from layers.layers import Classification_layer
 from opennmt.utils.losses import _softmax_cross_entropy
+from utils.my_inputter import My_inputter
 class Multi_domain_SequenceToSequence(model.SequenceGenerator):
 
   """A sequence to sequence model."""
@@ -39,8 +40,8 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
                num_units=512,
                share_embeddings=EmbeddingsSharingLevel.NONE):
 
-    if not isinstance(target_inputter, inputters.WordEmbedder):
-      raise TypeError("Target inputter must be a WordEmbedder")
+    if not isinstance(target_inputter, inputters.WordEmbedder) or isinstance(target_inputter, My_inputter):
+      raise TypeError("Target inputter must be a WordEmbedder or My_inputter")
     if EmbeddingsSharingLevel.share_input_embeddings(share_embeddings):
       if isinstance(source_inputter, inputters.ParallelInputter):
         source_inputters = source_inputter.inputters
