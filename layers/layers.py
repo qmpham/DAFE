@@ -4,6 +4,55 @@ from layers import common
 from opennmt.utils import misc
 from opennmt.utils.misc import shape_list
 import sys
+
+class Classification_layer(tf.keras.layers.Layer):
+  def __init__(self,   
+               input_dim,            
+               domain_numb=6,
+               kernel_size=512,
+               dropout=0.1,
+               **kwargs):
+    
+    super(Classification_layer, self).__init__(**kwargs)
+    self.domain_numb = domain_numb
+    self.input_dim = input_dim
+    self.layer_norm = common.LayerNorm()
+    self.kernel_size = kernel_size
+    self.ff_layer_1 = common.Dense(2048, activation=tf.nn.leaky_relu)
+    self.ff_layer_2 = common.Dense(2048, activation=tf.nn.leaky_relu)
+    self.ff_layer_end = common.Dense(domain_numb)
+
+  def build(self, input_shape):
+    super(Classification_layer, self).build(input_shape)
+    scope_name = self.name_scope()
+    self.v = self.add_weight("%s_v_a"%scope_name, shape=[self.kernel_size])
+    self.W = self.add_weight("%s_W_a"%scope_name, shape=[self.input_dim, self.kernel_size])
+
+  def call(self, inputs, src_length, training=True):    
+    v = self.v
+    W = self.W
+    v_a = tf.expand_dims(tf.expand_dims(v, 0),2)
+    v_a = tf.tile(v_a, [tf.shape(inputs)[0], 1, 1])
+    W_a = tf.expand_dims(W, 0)
+    W_a = tf.tile(W_a, [tf.shape(inputs)[0],1,1])
+    attention_weight = tf.matmul(tf.tanh(tf.matmul(inputs, W_a)), v_a)
+    adv_mask = tf.sequence_mask(src_length, maxlen=tf.shape(attention_weight)[1], dtype=tf.float32)
+    adv_mask = tf.expand_dims(adv_mask, -1)
+    attention_weight = tf.cast(tf.cast(attention_weight, tf.float32) * adv_mask + ((1.0 - adv_mask) * tf.float32.min), attention_weight.dtype)
+    attention_weight = tf.cast(tf.nn.softmax(tf.cast(attention_weight, tf.float32)), attention_weight.dtype)
+    attention_weight = tf.squeeze(attention_weight,-1)
+    attention_weight = tf.expand_dims(attention_weight, 1)
+    logits = tf.matmul(attention_weight, inputs)
+    logits = tf.squeeze(logits,1)
+    
+    logits = common.dropout(logits, rate=0.3, training=training)
+    outputs = self.ff_layer_1(logits)          
+    outputs = common.dropout(outputs, rate=0.3, training=training)
+    outputs = self.ff_layer_2(outputs)
+    outputs = common.dropout(outputs, rate=0.3, training=training)
+    outputs = self.ff_layer_end(outputs)
+    return outputs
+
 class Multi_domain_FeedForwardNetwork(tf.keras.layers.Layer):
 
   def __init__(self,

@@ -24,6 +24,7 @@ from opennmt.models.sequence_to_sequence import EmbeddingsSharingLevel, Sequence
 from utils.my_inputter import My_inputter, Multi_domain_SequenceToSequenceInputter
 from utils.utils_ import make_domain_mask, masking
 from opennmt.layers import common
+from layers.layers import Classification_layer
 from opennmt.utils.losses import _softmax_cross_entropy
 class Multi_domain_SequenceToSequence(model.SequenceGenerator):
 
@@ -56,6 +57,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     self.encoder = encoder
     self.decoder = decoder
     self.share_embeddings = share_embeddings
+    self.classification_layer = Classification_layer(encoder.num_units, domain_numb=encoder.num_domains, name="On_top_encoder_domain_classification")
   def auto_config(self, num_replicas=1):
     config = super(Multi_domain_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
@@ -394,6 +396,12 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           attention=attention,
           alignment_type=alignment_type)
       print_bytes(tf.compat.as_bytes(sentence), stream=stream)
+
+  def classification_on_top_encoder(self, features, training=None):
+    source_length = self.features_inputter.get_length(features)
+    source_inputs = self.features_inputter(features, training=training)
+    logits = self.classification_layer(source_inputs, source_length, training=training)
+    return logits
 
 class LDR_SequenceToSequence(model.SequenceGenerator):
   """A sequence to sequence model."""

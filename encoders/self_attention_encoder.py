@@ -30,6 +30,7 @@ class Multi_domain_SelfAttentionEncoder(Encoder):
     
     super(Multi_domain_SelfAttentionEncoder, self).__init__(**kwargs)
     self.num_units = num_units
+    self.num_domains = num_domains
     self.dropout = dropout
     self.position_encoder = None
     if position_encoder_class is not None:
@@ -536,7 +537,7 @@ class Multi_domain_SelfAttentionEncoder_v5(Encoder):
       m += layer.map_v1_weights(weights["layer_%d" % i])
     return m    
 
-class Multi_domain_SelfAttentionEncoder_v4(Encoder):  
+class Multi_domain_SelfAttentionEncoder_v4(Encoder):
 
   def __init__(self,
                num_layers,

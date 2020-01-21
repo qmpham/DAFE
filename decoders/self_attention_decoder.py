@@ -2487,6 +2487,7 @@ class Multi_domain_SelfAttentionDecoder_v9(Decoder):
     super(Multi_domain_SelfAttentionDecoder_v9, self).__init__(num_sources=num_sources, **kwargs)
     self.num_units = num_units
     self.num_heads = num_heads
+    self.num_domains = num_domains
     self.dropout = dropout
     self.position_encoder = None
     if position_encoder_class is not None:
