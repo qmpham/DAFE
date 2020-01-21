@@ -53,11 +53,16 @@ class My_inputter(TextInputter):
                 initializer=initializer,
                 trainable=self.trainable)
         super(My_inputter, self).build(input_shape)
-            
+
+    def call(self, features, training=None):
+      outputs = tf.nn.embedding_lookup(self.embedding, features["ids"])
+      outputs = common.dropout(outputs, self.dropout, training=training)
+      return outputs
+
     def make_features(self, element=None, features=None, domain=1, training=None):
         features = super(My_inputter, self).make_features(
             element=element, features=features, training=training)
-            
+
         if "ids" in features and "domain" in features:
           return features
 
