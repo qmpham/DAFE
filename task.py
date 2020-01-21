@@ -4198,24 +4198,18 @@ def domain_predict(source_file,
   # Iterates on the dataset.
   
   print("output file: ", output_file)
-  with open(output_file, "w") as output_:
-    while True:    
-      try:
-        predictions = predict_next()
-        for d in predictions.numpy():          
-          print_bytes(sentence, d)
-      except tf.errors.OutOfRangeError:
-        break
-  scorer = classification_scorer
-  if reference!=None:
-    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
-    score = scorer(reference, output_file)
-    if score is None:
-      return 0.0
-    else:
-      return score
-
-def classification_scorer(reference, output_file):
+  predicted_domain = []
+  
+  while True:    
+    try:
+      predictions = predict_next()
+      for d in predictions.numpy():          
+        predicted_domain.append(d)
+    except tf.errors.OutOfRangeError:
+      break
+  true_domain = [domain] * len(predicted_domain)
+  from sklearn.metrics import classification_report
+  print(classification_report(true_domain, predicted_domain))
 
 def averaged_checkpoint_translate(config, source_file,
               reference,
