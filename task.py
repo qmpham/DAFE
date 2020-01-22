@@ -3936,7 +3936,7 @@ def train_v13(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    variables = model.trainable_variables #[var for var in model.trainable_variables if "gate" in var.name]
+    variables = [var for var in model.trainable_variables if "gate" in var.name]
     print("gate var numb: ", len(variables))
     gradients = adv_optimizer.get_gradients(training_loss, variables)
     gate_gradient_accumulator(gradients)
@@ -3954,11 +3954,11 @@ def train_v13(config,
     gradient_accumulator.reset()
 
   def _apply_adv_gradients():
-    variables = model.trainable_variables #[var for var in model.trainable_variables if "gate" in var.name]
+    variables = [var for var in model.trainable_variables if "gate" in var.name]
     grads_and_vars = []
     for gradient, variable in zip(gate_gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gate_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     adv_optimizer.apply_gradients(grads_and_vars)
     gate_gradient_accumulator.reset()
