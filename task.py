@@ -3942,6 +3942,7 @@ def train_v13(config,
         labels=target,
         training=True,
         step=optimizer.iterations)
+    print(outputs)
     loss = tf.reduce_sum(outputs["logits"]) #model.compute_loss(outputs, target, training=True) 
     training_loss = loss
     reported_loss = loss
