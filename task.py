@@ -4004,6 +4004,7 @@ def train_v13(config,
   train_adv_data_flow = iter(_adv_train_forward())  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
+  _adv_loss = []
   _number_examples = []    
   step = 0
   with _summary_writer.as_default():
@@ -4015,15 +4016,22 @@ def train_v13(config,
         _number_examples.append(num_examples)
       _step()  
       if step > 100000:
-        _, _ = next(train_adv_data_flow)
+        adv_loss, _ = next(train_adv_data_flow)
         _adv_step()
+        _adv_loss.append(adv_loss)
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
-        tf.get_logger().info(
+        if len(_adv_loss)!=0:
+          tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; Adv_loss = %f, number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.mean(_adv_loss), np.sum(_number_examples), elapsed)
+        else:
+          tf.get_logger().info(
             "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
             step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
         _loss = []
+        _adv_loss = []
         _number_examples = []
         start = time.time()
       if step % save_every == 0:
