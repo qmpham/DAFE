@@ -49,10 +49,8 @@ def translate(source_file,
   
   # Create the inference dataset.
   if checkpoint_path == None:
-    checkpoint.restore(checkpoint_manager.latest_checkpoint)
-  else:
-    checkpoint.restore(checkpoint_path)
-  tf.get_logger().info("Evaluating model %s", checkpoint_manager.latest_checkpoint)
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
   print("In domain %d"%domain)
   dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
   iterator = iter(dataset)
