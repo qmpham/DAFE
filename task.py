@@ -3937,7 +3937,7 @@ def train_v13(config,
     #tf.print("domain:", source["domain"][0],"adv_domain:", adv_domain, sep="|")
     source["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(source["domain"]))
     target["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(target["domain"]))
-    outputs, _ = model(
+    outputs, _ = model.adv_call(
         source,
         labels=target,
         training=True,
