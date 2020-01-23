@@ -2631,7 +2631,6 @@ class Multi_domain_SelfAttentionDecoder_v9(Decoder):
     multi_domain_forget_gate = self.multi_domain_forget_gate
     multi_domain_input_gate = self.multi_domain_input_gate
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
-
       inputs, layer_cache, attention = layer(
           inputs,
           mask=mask,
@@ -2659,7 +2658,7 @@ class Multi_domain_SelfAttentionDecoder_v9(Decoder):
           i = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
         inputs = inputs * f + ADAP_input * i
       tf.print("%s"%self.name_scope(), "forget_gate: ", f, "inputs gate:", i)
-      
+
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
 
@@ -2685,6 +2684,103 @@ class Multi_domain_SelfAttentionDecoder_v9(Decoder):
     logits = self.output_layer(outputs)
     return logits, state, attention
     
+  def _adv_run(self,
+           inputs,
+           sequence_length=None,
+           cache=None,
+           memory=None,
+           memory_sequence_length=None,
+           step=None,
+           training=None):
+    # Process inputs.
+    domain = inputs[1]
+    domain = domain[0]
+    inputs = inputs[0]
+    inputs *= self.num_units**0.5
+    if self.position_encoder is not None:
+      inputs = self.position_encoder(inputs, position=step + 1 if step is not None else None)
+    inputs = common.dropout(inputs, self.dropout, training=training)
+
+    # Prepare query mask.
+    mask = None
+    if step is None:
+      maximum_length = tf.shape(inputs)[1]
+      if sequence_length is None:
+        batch_size = tf.shape(inputs)[0]
+        sequence_length = tf.fill([batch_size], maximum_length)
+      mask = transformer.future_mask(sequence_length, maximum_length=maximum_length)
+
+    # Prepare memory mask.
+    memory_mask = None
+    if memory is not None:
+      if not isinstance(memory, (list, tuple)):
+        memory = (memory,)
+    if memory_sequence_length is not None:
+      if not isinstance(memory_sequence_length, (list, tuple)):
+        memory_sequence_length = (memory_sequence_length,)
+      memory_mask = [
+          tf.sequence_mask(mem_length, maxlen=tf.shape(mem)[1])
+          for mem, mem_length in zip(memory, memory_sequence_length)]
+
+    # Run each layer.
+    new_cache = []
+    multi_domain_forget_gate = self.multi_domain_forget_gate
+    multi_domain_input_gate = self.multi_domain_input_gate
+    for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
+      inputs, layer_cache, attention = layer(
+          inputs,
+          mask=mask,
+          memory=memory,
+          memory_mask=memory_mask,
+          cache=cache[i] if cache is not None else None,
+          training=training)
+      new_cache.append(layer_cache)
+      if self.ADAP_layer_stopping_gradient: 
+        ADAP_input = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training)
+        if self.ADAP_gate_stopping_gradient:
+          f = multi_domain_forget_gate(tf.stop_gradient(inputs), ADAP_input, mask=mask, training=training)
+          i = multi_domain_input_gate(tf.stop_gradient(inputs), ADAP_input, mask=mask, training=training)
+        else:
+          f = multi_domain_forget_gate(inputs, ADAP_input, mask=mask, training=training)
+          i = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
+        inputs = inputs * f + tf.stop_gradient(ADAP_input) * i
+      else:
+        ADAP_input = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        if self.ADAP_gate_stopping_gradient:
+          f = multi_domain_forget_gate(tf.stop_gradient(inputs), ADAP_input, mask=mask, training=training)
+          i = multi_domain_input_gate(tf.stop_gradient(inputs), ADAP_input, mask=mask, training=training)
+        else:
+          f = multi_domain_forget_gate(inputs, ADAP_input, mask=mask, training=training)
+          i = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
+        inputs = inputs * f + tf.stop_gradient(ADAP_input) * i
+      if not training:
+        tf.print("%s"%self.name_scope(), "forget_gate: ", f, "inputs gate:", i)
+
+    outputs = self.layer_norm(inputs)
+    return outputs, new_cache, attention
+
+  def adv_forward(self,
+              inputs,
+              sequence_length=None,
+              initial_state=None,
+              memory=None,
+              memory_sequence_length=None,
+              input_fn=None,
+              sampling_probability=None,
+              training=None):
+    _ = initial_state
+    _ = input_fn
+    if sampling_probability is not None:
+      raise ValueError("Scheduled sampling is not supported by this decoder")
+    outputs, state, attention = self._adv_run(
+        inputs,
+        sequence_length=sequence_length,
+        memory=memory,
+        memory_sequence_length=memory_sequence_length,
+        training=training)
+    logits = self.output_layer(outputs)
+    return logits, state, attention
+
   def forward_fn(self,
               inputs,
               args_dict,
