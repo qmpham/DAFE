@@ -3932,7 +3932,7 @@ def train_v13(config,
         labels=target,
         training=True,
         step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
+    loss = model.compute_loss(outputs, target, training=True) * config.get("adv_loss_weight", 0.1)
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
