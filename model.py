@@ -137,7 +137,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     source_inputs = self.features_inputter(features, training=training)
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder.adv_call(
         [source_inputs, features["domain"]], sequence_length=source_length, training=training)
-
+    """
     outputs = None
     predictions = None
 
@@ -150,8 +150,8 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           encoder_sequence_length,
           step=step,
           training=training)
-
-    return outputs, predictions
+    """
+    return encoder_outputs #outputs, predictions
 
   def forward_fn(self, features, args_dict, labels=None, training=None, step=None):
     # Encode the source.

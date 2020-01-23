@@ -3937,18 +3937,23 @@ def train_v13(config,
     #tf.print("domain:", source["domain"][0],"adv_domain:", adv_domain, sep="|")
     source["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(source["domain"]))
     target["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(target["domain"]))
-    outputs, _ = model.adv_call(
+    outputs = model.adv_call(
         source,
         labels=target,
         training=True,
         step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True) 
+    loss = tf.reduce_sum(outputs) #model.compute_loss(outputs, target, training=True) 
+    training_loss = loss
+    reported_loss = loss
+    """
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss * config.get("adv_loss_weight", 0.1), loss
     variables = [var for var in model.trainable_variables if not is_ADAP_learning_variable(var.name)]
+    """
+    variables = [var for var in model.trainable_variables if "encoder" in var.name]
     print("var numb: ", len(variables))
     gradients = adv_optimizer.get_gradients(training_loss, variables)
     gate_gradient_accumulator(gradients)
