@@ -3932,12 +3932,12 @@ def train_v13(config,
         labels=target,
         training=True,
         step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True) * config.get("adv_loss_weight", 0.1)
+    loss = model.compute_loss(outputs, target, training=True) 
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
     else:
-      training_loss, reported_loss = loss, loss
+      training_loss, reported_loss = loss * config.get("adv_loss_weight", 0.1), loss
     variables = [var for var in model.trainable_variables if "gate" in var.name]
     print("gate var numb: ", len(variables))
     gradients = adv_optimizer.get_gradients(training_loss, variables)
