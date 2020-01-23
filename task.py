@@ -3966,7 +3966,7 @@ def train_v13(config,
     gradient_accumulator.reset()
 
   def _apply_adv_gradients():
-    variables = [var for var in model.trainable_variables if "gate" in var.name]
+    variables = [var for var in model.trainable_variables if not is_ADAP_learning_variable(var.name)]
     grads_and_vars = []
     for gradient, variable in zip(gate_gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
