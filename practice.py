@@ -496,7 +496,7 @@ def main():
   print("warmup_steps: ", warmup_steps)
   learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
   meta_train_optimizer = tf.keras.optimizers.SGD(0.0001)
-  adv_optimizer = tf.keras.optimizers.SGD(0.0001)
+  adv_optimizer = tfa.optimizers.LazyAdam(0.0001)
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=meta_test_optimizer)   
   model.initialize(data_config)

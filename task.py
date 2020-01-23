@@ -3962,7 +3962,7 @@ def train_v13(config,
     grads_and_vars = []
     for gradient, variable in zip(gate_gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gate_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     adv_optimizer.apply_gradients(grads_and_vars)
     gate_gradient_accumulator.reset()
