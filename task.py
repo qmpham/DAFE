@@ -37,17 +37,21 @@ def translate(source_file,
               reference,
               model,
               checkpoint_manager,
-              checkpoint,
+              checkpoint,              
               domain,
               output_file,
               length_penalty,
+              checkpoint_path=None,
               experiment="ldr",
               score_type="MultiBLEU",
               batch_size=10,
               beam_size=5):
   
   # Create the inference dataset.
-  checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  if checkpoint_path == None:
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  else:
+    checkpoint.restore(checkpoint_path)
   tf.get_logger().info("Evaluating model %s", checkpoint_manager.latest_checkpoint)
   print("In domain %d"%domain)
   dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)

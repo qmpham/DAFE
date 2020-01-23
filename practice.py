@@ -35,6 +35,7 @@ def main():
   parser.add_argument("run", choices=["train", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
+  parser.add_argument("--ckpt", default=None)
   parser.add_argument("--output", default="trans")
   parser.add_argument("--domain", default=0)
   parser.add_argument("--ref", default=None)
@@ -551,7 +552,7 @@ def main():
     model.build(None)
     print("translate in domain %d"%(int(args.domain)))
     task.translate(args.src, args.ref, model, checkpoint_manager,
-              checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment)
+              checkpoint, int(args.domain), args.output, length_penalty=0.6, checkpoint_path=args.ckpt, experiment=experiment)
   elif args.run == "translatev1":
     model.build(None)
     translate_config_file = args.src
