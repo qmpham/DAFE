@@ -3921,13 +3921,23 @@ def train_v13(config,
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
+  def is_ADAP_learning_variable(name):
+
+    yes = False
+
+    for i in range(6):
+      if "ADAP_%d"%i in name:
+        yes= True
+        break
+    return yes
+
   def _accumulate_adv_gradients(source, target):
     adv_domain = tf.reshape(tf.math.floormod(source["domain"][0] + \
       tf.cast(tf.reshape(tf.random.categorical(tf.expand_dims(tf.math.log([1.0/(domain_num-1)]*domain_num),0),1),[]) + 1,tf.int32), domain_num), [])
     #tf.print("domain:", source["domain"][0],"adv_domain:", adv_domain, sep="|")
     source["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(source["domain"]))
     target["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(target["domain"]))
-    outputs, _ = model.adv_call(
+    outputs, _ = model(
         source,
         labels=target,
         training=True,
@@ -3938,8 +3948,8 @@ def train_v13(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss * config.get("adv_loss_weight", 0.1), loss
-    variables = [var for var in model.trainable_variables if "gate" in var.name]
-    print("gate var numb: ", len(variables))
+    variables = [var for var in model.trainable_variables if not is_ADAP_learning_variable(var.name)]
+    print("var numb: ", len(variables))
     gradients = adv_optimizer.get_gradients(training_loss, variables)
     gate_gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
