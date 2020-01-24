@@ -3865,6 +3865,11 @@ def train_v13(config,
 
   train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, 
                                                                         batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=(config["experiment"]!="baseline"),picking_prob=config.get("picking_prob",None))
+  
+  adv_train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, 
+                                                                        batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=(config["experiment"]!="baseline"),picking_prob=None)
+
+
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -3991,7 +3996,7 @@ def train_v13(config,
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
   
-  @dataset_util.function_on_next(train_dataset)
+  @dataset_util.function_on_next(adv_train_dataset)
   def _adv_train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
