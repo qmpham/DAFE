@@ -4037,7 +4037,7 @@ def train_v13(config,
         _number_examples.append(num_examples)
       _step()  
       """
-      if step > 100000:
+      if True:
         adv_loss, _ = next(train_adv_data_flow)
         _adv_step()
         _adv_loss.append(adv_loss)
