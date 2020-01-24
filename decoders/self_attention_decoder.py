@@ -2740,7 +2740,7 @@ class Multi_domain_SelfAttentionDecoder_v9(Decoder):
       ADAP_input = multi_domain_layer(inputs, domain, mask=mask, training=training)
       f = multi_domain_forget_gate(inputs, ADAP_input, mask=mask, training=training)
       i = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
-      inputs = inputs * f + ADAP_input * i
+      inputs = inputs * f + tf.stop_gradient(ADAP_input) * i
       """
       if not training:
         tf.print("%s"%self.name_scope(), "forget_gate: ", f, "inputs gate:", i)
@@ -2768,8 +2768,6 @@ class Multi_domain_SelfAttentionDecoder_v9(Decoder):
         memory_sequence_length=memory_sequence_length,
         training=training)
     logits = self.output_layer(outputs)
-    #logits = inputs[0]
-    #logits = outputs
     return logits, state, attention
 
   def forward_fn(self,
