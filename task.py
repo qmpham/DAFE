@@ -3955,7 +3955,7 @@ def train_v13(config,
       training_loss, reported_loss = loss * config.get("adv_loss_weight", 0.1), loss
     variables = [var for var in model.trainable_variables if not is_ADAP_learning_variable(var.name)]
     """
-    variables = model.trainable_variables#[var for var in model.trainable_variables if "encoder" in var.name]
+    variables = model.trainable_variables #[var for var in model.trainable_variables if "encoder" in var.name]
     print("var numb: ", len(variables))
     gradients = adv_optimizer.get_gradients(training_loss, variables)
     gate_gradient_accumulator(gradients)
@@ -3975,7 +3975,7 @@ def train_v13(config,
 
   """
   def _apply_adv_gradients():
-    variables = [var for var in model.trainable_variables if not is_ADAP_learning_variable(var.name)]
+    variables = model.trainable_variables #[var for var in model.trainable_variables if not is_ADAP_learning_variable(var.name)]
     grads_and_vars = []
     for gradient, variable in zip(gate_gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
