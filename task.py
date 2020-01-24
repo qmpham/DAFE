@@ -3871,6 +3871,7 @@ def train_v13(config,
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     gate_gradient_accumulator = optimizer_util.GradientAccumulator()
 
+  """
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
@@ -3920,7 +3921,7 @@ def train_v13(config,
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
-
+  """
   def is_ADAP_learning_variable(name):
 
     yes = False
@@ -3961,6 +3962,7 @@ def train_v13(config,
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
 
+  """
   def _apply_gradients():
     variables = model.trainable_variables
     grads_and_vars = []
@@ -3971,6 +3973,7 @@ def train_v13(config,
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
 
+  """
   def _apply_adv_gradients():
     variables = [var for var in model.trainable_variables if not is_ADAP_learning_variable(var.name)]
     grads_and_vars = []
@@ -3981,6 +3984,7 @@ def train_v13(config,
     adv_optimizer.apply_gradients(grads_and_vars)
     gate_gradient_accumulator.reset()
  
+  """
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
@@ -3991,7 +3995,7 @@ def train_v13(config,
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
-
+  """
   @dataset_util.function_on_next(train_dataset)
   def _adv_train_forward(next_fn):    
     with strategy.scope():
@@ -4016,7 +4020,7 @@ def train_v13(config,
   # Runs the training loop.
   import time
   start = time.time()  
-  train_data_flow = iter(_train_forward())
+  #train_data_flow = iter(_train_forward())
   train_adv_data_flow = iter(_adv_train_forward())  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
@@ -4026,11 +4030,13 @@ def train_v13(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
+      """
       for _ in range(int(config.get("accumulation_step",1))):
         loss, num_examples = next(train_data_flow)
         _loss.append(loss)
         _number_examples.append(num_examples)
       _step()  
+      """
       if step > 100000:
         adv_loss, _ = next(train_adv_data_flow)
         _adv_step()
