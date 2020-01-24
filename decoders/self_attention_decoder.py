@@ -2768,6 +2768,7 @@ class Multi_domain_SelfAttentionDecoder_v9(Decoder):
         memory_sequence_length=memory_sequence_length,
         training=training)
     logits = self.output_layer(outputs)
+    logits = inputs
     return logits, state, attention
 
   def forward_fn(self,
