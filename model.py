@@ -205,11 +205,13 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         initial_state=encoder_state)
     logits, _, attention = self.decoder.adv_forward(
         [target_inputs, labels["domain"]],
-        self.labels_inputter.get_length(labels),
-        initial_state=initial_state,
-        input_fn=input_fn,
-        sampling_probability=sampling_probability,
-        training=training)
+        sequence_length=self.labels_inputter.get_length(labels),
+              initial_state=initial_state,
+              memory=encoder_outputs,
+              memory_sequence_length=encoder_sequence_length,
+              input_fn=input_fn,
+              sampling_probability=sampling_probability,
+              training=training)
     outputs = dict(logits=logits, attention=attention)
 
     return outputs
