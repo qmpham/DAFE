@@ -4020,7 +4020,7 @@ def train_v13(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  #train_adv_data_flow = iter(_adv_train_forward())  
+  train_adv_data_flow = iter(_adv_train_forward())  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   _adv_loss = []
