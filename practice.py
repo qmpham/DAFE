@@ -538,11 +538,11 @@ def main():
     task.meta_train_v3(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "metatrainv1":
     task.meta_train_v1(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
-  elif args.run =="train":
+  elif args.run == "train":
     task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
-  elif args.run =="dcote":
+  elif args.run == "dcote":
     task.domain_classification_on_top_encoder(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",1000), eval_every=config.get("eval_every",2000))
-  elif args.run =="trainv2":
+  elif args.run == "trainv2":
     task.train_v2(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "trainv3":
     task.train_v3(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
@@ -566,12 +566,12 @@ def main():
       print("output_file: ", output_file)
       task.translate(src_file, None, model, checkpoint_manager,
               checkpoint, int(domain), output_file, length_penalty=0.6, experiment=experiment)
-  elif args.run=="translatev2":
+  elif args.run == "translatev2":
     model.create_variables()
     print("translate in domain %d"%(int(args.domain)))
     task.averaged_checkpoint_translate(config, args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment, max_count=args.maxcount)
-  elif args.run=="translatev3":
+  elif args.run == "translatev3":
     model.create_variables()
     translate_config_file = args.src
     with open(translate_config_file, "r") as stream:
