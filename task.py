@@ -4026,6 +4026,14 @@ def train_v13(config,
   _adv_loss = []
   _number_examples = []    
   step = 0
+  if True:
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+    tf.summary.experimental.set_step(step)
+    for src,ref,i in zip(config["tst_src"],config["tst_ref"],config["tst_domain"]):
+      output_file = os.path.join(config["model_dir"],"tst",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+      score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+      tf.summary.scalar("tst_score_%d"%i, score, description="BLEU on test set %s"%src)
+    exit()
   with _summary_writer.as_default():
     while True:
       #####Training batch
