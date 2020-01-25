@@ -549,10 +549,13 @@ def main():
   elif args.run == "trainv13":
     task.train_v13(config, meta_test_optimizer, adv_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "translate":
+    """
     model.create_variables()
     print("translate in domain %d"%(int(args.domain)))
     task.translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.domain), args.output, length_penalty=0.6, checkpoint_path=args.ckpt, experiment=experiment)
+    """
+    task.train_v13(config, meta_test_optimizer, adv_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "translatev1":
     model.build(None)
     translate_config_file = args.src
