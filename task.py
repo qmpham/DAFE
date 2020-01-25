@@ -4030,7 +4030,7 @@ def train_v13(config,
     checkpoint_path = checkpoint_manager.latest_checkpoint
     tf.summary.experimental.set_step(step)
     for src,ref,i in zip(config["tst_src"],config["tst_ref"],config["tst_domain"]):
-      output_file = os.path.join(config["model_dir"],"tst",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
       print("src:",src)
       print("ref:",ref)
       score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
