@@ -2511,7 +2511,7 @@ class Multi_domain_SelfAttentionDecoder_v9(Decoder):
     self.multi_domain_input_gate = multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_input_gate")
 
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
-    self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
+    self.ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient
     if ADAP_contribution==None:
       ADAP_contribution =[1.0] * num_layers
 

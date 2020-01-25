@@ -52,6 +52,7 @@ def translate(source_file,
     checkpoint_path = checkpoint_manager.latest_checkpoint
   tf.get_logger().info("Evaluating model %s", checkpoint_path)
   print("In domain %d"%domain)
+  checkpoint.restore(checkpoint_path)
   dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
   iterator = iter(dataset)
 
@@ -3868,7 +3869,6 @@ def train_v13(config,
   
   adv_train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, 
                                                                         batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=(config["experiment"]!="baseline"),picking_prob=None)
-
 
   #####
   with strategy.scope():
