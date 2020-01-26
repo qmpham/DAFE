@@ -717,10 +717,10 @@ class Multi_domain_SelfAttentionEncoder_v6(Encoder):
     multi_domain_input_gate = self.multi_domain_input_gate
     for layer, multi_domain_layer in zip(self.layers, self.multi_domain_layers):
       inputs = layer(inputs, mask=mask, training=training)      
-      ADAP_input = multi_domain_layer(inputs, domain, mask=mask, training=training)
+      ADAP_input = tf.stop_gradient(multi_domain_layer(inputs, domain, mask=mask, training=training))
       f = multi_domain_forget_gate(inputs, ADAP_input, mask=mask, training=training)
       i = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
-      inputs = inputs * f + tf.stop_gradient(ADAP_input) * i
+      inputs = inputs * f + ADAP_input * i
       
     outputs = self.layer_norm(inputs)
     
