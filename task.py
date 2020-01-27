@@ -3956,7 +3956,7 @@ def train_v13(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss * config.get("adv_loss_weight", 0.1), loss
-    if config.get("input_gate_regularization",False):
+    if config.get("input_gate_regularizing",False):
       regularization_losses = model.losses
       output_activity_regularization_losses = []
       for loss_ in regularization_losses:
