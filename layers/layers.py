@@ -903,6 +903,7 @@ class Multi_domain_Gate_v2(tf.keras.layers.Layer):
                dropout=0.1,
                activation=tf.nn.sigmoid,
                outer_activation=None,
+               output_regularization=False,
                **kwargs):
     
     super(Multi_domain_Gate_v2, self).__init__(**kwargs)
@@ -915,6 +916,7 @@ class Multi_domain_Gate_v2(tf.keras.layers.Layer):
     self.outer_transpose = False
     self.outer_use_bias = True
     self.outer_activation = activation
+    self.output_regularization = output_regularization
   
   def build(self, input_shape):
     super(Multi_domain_Gate_v2, self).build(input_shape)
@@ -941,7 +943,12 @@ class Multi_domain_Gate_v2(tf.keras.layers.Layer):
       outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
-
+    if self.output_regularization:
+      if mask is not None:        
+        mask=tf.cast(mask,tf.float32)
+        self.add_loss(tf.divide(tf.reduce_sum(mask * tf.reduce_sum(tf.abs(outputs),axis=-1)), tf.reduce_sum(mask)))
+      else:
+        self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
     return outputs
 
   def forward_fn(self, inputs, args_dict, domain, mask=None, training=None):  # pylint: disable=arguments-differ

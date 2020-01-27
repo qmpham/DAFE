@@ -649,6 +649,7 @@ class Multi_domain_SelfAttentionEncoder_v6(Encoder):
                position_encoder_class=SinusoidalPositionEncoder,
                multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
                multi_domain_adapter_gate_class=Multi_domain_Gate_v2,
+               input_gate_regularization=False,
                ADAP_contribution=None,
                **kwargs):
     
@@ -673,7 +674,7 @@ class Multi_domain_SelfAttentionEncoder_v6(Encoder):
         multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
         for i in range(num_layers)]
     self.multi_domain_forget_gate = multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_forget_gate")
-    self.multi_domain_input_gate = multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_input_gate")
+    self.multi_domain_input_gate = multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_input_gate", output_regularization=input_gate_regularization)
     self.ADAP_layer_stopping_gradient = ADAP_layer_stopping_gradient
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution == None:

@@ -3956,7 +3956,14 @@ def train_v13(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss * config.get("adv_loss_weight", 0.1), loss
-    
+    if config.get("input_gate_regularization",False):
+      regularization_losses = model.losses
+      output_activity_regularization_losses = []
+      for loss_ in regularization_losses:
+        if "input_gate" in loss_.name:
+          output_activity_regularization_losses.append(loss_)
+      print(output_activity_regularization_losses)
+      training_loss += tf.add_n(output_activity_regularization_losses) * config.get("input_gate_regularization_scale", 0.01)
     variables = [var for var in model.trainable_variables if not is_ADAP_learning_variable(var.name)]
     print("var numb: ", len(variables))
     gradients = adv_optimizer.get_gradients(training_loss, variables)
@@ -4026,22 +4033,9 @@ def train_v13(config,
   _adv_loss = []
   _number_examples = []    
   step = 0
-  """
-  if True:
-    checkpoint_path = checkpoint_manager.latest_checkpoint
-    tf.summary.experimental.set_step(step)
-    for src,ref,i in zip(config["tst_src"],config["tst_ref"],config["tst_domain"]):
-      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-      print("src:",src)
-      print("ref:",ref)
-      score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-      tf.summary.scalar("tst_score_%d"%i, score, description="BLEU on test set %s"%src)
-    exit()
-  """
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      
       for _ in range(int(config.get("accumulation_step",1))):
         loss, num_examples = next(train_data_flow)
         _loss.append(loss)
