@@ -944,7 +944,7 @@ class Multi_domain_Gate_v2(tf.keras.layers.Layer):
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
     if self.output_regularization:
-      print("output_regularization")
+      print("output_regularization", self.scope_name())
       print(tf.shape(outputs))
       print(tf.shape(mask))
       if mask is not None:        
