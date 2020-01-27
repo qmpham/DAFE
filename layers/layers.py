@@ -944,14 +944,7 @@ class Multi_domain_Gate_v2(tf.keras.layers.Layer):
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
     if self.output_regularization:
-      print("output_regularization", self.name_scope())
-      print(tf.shape(outputs))
-      print(tf.shape(mask))
-      if mask is not None:        
-        mask=tf.cast(mask,tf.float32)
-        self.add_loss(tf.divide(tf.reduce_sum(mask * tf.reduce_sum(tf.abs(outputs),axis=-1)), tf.reduce_sum(mask)))
-      else:
-        self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
+      self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
     return outputs
 
   def forward_fn(self, inputs, args_dict, domain, mask=None, training=None):  # pylint: disable=arguments-differ
