@@ -228,7 +228,7 @@ def main():
     model = Multi_domain_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
-    encoder=Multi_domain_SelfAttentionEncoder_v6(
+    encoder=Multi_domain_SelfAttentionEncoder_v8(
         num_layers=6,
         num_domains=num_domains,
         num_domain_units=num_domain_units,
@@ -242,7 +242,7 @@ def main():
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         input_gate_regularization=config.get("input_gate_regularizing", False)),
-    decoder=Multi_domain_SelfAttentionDecoder_v9(
+    decoder=Multi_domain_SelfAttentionDecoder_v10(
         num_layers=6,
         num_domains=num_domains,
         num_domain_units=num_domain_units,
