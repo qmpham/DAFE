@@ -240,7 +240,7 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1,
-        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         input_gate_regularization=config.get("input_gate_regularizing", False)),
     decoder=Multi_domain_SelfAttentionDecoder_v9(
         num_layers=6,
