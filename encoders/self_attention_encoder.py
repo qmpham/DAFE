@@ -839,7 +839,7 @@ class Multi_domain_SelfAttentionEncoder_v8(Encoder):
       i_ = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
       inputs = inputs * f + ADAP_input * i_
       if not training:
-        tf.print(self.name_scope(),"forget_gate:",tf.reduce_mean(tf.abs(f)),"input gate:",tf.reduce_mean(tf.abs(i)),sep="|")
+        tf.print(self.name_scope(),"forget_gate:",tf.reduce_mean(tf.abs(f)),"input gate:",tf.reduce_mean(tf.abs(i_)),sep="|")
     outputs = self.layer_norm(inputs)
     
     return outputs, None, sequence_length
