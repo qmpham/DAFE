@@ -3919,6 +3919,15 @@ def train_v13(config,
       if len(output_activity_regularization_losses)>0:
         training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
     
+    if config.get("input_gate_regularizing", False):
+      regularization_losses = model.losses
+      output_activity_regularization_losses = []
+      for loss_ in regularization_losses:
+        if "input_gate" in loss_.name:
+          output_activity_regularization_losses.append(loss_)
+      print(output_activity_regularization_losses)
+      training_loss -= tf.add_n(output_activity_regularization_losses) * config.get("input_gate_regularization_scale", 0.01)
+
     variables = model.trainable_variables
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
