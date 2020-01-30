@@ -3926,7 +3926,7 @@ def train_v13(config,
         if "input_gate" in loss_.name:
           output_activity_regularization_losses.append(loss_)
       print(output_activity_regularization_losses)
-      training_loss -= tf.add_n(output_activity_regularization_losses) * config.get("input_gate_regularization_scale", 0.01)
+      training_loss -= tf.add_n(output_activity_regularization_losses) * config.get("input_gate_regularization_scale", 0.0001)
 
     variables = model.trainable_variables
     print("var numb: ", len(variables))
@@ -3965,7 +3965,7 @@ def train_v13(config,
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
     else:
-      training_loss, reported_loss = loss * config.get("adv_loss_weight", 0.1), loss
+      training_loss, reported_loss = loss * config.get("adv_loss_weight", 0.01), loss
     if config.get("input_gate_regularizing",False):
       regularization_losses = model.losses
       output_activity_regularization_losses = []
@@ -3973,7 +3973,7 @@ def train_v13(config,
         if "input_gate" in loss_.name:
           output_activity_regularization_losses.append(loss_)
       print(output_activity_regularization_losses)
-      training_loss += tf.add_n(output_activity_regularization_losses) * config.get("input_gate_regularization_scale", 0.01)
+      training_loss += tf.add_n(output_activity_regularization_losses) * config.get("input_gate_regularization_scale", 0.0001)
     variables = [var for var in model.trainable_variables if not is_ADAP_learning_variable(var.name)]
     print("var numb: ", len(variables))
     gradients = adv_optimizer.get_gradients(training_loss, variables)
