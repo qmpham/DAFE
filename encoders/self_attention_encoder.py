@@ -834,7 +834,7 @@ class Multi_domain_SelfAttentionEncoder_v8(Encoder):
     mask = self.build_mask(inputs, sequence_length=sequence_length)
     for i, (layer, multi_domain_layer, multi_domain_input_gate, multi_domain_forget_gate) in enumerate(zip(self.layers, self.multi_domain_layers, self.multi_domain_input_gates, self.multi_domain_forget_gates)):
       inputs = layer(inputs, mask=mask, training=training)
-      ADAP_input = multi_domain_layer(inputs, domain, mask=mask, training=training)
+      ADAP_input = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training)
       f = multi_domain_forget_gate(tf.stop_gradient(inputs), tf.stop_gradient(ADAP_input), mask=mask, training=training)
       i_ = multi_domain_input_gate(tf.stop_gradient(inputs), tf.stop_gradient(ADAP_input), mask=mask, training=training)
       inputs = inputs * f + ADAP_input * i_

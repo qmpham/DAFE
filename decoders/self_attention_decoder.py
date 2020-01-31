@@ -3064,8 +3064,8 @@ class Multi_domain_SelfAttentionDecoder_v10(Decoder):
           training=training)
       new_cache.append(layer_cache) 
       ADAP_input = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training)        
-      f = multi_domain_forget_gate(inputs, ADAP_input, mask=mask, training=training)
-      i_ = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
+      f = multi_domain_forget_gate(tf.stop_gradient(inputs), tf.stop_gradient(ADAP_input), mask=mask, training=training)
+      i_ = multi_domain_input_gate(tf.stop_gradient(inputs), tf.stop_gradient(ADAP_input), mask=mask, training=training)
       inputs = inputs * f + ADAP_input * i_
       if not training:
         tf.print(self.name_scope(),"forget_gate:",tf.reduce_mean(tf.abs(f)),"input gate:",tf.reduce_mean(tf.abs(i_)),sep="|")
@@ -3144,8 +3144,8 @@ class Multi_domain_SelfAttentionDecoder_v10(Decoder):
           training=training)
       new_cache.append(layer_cache)
       ADAP_input = tf.stop_gradient(multi_domain_layer(inputs, domain, mask=mask, training=training))
-      f = multi_domain_forget_gate(inputs, ADAP_input, mask=mask, training=training)
-      i_ = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
+      f = multi_domain_forget_gate(tf.stop_gradient(inputs), ADAP_input, mask=mask, training=training)
+      i_ = multi_domain_input_gate(tf.stop_gradient(inputs), ADAP_input, mask=mask, training=training)
       inputs = inputs * f + ADAP_input * i_
       
     outputs = self.layer_norm(inputs)
