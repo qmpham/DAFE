@@ -927,6 +927,7 @@ class Multi_domain_Gate_v2(tf.keras.layers.Layer):
     
   def call(self, inputs, updates, mask=None, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
+    inputs = tf.stop_gradient(inputs)
     shape = shape_list(inputs)
     rank = len(shape)      
     if rank > 2:
