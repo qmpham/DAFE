@@ -1,7 +1,7 @@
 """Define self-attention decoder."""
 
 import tensorflow as tf
-
+import sys
 from opennmt.decoders.decoder import Decoder
 from opennmt.decoders.self_attention_decoder import SelfAttentionDecoder
 from layers import common, transformer
@@ -2646,7 +2646,7 @@ class Multi_domain_SelfAttentionDecoder_v9(Decoder):
         i = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
         inputs = inputs * f + ADAP_input * i
       if not training:
-        tf.print(self.name_scope(),"forget_gate:",tf.reduce_mean(tf.abs(f)),"input gate:",tf.reduce_mean(tf.abs(i)),sep="|")
+        tf.print(self.name_scope(),"forget_gate:",tf.reduce_mean(tf.abs(f)),"input gate:",tf.reduce_mean(tf.abs(i)),sep="|",stream=sys.stderr)
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
 

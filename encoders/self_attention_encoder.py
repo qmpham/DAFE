@@ -4,6 +4,7 @@ import tensorflow as tf
 
 from layers import transformer
 
+import sys
 from opennmt.encoders.encoder import Encoder
 from opennmt.encoders.self_attention_encoder import SelfAttentionEncoder
 from opennmt.layers.position import SinusoidalPositionEncoder
@@ -839,7 +840,7 @@ class Multi_domain_SelfAttentionEncoder_v8(Encoder):
       i_ = multi_domain_input_gate(tf.stop_gradient(inputs), tf.stop_gradient(ADAP_input), mask=mask, training=training)
       inputs = inputs * f + ADAP_input * i_
       if not training:
-        tf.print(self.name_scope(),"forget_gate:",tf.reduce_mean(tf.abs(f)),"input gate:",tf.reduce_mean(tf.abs(i_)),sep="|")
+        tf.print(self.name_scope(),"forget_gate:",tf.reduce_mean(tf.abs(f)),"input gate:",tf.reduce_mean(tf.abs(i_)),sep="|", stream=sys.stderr)
     outputs = self.layer_norm(inputs)
     
     return outputs, None, sequence_length
