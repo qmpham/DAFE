@@ -259,7 +259,7 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
               batch_type=batch_type,
               domain=i,
               shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              length_bucket_width=None,  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=maximum_length,
               maximum_labels_length=maximum_length))
   else:
@@ -268,7 +268,7 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
               batch_size=batch_train_size,
               batch_type=batch_type,
               shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+              length_bucket_width=None,  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=maximum_length,
               maximum_labels_length=maximum_length))
   
