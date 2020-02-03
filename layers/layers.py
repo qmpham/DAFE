@@ -4,6 +4,9 @@ from layers import common
 from opennmt.utils import misc
 from opennmt.utils.misc import shape_list
 import sys
+from opennmt.layers.rnn import _RNNWrapper
+from opennmt.layers import reducer as reducer_lib
+
 
 class Classification_layer(tf.keras.layers.Layer):
   def __init__(self,   
@@ -973,7 +976,7 @@ class Multi_domain_Gate_v2(tf.keras.layers.Layer):
     return outputs
 
 class DAFE(tf.keras.layers.Layer):
-
+  
   def __init__(self,
                input_dim, 
                domain_numb=6,
@@ -1018,3 +1021,86 @@ class DAFE(tf.keras.layers.Layer):
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     return outputs
+
+class GRU(tf.keras.layers.Layer):
+
+  def __init__(self,
+               num_layers,
+               num_units,
+               bidirectional=False,
+               reducer=reducer_lib.ConcatReducer(),
+               dropout=0,
+               residual_connections=False,
+               **kwargs):
+    
+    super(GRU, self).__init__(**kwargs)
+    rnn_layers = [
+        _RNNWrapper(
+            tf.keras.layers.GRU(num_units, return_sequences=True, return_state=True),
+            bidirectional=bidirectional,
+            reducer=reducer)
+        for _ in range(num_layers)]
+    self.layers = [
+        common.LayerWrapper(
+            layer,
+            output_dropout=dropout,
+            residual_connection=residual_connections)
+        for layer in rnn_layers]
+
+  def call(self, inputs, mask=None, training=None, initial_state=None):  # pylint: disable=arguments-differ
+    all_states = []
+    for i, layer in enumerate(self.layers):
+      outputs, states = layer(
+          inputs,
+          mask=mask,
+          training=training,
+          initial_state=initial_state[i] if initial_state is not None else None)
+      all_states.append(states)
+      inputs = outputs
+    return outputs, tuple(all_states)
+
+class CondGRUCell(tf.keras.layers.Layer):
+
+    def __init__(self, units, **kwargs):
+        self.units = units
+        self.state_size = units
+        self.cell1 = tf.keras.layers.GRUCell(units)
+        self.cell2 = tf.keras.layers.GRUCell(units)
+        super(CondGRUCell, self).__init__(**kwargs)       
+
+    def call(self, inputs, context, ):
+        
+
+class CondGRU(tf.keras.layers.Layer):
+  def __init__(self,
+                num_layers,
+                num_units,
+                bidirectional=False,
+                reducer=reducer_lib.ConcatReducer(),
+                dropout=0,
+                residual_connections=False,
+                **kwargs):
+      
+      super(GRU, self).__init__(**kwargs)
+      rnn_layers = [
+          _RNNWrapper(
+              tf.keras.layers.RNN(CondGRUCell(num_units, return_sequences=True, return_state=True)))
+          for _ in range(num_layers)]
+      self.layers = [
+          common.LayerWrapper(
+              layer,
+              output_dropout=dropout,
+              residual_connection=residual_connections)
+          for layer in rnn_layers]
+
+    def call(self, inputs, mask=None, training=None, initial_state=None):
+      all_states = []
+      for i, layer in enumerate(self.layers):
+        outputs, states = layer(
+            inputs,
+            mask=mask,
+            training=training,
+            initial_state=initial_state[i] if initial_state is not None else None)
+        all_states.append(states)
+        inputs = outputs
+      return outputs, tuple(all_states)
