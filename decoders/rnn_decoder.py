@@ -1,7 +1,7 @@
 from opennmt.decoders.rnn_decoder import RNNDecoder
 import tensorflow_addons as tfa
 import tensorflow as tf
-import common
+from layers import common
 
 class AttentionalRNNDecoder(RNNDecoder):
   """A RNN decoder with attention."""

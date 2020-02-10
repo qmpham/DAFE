@@ -1068,9 +1068,9 @@ class CondGRUCell(tf.keras.layers.Layer):
         self.cell2 = tf.keras.layers.GRUCell(units)
         super(CondGRUCell, self).__init__(**kwargs)       
 
-    def call(self, inputs, context, ):
+    def call(self, inputs, state):
         
-
+      return
 class CondGRU(tf.keras.layers.Layer):
   def __init__(self,
                 num_layers,
@@ -1081,7 +1081,7 @@ class CondGRU(tf.keras.layers.Layer):
                 residual_connections=False,
                 **kwargs):
       
-      super(GRU, self).__init__(**kwargs)
+      super(CondGRU, self).__init__(**kwargs)
       rnn_layers = [
           _RNNWrapper(
               tf.keras.layers.RNN(CondGRUCell(num_units, return_sequences=True, return_state=True)))
@@ -1093,14 +1093,14 @@ class CondGRU(tf.keras.layers.Layer):
               residual_connection=residual_connections)
           for layer in rnn_layers]
 
-    def call(self, inputs, mask=None, training=None, initial_state=None):
-      all_states = []
-      for i, layer in enumerate(self.layers):
-        outputs, states = layer(
-            inputs,
-            mask=mask,
-            training=training,
-            initial_state=initial_state[i] if initial_state is not None else None)
-        all_states.append(states)
-        inputs = outputs
-      return outputs, tuple(all_states)
+  def call(self, inputs, mask=None, training=None, initial_state=None):
+    all_states = []
+    for i, layer in enumerate(self.layers):
+      outputs, states = layer(
+          inputs,
+          mask=mask,
+          training=training,
+          initial_state=initial_state[i] if initial_state is not None else None)
+      all_states.append(states)
+      inputs = outputs
+    return outputs, tuple(all_states)
