@@ -226,7 +226,6 @@ class DC_inputter(WordEmbedder):
         self.embedding_size = embedding_size
         self.embedding_file = None
         self.dropout = dropout
-        self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)
         self.domain_mask = make_domain_mask(num_domains, num_domain_units=num_domain_units)
         self.num_domain_units = num_domain_units
         self.num_domains = num_domains
@@ -260,7 +259,7 @@ class DC_inputter(WordEmbedder):
             ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, domain)
         ldr_inputs = tf.tile(tf.expand_dims(ldr_inputs,1), (1,tf.shape(outputs)[1],1))
         outputs = tf.concat([outputs, ldr_inputs],-1)
-        return self.fusion_layer(outputs)
+        return outputs
     
     def build(self, input_shape):
         self.ldr_embed = self.add_weight(
