@@ -243,7 +243,7 @@ class DC_inputter(WordEmbedder):
             self.case_insensitive_embeddings = embedding.get("case_insensitive", True)
     
     def make_features(self, element=None, features=None, domain=1, training=None):
-        features = super(LDR_inputter, self).make_features(
+        features = super(DC_inputter, self).make_features(
             element=element, features=features, training=training)
         if "domain" in features:
             return features
