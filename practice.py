@@ -14,7 +14,7 @@ from opennmt.utils.misc import print_bytes
 from opennmt.data import dataset as dataset_util
 from opennmt.optimizers import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
-from utils.my_inputter import My_inputter, LDR_inputter
+from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter
 from opennmt.models.sequence_to_sequence import SequenceToSequence
 from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
 from encoders.self_attention_encoder import *
@@ -456,6 +456,26 @@ def main():
     model = LDR_SequenceToSequence(
     source_inputter=LDR_inputter(embedding_size=config.get("ldr_embedding_size",464), num_domains=config.get("num_domains", 8), num_domain_units=config.get("num_domain_units", 8)),
     target_inputter=LDR_inputter(embedding_size=config.get("ldr_embedding_size",464), num_domains=config.get("num_domains", 8), num_domain_units=config.get("num_domain_units", 8)),
+    encoder=onmt.encoders.self_attention_encoder.SelfAttentionEncoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1),
+    decoder=onmt.decoders.self_attention_decoder.SelfAttentionDecoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1))
+  elif experiment=="DC":
+    model = LDR_SequenceToSequence(
+    source_inputter=DC_inputter(embedding_size=config.get("ldr_embedding_size",508), num_domains=config.get("num_domains", 6), num_domain_units=config.get("num_domain_units", 4)),
+    target_inputter=DC_inputter(embedding_size=config.get("ldr_embedding_size",508), num_domains=config.get("num_domains", 6), num_domain_units=config.get("num_domain_units", 4)),
     encoder=onmt.encoders.self_attention_encoder.SelfAttentionEncoder(
         num_layers=6,
         num_units=512,
