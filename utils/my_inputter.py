@@ -147,7 +147,6 @@ class My_inputter(TextInputter):
             prefetch_buffer_size=prefetch_buffer_size))
         return dataset
 
-
 class LDR_inputter(WordEmbedder):
     def __init__(self, embedding_size=None, num_units=512 , num_domains=6, num_domain_units=8, dropout=0.0, **kwargs):        
         super(LDR_inputter, self).__init__(**kwargs)
@@ -255,9 +254,10 @@ class DC_inputter(WordEmbedder):
         outputs = common.dropout(outputs, self.dropout, training=training)
         if domain==None:
             ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["domain"])
+            ldr_inputs = tf.tile(tf.expand_dims(ldr_inputs,1), (1,tf.shape(outputs)[1],1))
         else:
             ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, domain)
-        ldr_inputs = tf.tile(tf.expand_dims(ldr_inputs,1), (1,tf.shape(outputs)[1],1))
+            ldr_inputs = tf.tile(tf.expand_dims(ldr_inputs,0), (tf.shape(outputs)[0],1))
         outputs = tf.concat([outputs, ldr_inputs],-1)
         return outputs
     
