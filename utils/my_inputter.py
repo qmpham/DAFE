@@ -154,7 +154,7 @@ class LDR_inputter(WordEmbedder):
         self.embedding_file = None
         self.dropout = dropout
         self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)
-        self.domain_mask = make_domain_mask(num_domains, num_domain_units=num_domain_units)
+        self.domain_mask = make_domain_mask(num_domains, embedding_size, num_domain_units=num_domain_units)
         self.num_domain_units = num_domain_units
         self.num_domains = num_domains
 
@@ -181,24 +181,15 @@ class LDR_inputter(WordEmbedder):
     def call(self, features, domain=None, training=None):
         outputs = tf.nn.embedding_lookup(self.embedding, features["ids"])
         outputs = common.dropout(outputs, self.dropout, training=training)
-        ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
         if domain==None:
             domain_mask = tf.nn.embedding_lookup(self.domain_mask, features["domain"])
-            domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,1),tf.shape(ldr_inputs))
+            domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,1),tf.shape(outputs))
         else:
             domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
-            domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,0),tf.shape(ldr_inputs))
-        ldr_inputs = ldr_inputs * domain_mask
-        outputs = tf.concat([outputs, ldr_inputs],-1)
+            domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,0),tf.shape(outputs))
+        print("domain_mask", domain_mask)
+        outputs = outputs * domain_mask
         return self.fusion_layer(outputs)
-    
-    def build(self, input_shape):
-        self.ldr_embed = self.add_weight(
-                                "ldr_embedding",
-                                [self.vocabulary_size, self.num_domain_units * self.num_domains],
-                                initializer=None,
-                                trainable=True)
-        super(LDR_inputter, self).build(input_shape)
     
     def make_inference_dataset(self,
                              feature_file,
@@ -225,7 +216,6 @@ class DC_inputter(WordEmbedder):
         self.embedding_size = embedding_size
         self.embedding_file = None
         self.dropout = dropout
-        self.domain_mask = make_domain_mask(num_domains, num_domain_units=num_domain_units)
         self.num_domain_units = num_domain_units
         self.num_domains = num_domains
 
