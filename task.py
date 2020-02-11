@@ -84,7 +84,7 @@ def translate(source_file,
         memory_sequence_length=source_length)
     if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv7","residualv13","residualv12","residualv11","residualv8","residualv9","baselinev1"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
-    elif experiment=="ldr":
+    elif experiment in ["ldr", "DC"]:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
     else:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
@@ -4132,9 +4132,7 @@ def domain_classification_on_top_encoder(config,
 
   def _accumulate_gradients(source, target):
     logits = model.classification_on_top_encoder(source, training=True)
-    #tf.print("logits: ", logits)
     training_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], logits)    
-    #print(model.trainable_variables)
     variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name]
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
