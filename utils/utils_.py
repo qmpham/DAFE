@@ -6,6 +6,9 @@ import re
 import os
 import six
 def make_domain_mask(num_domains, num_units, num_domain_units=8, dtype=tf.float32):
+  print("num_domains", num_domains)
+  print("num_units", num_units)
+  print("num_domain_units", num_domain_units)
   M = np.zeros((num_domains, num_domains * num_domain_units))
   M_ = np.ones((num_domains, num_units - num_domains * num_domain_units))
   for i in range(num_domains):
