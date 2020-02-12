@@ -122,7 +122,7 @@ def average_checkpoints(model_dir,
       checkpoint.restore(checkpoint_path).assert_existing_objects_matched()
       for variable in model.variables:
         variable.assign(variable / num_checkpoints)
-        tf.print("variable:___", variable.name, tf.shape(variable),sep="|")
+        #tf.print("variable:___", variable.name, tf.shape(variable),sep="|")
     else:
       reader = tf.train.load_checkpoint(checkpoint_path)
       for path in six.iterkeys(reader.get_variable_to_shape_map()):
@@ -131,7 +131,7 @@ def average_checkpoints(model_dir,
         variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
         variable = variable_which(trackables, variable_path)
         value = reader.get_tensor(path)
-        tf.print("variable:___", variable.name, tf.shape(value), variable_path, sep="|")
+        #tf.print("variable:___", variable.name, tf.shape(value), variable_path, sep="|")
         variable.assign_add(value / num_checkpoints)
 
   new_checkpoint_manager = tf.train.CheckpointManager(checkpoint, output_dir, max_to_keep=None)
@@ -155,7 +155,7 @@ def variable_which(structure, path):
       raise ValueError("Invalid path in structure: %s" % path)
   name = path.split("/")[-1]  
   if sum([name in v.name for v in structure.trainable_variables]):
-    print([v.name for v in structure.trainable_variables])
+    #print([v.name for v in structure.trainable_variables])
     for v in structure.trainable_variables:
       v_name = v.name.split("/")[-1].split(":")[0]
       if name == v_name:
