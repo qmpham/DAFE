@@ -122,7 +122,7 @@ def average_checkpoints(model_dir,
       checkpoint.restore(checkpoint_path).assert_existing_objects_matched()
       for variable in model.variables:
         variable.assign(variable / num_checkpoints)
-        tf.print("variable:___", variable.name, tf.shape(value),sep="|")
+        tf.print("variable:___", variable.name, tf.shape(variable),sep="|")
     else:
       reader = tf.train.load_checkpoint(checkpoint_path)
       for path in six.iterkeys(reader.get_variable_to_shape_map()):
