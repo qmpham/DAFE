@@ -624,14 +624,13 @@ def main():
     model.create_variables()
     print("translate in domain %d"%(int(args.domain)))
     task.averaged_checkpoint_translate(config, args.src, args.ref, model, checkpoint_manager,
-              checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment, max_count=args.maxcount)
+              checkpoint, int(args.domain), args.output, length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))
   elif args.run == "translatev3":
     model.create_variables()
     translate_config_file = args.src
     with open(translate_config_file, "r") as stream:
       translate_config = yaml.load(stream)
-    for src_file, domain in zip(translate_config["src"], translate_config["domain"]):
-      #name = "%s.trans"%src_file.strip().split("/")[-1]
+    for src_file, domain in zip(translate_config["src"], translate_config["domain"]):      
       output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src_file) + ".trans")
       print("translating %s in domain %d"%(src_file, domain))
       print("output_file: ", output_file)
