@@ -4255,6 +4255,100 @@ def domain_predict(source_file,
   from sklearn.metrics import classification_report
   print(classification_report(true_domain, predicted_domain))
 
+def experimental_translate(source_file,
+              reference,
+              model,
+              checkpoint_manager,
+              checkpoint,              
+              encoder_domain,
+              decoder_domain,
+              output_file,
+              length_penalty,
+              checkpoint_path=None,
+              experiment="ldr",
+              score_type="MultiBLEU",
+              batch_size=10,
+              beam_size=5):
+  
+  # Create the inference dataset.
+  if checkpoint_path == None:
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
+  print("encoder_domain: %d"%encoder_domain)
+  print("decoder_domain: %s"%decoder_domain)
+  checkpoint.restore(checkpoint_path)
+  dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, encoder_domain)
+  iterator = iter(dataset)
+
+  # Create the mapping for target ids to tokens.
+  ids_to_tokens = model.labels_inputter.ids_to_tokens
+
+  @tf.function
+  def predict_next():    
+    source = next(iterator)
+    source_length = source["length"]
+    batch_size = tf.shape(source_length)[0]
+    source_inputs = model.features_inputter(source)
+    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
+      encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length)
+    else:
+      encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
+
+    # Prepare the decoding strategy.
+    if beam_size > 1:
+      encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
+      source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
+      decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
+    else:
+      decoding_strategy = onmt.utils.GreedySearch()
+
+    # Run dynamic decoding.
+    decoder_state = model.decoder.initial_state(
+        memory=encoder_outputs,
+        memory_sequence_length=source_length)
+    if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv7","residualv13","residualv12","residualv11","residualv8","residualv9","baselinev1"]:
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), decoder_domain), tf.int64)]
+    elif experiment in ["ldr", "DC"]:
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=decoder_domain)
+    else:
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
+    decoded = model.decoder.dynamic_decode(
+        map_input_fn,
+        tf.fill([batch_size], START_OF_SENTENCE_ID),
+        end_id=END_OF_SENTENCE_ID,
+        initial_state=decoder_state,
+        decoding_strategy=decoding_strategy,
+        maximum_iterations=250)
+    target_lengths = decoded.lengths
+    target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64))
+    return target_tokens, target_lengths
+
+  # Iterates on the dataset.
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  print("output file: ", output_file)
+  with open(output_file, "w") as output_:
+    while True:    
+      try:
+        batch_tokens, batch_length = predict_next()
+        for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
+          sentence = b" ".join(tokens[0][:length[0]])
+          print_bytes(sentence, output_)
+          #print_bytes(sentence)
+      except tf.errors.OutOfRangeError:
+        break
+  if reference!=None:
+    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
+    score = scorer(reference, output_file)
+    if score is None:
+      return 0.0
+    else:
+      return score
+
 def averaged_checkpoint_translate(config, source_file,
               reference,
               model,

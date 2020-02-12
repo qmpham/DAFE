@@ -32,12 +32,14 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
   parser.add_argument("--ckpt", default=None)
   parser.add_argument("--output", default="trans")
   parser.add_argument("--domain", default=0)
+  parser.add_argument("--encoder_domain", default=0)
+  parser.add_argument("--decoder_domain", default=0)
   parser.add_argument("--ref", default=None)
   parser.add_argument("--maxcount",default=3)
   args = parser.parse_args()
@@ -639,6 +641,10 @@ def main():
     task.finetuning(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "debug":
     task.debug(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, picking_prob=config.get("picking_prob",None))
-
+  elif args.run == "experimental_translate":
+    model.create_variables()
+    print("translate with encoder_domain %d and decoder_domain %d"%(int(args.encoder_domain), int(args.decoder_domain)))
+    task.experimental_translate(args.src, args.ref, model, checkpoint_manager,
+              checkpoint, int(args.encoder_domain), int(args.decoder_domain), args.output, length_penalty=0.6, checkpoint_path=args.ckpt, experiment=experiment)
 if __name__ == "__main__":
   main()
