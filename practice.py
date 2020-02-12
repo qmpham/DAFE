@@ -497,7 +497,7 @@ def main():
   elif experiment=="DC1":
     model = LDR_SequenceToSequence(
     source_inputter=DC_inputter(embedding_size=config.get("ldr_embedding_size",508), num_domains=config.get("num_domains", 6), num_domain_units=config.get("num_embedding_domain_units", 4)),
-    target_inputter=My_inputter(embedding_size=512),
+    target_inputter=WordEmbedder(embedding_size=512),
     encoder=onmt.encoders.self_attention_encoder.SelfAttentionEncoder(
         num_layers=6,
         num_units=512,
