@@ -47,7 +47,6 @@ class Multi_domain_SelfAttentionEncoder(Encoder):
             ffn_dropout=ffn_dropout,
             ffn_activation=ffn_activation)
         for i in range(num_layers)]
-    self.mask = make_domain_mask(num_domains, num_domain_units=num_domain_units)
     self.multi_domain_layers = [
         Multi_domain_FeedForwardNetwork(num_domains*num_domain_units, num_units, name="ADAP_%d"%i)
         for i in range(num_layers)]
@@ -141,6 +140,7 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
     if ADAP_contribution == None:
       ADAP_contribution = [1.0] * num_layers
     self.ADAP_contribution = ADAP_contribution
+  
   def call(self, inputs, sequence_length=None, training=None):
     domain = inputs[1]
     domain = domain[0]

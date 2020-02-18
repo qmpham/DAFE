@@ -249,6 +249,7 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v3, self).build(input_shape)
     scope_name = self.name_scope()
+    print("self.domain_numb, self.input_dim, self.inner_dim: ", self.domain_numb, self.input_dim, self.inner_dim)
     self.inner_kernel = self.add_weight("%s_inner_weight"%scope_name, shape=[self.domain_numb, self.input_dim*self.inner_dim])
     self.inner_bias = self.add_weight("%s_inner_bias"%scope_name, shape=[self.domain_numb, self.inner_dim])
     self.outer_kernel = self.add_weight("%s_outer_weight"%scope_name, shape=[self.domain_numb, self.inner_dim*self.output_dim])
@@ -1066,11 +1067,21 @@ class CondGRUCell(tf.keras.layers.Layer):
         self.state_size = units
         self.cell1 = tf.keras.layers.GRUCell(units)
         self.cell2 = tf.keras.layers.GRUCell(units)
+        self.gate = tf.keras.layers.Dense(units, activation=tf.nn.sigmoid)
+        
         super(CondGRUCell, self).__init__(**kwargs)       
 
     def call(self, inputs, state):
+
+      state_prime, _ = self.cell1(inputs, state)
+      context = attention_mechanism_1(state_prime)
+      d_context = attention_mechanism_2(state_prime)
+      gate_ = self.gate(tf.concat([state_prime, context, d_context],-1))
+      context = gate_ * context + (1 - gate_) * d_context
+      next_state, _ = self.cell2(context, state_prime)
         
-      return
+      return next_state
+
 class CondGRU(tf.keras.layers.Layer):
   def __init__(self,
                 num_layers,
