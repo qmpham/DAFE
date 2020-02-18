@@ -619,8 +619,9 @@ def finetuning(config,
   
   print("There are %d in-domain corpora"%len(source_file))
 
-  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, 
-                                                                        batch_train_size, batch_type, shuffle_buffer_size, maximum_length)
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=(config["experiment"]!="baseline"),picking_prob=config.get("picking_prob",None))
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -1524,8 +1525,9 @@ def train(config,
   
   print("There are %d in-domain corpora"%len(source_file))
 
-  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, 
-                                                                        batch_train_size, batch_type, shuffle_buffer_size, maximum_length, length_bucket_width=config.get("length_bucket_width",1), multi_domain=(config["experiment"]!="baseline"),picking_prob=config.get("picking_prob",None))
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=(config["experiment"]!="baseline"),picking_prob=config.get("picking_prob",None))
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
