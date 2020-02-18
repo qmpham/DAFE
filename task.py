@@ -84,7 +84,7 @@ def translate(source_file,
         memory_sequence_length=source_length)
     if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv7","residualv13","residualv12","residualv11","residualv8","residualv9","baselinev1"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
-    elif experiment in ["ldr", "DC"]:
+    elif experiment in ["DC"]:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
     else:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
@@ -4308,7 +4308,7 @@ def experimental_translate(source_file,
         memory_sequence_length=source_length)
     if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv7","residualv13","residualv12","residualv11","residualv8","residualv9","baselinev1"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), decoder_domain), tf.int64)]
-    elif experiment in ["ldr", "DC"]:
+    elif experiment in ["DC"]:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=decoder_domain)
     else:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
@@ -4401,7 +4401,7 @@ def averaged_checkpoint_translate(config, source_file,
         memory_sequence_length=source_length)
     if experiment in ["residual","residualv2","residualv1","residualv3","residualv5","residualv6","residualv13","residualv12","residualv11","residualv7","residualv8","residualv9","baselinev1"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
-    elif experiment in ["ldr","DC"]:
+    elif experiment in ["DC"]:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
     else:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
