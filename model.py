@@ -479,9 +479,10 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
                encoder,
                decoder,
                share_embeddings=EmbeddingsSharingLevel.NONE):
-    
+    """
     if not isinstance(target_inputter, inputters.WordEmbedder):
       raise TypeError("Target inputter must be a WordEmbedder")
+    """
     if EmbeddingsSharingLevel.share_input_embeddings(share_embeddings):
       if isinstance(source_inputter, inputters.ParallelInputter):
         source_inputters = source_inputter.inputters
