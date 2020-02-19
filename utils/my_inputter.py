@@ -189,7 +189,7 @@ class LDR_inputter(WordEmbedder):
             domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,0),tf.shape(outputs))
         print("domain_mask", domain_mask)
         outputs = outputs * domain_mask
-        return self.fusion_layer(outputs)
+        return outputs
     
     def make_inference_dataset(self,
                              feature_file,
