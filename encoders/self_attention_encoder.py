@@ -158,18 +158,6 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
       else:
         inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
     outputs = self.layer_norm(inputs)
-
-
-     def call(self, inputs, sequence_length=None, training=None):
-    inputs *= self.num_units**0.5
-    if self.position_encoder is not None:
-      inputs = self.position_encoder(inputs)
-    inputs = common.dropout(inputs, self.dropout, training=training)
-    mask = self.build_mask(inputs, sequence_length=sequence_length)
-    for layer in self.layers:
-      inputs = layer(inputs, mask=mask, training=training)
-    outputs = self.layer_norm(inputs)
-    return outputs, None, sequence_length
     
     return outputs, None, sequence_length
 
