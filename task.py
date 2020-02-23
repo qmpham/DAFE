@@ -44,7 +44,7 @@ def translate(source_file,
               checkpoint_path=None,
               experiment="ldr",
               score_type="MultiBLEU",
-              batch_size=10,
+              batch_size=5,
               beam_size=5):
   
   # Create the inference dataset.
