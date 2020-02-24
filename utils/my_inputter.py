@@ -154,7 +154,7 @@ class LDR_inputter(WordEmbedder):
         self.embedding_file = None
         self.dropout = dropout
         self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)
-        self.domain_mask = make_domain_mask(num_domains, embedding_size, num_domain_units=num_domain_units)
+        self.domain_mask = make_domain_mask(num_domains, num_domains * num_domain_units, num_domain_units=num_domain_units)
         self.num_domain_units = num_domain_units
         self.num_domains = num_domains
 
@@ -178,9 +178,25 @@ class LDR_inputter(WordEmbedder):
 
         return features
     
+    def build(self, input_shape):
+        self.ldr_embed = self.add_weight(
+                                "domain_embedding",
+                                [self.vocabulary_size, self.num_domain_units * self.num_domains],
+                                initializer=None,
+                                trainable=True)
+        super(LDR_inputter, self).build(input_shape)
+
     def call(self, features, domain=None, training=None):
         outputs = tf.nn.embedding_lookup(self.embedding, features["ids"])
         outputs = common.dropout(outputs, self.dropout, training=training)
+        
+        if domain==None:
+            ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
+            ldr_inputs = tf.tile(tf.expand_dims(ldr_inputs,1), (1,tf.shape(outputs)[1],1))
+        else:
+            ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
+            ldr_inputs = tf.tile(tf.expand_dims(ldr_inputs,0), (tf.shape(outputs)[0],1))
+        
         if domain==None:
             domain_mask = tf.nn.embedding_lookup(self.domain_mask, features["domain"])
             domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,1),tf.shape(outputs))
@@ -188,7 +204,9 @@ class LDR_inputter(WordEmbedder):
             domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
             domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,0),tf.shape(outputs))
         print("domain_mask", domain_mask)
-        outputs = outputs * domain_mask
+        print("ldr_inputs", ldr_inputs)
+        ldr_inputs = ldr_inputs * domain_mask
+        outputs = tf.concat([outputs, ldr_inputs],-1)
         return outputs
     
     def make_inference_dataset(self,

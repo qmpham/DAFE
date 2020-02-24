@@ -26,31 +26,23 @@ class AttentionalRNNDecoder(RNNDecoder):
         residual_connections=residual_connections,
         **kwargs)
     if attention_mechanism_class is None:
-      attention_mechanism_class = tfa.seq2seq.LuongAttention
-    self.attention_mechanism = attention_mechanism_class(self.cell.output_size)
-
-    def _add_attention(cell):
-      attention_layer = common.Dense(cell.output_size, use_bias=False, activation=tf.math.tanh)
-      wrapper = tfa.seq2seq.AttentionWrapper(
-          cell,
-          self.attention_mechanism,
-          attention_layer=attention_layer)
-      return wrapper
-
-    if first_layer_attention:
-      self.cell.cells[0] = _add_attention(self.cell.cells[0])
-    else:
-      self.cell = _add_attention(self.cell)
+      attention_mechanism_class = tfa.seq2seq.BahdanauAttention
+    self.attention_mechanism_1 = attention_mechanism_class(self.cell.output_size)
+    self.attention_mechanism_2 = attention_mechanism_class(self.cell.output_size)    
     self.dropout = dropout
-    self.first_layer_attention = first_layer_attention
-
+    
   @property
   def support_alignment_history(self):
     return True
 
   def _get_initial_state(self, batch_size, dtype, initial_state=None):
-    self.attention_mechanism.setup_memory(
-        self.memory, memory_sequence_length=self.memory_sequence_length)
+    ####
+    assert isinstance(self.memory,list)
+    self.attention_mechanism_1.setup_memory(
+        self.memory[0], memory_sequence_length=self.memory_sequence_length)
+    self.attention_mechanism_2.setup_memory(
+        self.memory[1], memory_sequence_length=self.memory_sequence_length)
+    ####
     decoder_state = self.cell.get_initial_state(batch_size=batch_size, dtype=dtype)
     if initial_state is not None:
       if self.first_layer_attention:
@@ -71,7 +63,7 @@ class AttentionalRNNDecoder(RNNDecoder):
            memory=None,
            memory_sequence_length=None,
            training=None):
-    outputs, state = self.cell(inputs, state, training=training)
+    outputs, state = self.cell(inputs, state, self.attention_mechanism_1, self.attention_mechanism_2,  training=training)
     outputs = common.dropout(outputs, self.dropout, training=training)
     if self.first_layer_attention:
       attention = state[0].alignments
