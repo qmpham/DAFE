@@ -189,13 +189,13 @@ class LDR_inputter(WordEmbedder):
     def call(self, features, domain=None, training=None):
         outputs = tf.nn.embedding_lookup(self.embedding, features["ids"])
         outputs = common.dropout(outputs, self.dropout, training=training)
-        
-        if domain==None:
+        ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
+        """ if domain==None:
             ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
             ldr_inputs = tf.tile(tf.expand_dims(ldr_inputs,1), (1,tf.shape(outputs)[1],1))
         else:
             ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
-            ldr_inputs = tf.tile(tf.expand_dims(ldr_inputs,0), (tf.shape(outputs)[0],1))
+            ldr_inputs = tf.tile(tf.expand_dims(ldr_inputs,0), (tf.shape(outputs)[0],1)) """
         
         if domain==None:
             domain_mask = tf.nn.embedding_lookup(self.domain_mask, features["domain"])
