@@ -199,10 +199,10 @@ class LDR_inputter(WordEmbedder):
         
         if domain==None:
             domain_mask = tf.nn.embedding_lookup(self.domain_mask, features["domain"])
-            domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,1),tf.shape(outputs))
+            domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,1),tf.shape(ldr_inputs))
         else:
             domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
-            domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,0),tf.shape(outputs))
+            domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,0),tf.shape(ldr_inputs))
         print("domain_mask", domain_mask)
         print("ldr_inputs", ldr_inputs)
         ldr_inputs = ldr_inputs * domain_mask
