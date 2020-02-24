@@ -206,6 +206,7 @@ class LDR_inputter(WordEmbedder):
         print("domain_mask", domain_mask)
         print("ldr_inputs", ldr_inputs)
         ldr_inputs = ldr_inputs * domain_mask
+        print("ldr_inputs", ldr_inputs)
         outputs = tf.concat([outputs, ldr_inputs],-1)
         return outputs
     
