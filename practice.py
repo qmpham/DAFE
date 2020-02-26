@@ -16,7 +16,7 @@ from opennmt.optimizers import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter
 from opennmt.models.sequence_to_sequence import SequenceToSequence
-from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, Domain_Representaion_Net
+from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
 from encoders.self_attention_encoder import *
 from decoders.self_attention_decoder import *
 from layers.layers import *
