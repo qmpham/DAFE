@@ -16,7 +16,7 @@ from opennmt.optimizers import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter
 from opennmt.models.sequence_to_sequence import SequenceToSequence
-from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
+from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, Domain_Representaion_Net
 from encoders.self_attention_encoder import *
 from decoders.self_attention_decoder import *
 from layers.layers import *
@@ -566,6 +566,19 @@ def main():
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
   elif experiment=="pretrain":
     return
+  elif experiment=="classification_net":
+    model = Domain_Representaion_Net(
+              My_inputter(embedding_size=16),
+              encoder=onmt.encoders.SelfAttentionEncoder(
+              num_layers=2,
+              num_units=16,
+              num_heads=3,
+              ffn_inner_dim=64,
+              dropout=0.1,
+              attention_dropout=0.1,
+              ffn_dropout=0.1),
+              num_domains=6,
+              num_units=16)
   warmup_steps = config.get("warmup_steps",4000)
   print("warmup_steps: ", warmup_steps)
   learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))

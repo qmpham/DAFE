@@ -1048,7 +1048,7 @@ class GRU(tf.keras.layers.Layer):
             residual_connection=residual_connections)
         for layer in rnn_layers]
 
-  def call(self, inputs, mask=None, training=None, initial_state=None):  # pylint: disable=arguments-differ
+  def call(self, inputs, sequence_length=None, mask=None, training=None, initial_state=None):  # pylint: disable=arguments-differ
     all_states = []
     for i, layer in enumerate(self.layers):
       outputs, states = layer(

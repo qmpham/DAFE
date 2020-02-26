@@ -465,7 +465,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
 
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
-    encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
+    encoder_outputs, _, encoder_sequence_length = self.encoder(
         [source_inputs, features["domain"]], sequence_length=source_length, training=training)
     logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
     return logits
@@ -801,16 +801,18 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
         optimizer=optimizer,
         ignore_weights=updated_variables)
 
-class Masked_LM(model.Model):
+class Domain_Representaion_Net(model.Model):
   def __init__(self,
                source_inputter,
-               encoder):
+               encoder,
+               num_domains=6,
+               num_units=512):
 
-    super(Masked_LM, self).__init__(source_inputter)
+    super(Domain_Representaion_Net, self).__init__(source_inputter)
     self.encoder = encoder
-
+    self.classification_layer = Classification_layer(num_units, domain_numb=num_domains, name="On_top_encoder_domain_classification")
   def build(self, input_shape):
-    super(Masked_LM, self).build(input_shape)
+    super(Domain_Representaion_Net, self).build(input_shape)
     vocab_size = self.examples_inputter.vocabulary_size
     output_layer = None
     if self.reuse_embedding:
@@ -820,38 +822,21 @@ class Masked_LM(model.Model):
           transpose=True)
     self.decoder.initialize(vocab_size=vocab_size, output_layer=output_layer)
 
-  def call(self, features, training=None, step=None):
+  def call(self, features, training=None, step=None):    
+    source_length = self.examples_inputter.get_length(features)
+    source_inputs = self.examples_inputter(features, training=training)
+    encoder_outputs, _, _ = self.encoder(
+        [source_inputs, features["domain"]], sequence_length=source_length, training=training)
     
-    ids, length = features["ids"], features["length"]
-    #ids = masking(ids, noise_percentage=0.15)
-    logits, _ = self.encoder(ids, length, training=training)
-    outputs = dict(logits=logits)
-    
-    return outputs
+    return encoder_outputs
 
   def compute_loss(self, outputs, features, training=True):
-    ids_out = None
-    length = None
-    logits = outputs["logits"]
-    labels = features["ids"]
-    sequence_length = features["length"]
-    label_smoothing = 0.1
-    average_in_time = True
-    batch_size = tf.shape(logits)[0]
-    max_time = tf.shape(logits)[1]
-
-    cross_entropy = _softmax_cross_entropy(logits, labels, label_smoothing, training)
-    weights = tf.sequence_mask(
-        sequence_length, maxlen=max_time, dtype=cross_entropy.dtype)
-    loss = tf.reduce_sum(cross_entropy * weights)
-    loss_token_normalizer = tf.reduce_sum(weights)
-
-    if average_in_time or not training:
-      loss_normalizer = loss_token_normalizer
-    else:
-      loss_normalizer = tf.cast(batch_size, loss.dtype)
-
-    return loss, loss_normalizer, loss_token_normalizer
+    source_length = self.examples_inputter.get_length(features)
+    source_inputs = self.examples_inputter(features, training=training)
+    encoder_outputs, _, encoder_sequence_length = self.encoder(
+        [source_inputs, features["domain"]], sequence_length=source_length, training=training)
+    logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
+    return logits
   
 class Multi_domain_SequenceToSequence_v2(model.SequenceGenerator):
 
