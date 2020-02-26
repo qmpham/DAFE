@@ -800,43 +800,6 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
         new_optimizer=new_optimizer,
         optimizer=optimizer,
         ignore_weights=updated_variables)
-
-class Domain_Representaion_Net(model.Model):
-  def __init__(self,
-               source_inputter,
-               encoder,
-               num_domains=6,
-               num_units=512):
-
-    super(Domain_Representaion_Net, self).__init__(source_inputter)
-    self.encoder = encoder
-    self.classification_layer = Classification_layer(num_units, domain_numb=num_domains, name="On_top_encoder_domain_classification")
-  def build(self, input_shape):
-    super(Domain_Representaion_Net, self).build(input_shape)
-    vocab_size = self.examples_inputter.vocabulary_size
-    output_layer = None
-    if self.reuse_embedding:
-      output_layer = layers.Dense(
-          vocab_size,
-          weight=self.examples_inputter.embedding,
-          transpose=True)
-    self.decoder.initialize(vocab_size=vocab_size, output_layer=output_layer)
-
-  def call(self, features, training=None, step=None):    
-    source_length = self.examples_inputter.get_length(features)
-    source_inputs = self.examples_inputter(features, training=training)
-    encoder_outputs, _, _ = self.encoder(
-        [source_inputs, features["domain"]], sequence_length=source_length, training=training)
-    
-    return encoder_outputs
-
-  def compute_loss(self, outputs, features, training=True):
-    source_length = self.examples_inputter.get_length(features)
-    source_inputs = self.examples_inputter(features, training=training)
-    encoder_outputs, _, encoder_sequence_length = self.encoder(
-        [source_inputs, features["domain"]], sequence_length=source_length, training=training)
-    logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
-    return logits
   
 class Multi_domain_SequenceToSequence_v2(model.SequenceGenerator):
 
