@@ -1094,7 +1094,7 @@ class Regulation_Gate(tf.keras.layers.Layer):
                outer_activation=None,
                **kwargs):
     
-    super(Gate, self).__init__(**kwargs)
+    super(Regulation_Gate, self).__init__(**kwargs)
     self.dropout = dropout
     self.domain_numb = domain_numb
     self.input_dim = input_dim
@@ -1110,7 +1110,7 @@ class Regulation_Gate(tf.keras.layers.Layer):
     self.outer_activation = outer_activation
   
   def build(self, input_shape):
-    super(Gate, self).build(input_shape)
+    super(Regulation_Gate, self).build(input_shape)
     scope_name = self.name_scope()
     self.inner_kernel = self.add_weight("%s_inner_weight"%scope_name, shape=[self.input_dim, self.inner_dim])
     self.inner_bias = self.add_weight("%s_inner_bias"%scope_name, shape=[self.inner_dim])
