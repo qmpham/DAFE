@@ -591,7 +591,7 @@ def finetuning(config,
           model,  
           strategy,  
           checkpoint_manager,
-          checkpoint,
+          checkpoint,          
           maximum_length=80,
           batch_size = 2048,
           batch_type = "tokens",
@@ -605,10 +605,15 @@ def finetuning(config,
     train_steps = config.get("train_steps")
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
+  checkpoint_path = config.get("checkpoint_path",None)
   #####
-  if checkpoint_manager.latest_checkpoint is not None:
-    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  if checkpoint_path is None:
+    if checkpoint_manager.latest_checkpoint is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+      checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  else:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+    checkpoint.restore(checkpoint_path)
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
