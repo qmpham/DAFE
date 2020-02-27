@@ -19,14 +19,13 @@ from opennmt.models.sequence_to_sequence import SequenceToSequence
 from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
 from encoders.self_attention_encoder import *
 from decoders.self_attention_decoder import *
-from layers.layers import *
 import numpy as np
 from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset
 from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer
 import task
-from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_FeedForwardNetwork_v1, Multi_domain_FeedForwardNetwork_v0
+from layers.layers import Regulation_Gate, Multi_domain_Gate_v1, Multi_domain_FeedForwardNetwork_v5, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_FeedForwardNetwork_v1, Multi_domain_FeedForwardNetwork_v0
 def main():
   devices = tf.config.experimental.list_logical_devices(device_type="GPU")
   print(devices)
@@ -454,6 +453,38 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1))
+  elif experiment=="residualv15":
+    model = Multi_domain_SequenceToSequence(
+    source_inputter=My_inputter(embedding_size=512),
+    target_inputter=My_inputter(embedding_size=512),
+    encoder=Multi_domain_SelfAttentionEncoder_v1(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_gate_class=Regulation_Gate,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3),
+    decoder=Multi_domain_SelfAttentionDecoder_v6(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_gate_class=Regulation_Gate,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
   elif experiment=="ldr":
     model = LDR_SequenceToSequence(
     source_inputter=LDR_inputter(embedding_size=config.get("ldr_embedding_size",464), num_domains=config.get("num_domains", 8), num_domain_units=config.get("num_embedding_domain_units", 8)),
