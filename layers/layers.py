@@ -1090,8 +1090,8 @@ class Regulation_Gate(tf.keras.layers.Layer):
                output_dim,
                domain_numb=6,
                dropout=0.1,
-               activation=tf.nn.sigmoid,
-               outer_activation=None,
+               activation=tf.nn.relu,
+               outer_activation=tf.nn.sigmoid,
                **kwargs):
     
     super(Regulation_Gate, self).__init__(**kwargs)
