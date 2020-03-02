@@ -119,7 +119,8 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           encoder_state,
           encoder_sequence_length,
           step=step,
-          training=training)
+          training=training,
+          internal_node_printing=internal_node_printing)
 
     # When not in training, also compute the model predictions.
     if not training:
@@ -223,7 +224,8 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
                      encoder_state,
                      encoder_sequence_length,
                      step=None,
-                     training=None):
+                     training=None,
+                     internal_node_printing=False):
     params = self.params
     target_inputs = self.labels_inputter(labels, training=training)
     input_fn = lambda ids: [self.labels_inputter({"ids": ids}, training=training), labels["domain"]]
