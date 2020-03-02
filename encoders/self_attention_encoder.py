@@ -395,7 +395,8 @@ class Multi_domain_SelfAttentionEncoder_v1(Encoder):
     if ADAP_contribution == None:
       ADAP_contribution = [1.0] * num_layers
     self.ADAP_contribution = ADAP_contribution
-  def call(self, inputs, sequence_length=None, training=None):
+  
+  def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     domain = inputs[1]
     domain = domain[0]
     inputs = inputs[0]
@@ -415,6 +416,9 @@ class Multi_domain_SelfAttentionEncoder_v1(Encoder):
         inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) * g + inputs * (1-g)
       else:
         inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * g + inputs * (1-g)
+      if internal_node_printing:
+        tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(tf.abs(g),-1)[0,:], "domain: ", domain, "###", sep="|")
+
     outputs = self.layer_norm(inputs)
     
     return outputs, None, sequence_length

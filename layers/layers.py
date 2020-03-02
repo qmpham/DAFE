@@ -1154,8 +1154,8 @@ class Regulation_Gate(tf.keras.layers.Layer):
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
     
-    if not training:
-       tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(tf.abs(outputs),-1)[0,:], "domain: ", domain, "###", sep="|")    
+    #if not training:
+    #   tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(tf.abs(outputs),-1)[0,:], "domain: ", domain, "###", sep="|")    
     return outputs
 
   def forward_fn(self, inputs, args_dict, domain, mask=None, training=None):  # pylint: disable=arguments-differ

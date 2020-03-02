@@ -1580,7 +1580,8 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
            state=None,
            input_fn=None,
            sampling_probability=None,
-           training=None):
+           training=None,
+           internal_node_printing=False):
     
     self._assert_is_initialized()
     if isinstance(inputs, list):
@@ -1598,7 +1599,8 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
           state=state,
           memory=self.memory,
           memory_sequence_length=self.memory_sequence_length,
-          training=training)
+          training=training,
+          internal_node_printing=internal_node_printing)
       logits = self.output_layer(outputs)
     elif rank == 3:
       if length_or_step.shape.ndims != 1:
@@ -1611,7 +1613,8 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
           memory_sequence_length=self.memory_sequence_length,
           input_fn=input_fn,
           sampling_probability=sampling_probability,
-          training=training)
+          training=training,
+          internal_node_printing=internal_node_printing)
     else:
       raise ValueError("Unsupported input rank %d" % rank)
     return logits, state, attention
@@ -1623,7 +1626,8 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
            memory=None,
            memory_sequence_length=None,
            step=None,
-           training=None):
+           training=None,
+           internal_node_printing=False):
     # Process inputs.
     domain = inputs[1]
     domain = domain[0]
@@ -1674,7 +1678,8 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
         inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) * g + inputs * (1-g)
       else:
         inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * g + inputs * (1-g)
-
+      if internal_node_printing:
+        tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(tf.abs(g),-1)[0,:], "domain: ", domain, "###", sep="|")
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
 
@@ -1686,7 +1691,8 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
               memory_sequence_length=None,
               input_fn=None,
               sampling_probability=None,
-              training=None):
+              training=None,
+              internal_node_printing=False):
     _ = initial_state
     _ = input_fn
     if sampling_probability is not None:
@@ -1696,7 +1702,8 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
         sequence_length=sequence_length,
         memory=memory,
         memory_sequence_length=memory_sequence_length,
-        training=training)
+        training=training,
+        internal_node_printing=internal_node_printing)
     logits = self.output_layer(outputs)
     return logits, state, attention
     
@@ -1730,7 +1737,8 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
            state=None,
            memory=None,
            memory_sequence_length=None,
-           training=None):
+           training=None,
+           internal_node_printing=False):
     
     inputs = [tf.expand_dims(inputs[0], 1), inputs[1]]
     outputs, state, attention = self._run(
@@ -1739,7 +1747,8 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
         memory=memory,
         memory_sequence_length=memory_sequence_length,
         step=timestep,
-        training=training)
+        training=training,
+        internal_node_printing=internal_node_printing)
     outputs = tf.squeeze(outputs, axis=1)
     if attention is not None:
       attention = tf.squeeze(attention, axis=1)
