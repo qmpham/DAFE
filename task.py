@@ -4383,7 +4383,7 @@ def visualize(config,
     checkpoint_path = checkpoint_manager.latest_checkpoint
   
   batch_train_size = config["batch_train_size"]  
-  batch_type = batch_type
+  batch_type = config.get("batch_type","tokens")
   source_file = config["src"]
   target_file = config["tgt"]
   domain = config["domain"]
