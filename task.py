@@ -4416,7 +4416,7 @@ def visualize(config,
     try:    
       next(train_data_flow)    
       tf.summary.flush()
-    except tf.errors.OutOfRangeError:
+    except StopIteration:
       break
 
 def averaged_checkpoint_translate(config, source_file,
