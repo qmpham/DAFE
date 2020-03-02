@@ -4409,13 +4409,12 @@ def visualize(config,
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
   
   # Runs the training loop.
-  train_data_flow = iter(_train_forward())
-  _, _ = next(train_data_flow)
+  train_data_flow = iter(_train_forward())  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("Visualizing gating value")
   while True:  
     try:    
-      _, _ = next(train_data_flow)    
+      next(train_data_flow)    
       tf.summary.flush()
     except tf.errors.OutOfRangeError:
       break
