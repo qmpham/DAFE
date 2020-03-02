@@ -653,6 +653,8 @@ def main():
     task.train_v3(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "trainv13":
     task.train_v13(config, meta_test_optimizer, adv_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+  elif args.run == "visualize":
+    task.visualize(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "translate":
     model.create_variables()
     print("translate in domain %d"%(int(args.domain)))
