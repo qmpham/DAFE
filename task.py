@@ -4381,9 +4381,7 @@ def visualize(config,
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
     checkpoint_path = checkpoint_manager.latest_checkpoint
-  #####
-  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
-  #####
+  
   batch_train_size = config["batch_train_size"]  
   batch_type = batch_type
   source_file = config["src"]
@@ -4414,7 +4412,7 @@ def visualize(config,
   train_data_flow = iter(_train_forward())
   _, _ = next(train_data_flow)
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
-  
+  print("Visualizing gating value")
   while True:  
     try:    
       _, _ = next(train_data_flow)    
