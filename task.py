@@ -4399,7 +4399,8 @@ def visualize(config,
         source,
         labels=target,
         training=True,
-        step=optimizer.iterations)
+        step=optimizer.iterations,
+        internal_node_printing=True)
  
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    

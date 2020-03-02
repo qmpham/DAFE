@@ -417,7 +417,7 @@ class Multi_domain_SelfAttentionEncoder_v1(Encoder):
       else:
         inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * g + inputs * (1-g)
       if internal_node_printing:
-        tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(tf.abs(g),-1)[0,:], "domain: ", domain, "###", sep="|")
+        tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(tf.abs(g),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
 
     outputs = self.layer_norm(inputs)
     
