@@ -1316,7 +1316,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
       noisy_outputs = self.outer_activation(noisy_outputs)
 
     ####
-    keeping = tf.cast(tf.keras.backend.random_binomial(tf.shape(inputs)[0],1-fake_domain_prob)[0], tf.int32)
+    keeping = tf.keras.backend.random_binomial(tf.expand_dims(tf.shape(inputs)[0],0),1-fake_domain_prob)
     keeping = tf.tile(tf.reshape(keeping,[-1,1]),[1,512])
     tf.print("keeping mask: ", keeping)
     outputs = outputs * keeping + (1-keeping) * noisy_outputs
