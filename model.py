@@ -27,6 +27,7 @@ from opennmt.layers import common
 from layers.layers import Classification_layer
 from opennmt.utils.losses import _softmax_cross_entropy
 from utils.my_inputter import My_inputter
+from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder_v3
 class Multi_domain_SequenceToSequence(model.SequenceGenerator):
 
   """A sequence to sequence model."""
@@ -105,8 +106,12 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     assert isinstance(self.labels_inputter, My_inputter)    
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
-    encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
+    if isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v3):
+      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         [source_inputs, features["domain"]], sequence_length=source_length, training=training, internal_node_printing=internal_node_printing)
+    else:
+      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
+        [source_inputs, features["domain"]], sequence_length=source_length, training=training)
 
     outputs = None
     predictions = None
@@ -119,8 +124,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           encoder_state,
           encoder_sequence_length,
           step=step,
-          training=training,
-          internal_node_printing=internal_node_printing)
+          training=training)
 
     # When not in training, also compute the model predictions.
     if not training:
