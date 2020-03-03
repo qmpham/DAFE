@@ -1201,7 +1201,7 @@ class Regulation_Gate(tf.keras.layers.Layer):
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])
     return outputs
 
-class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
+class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
 
   def __init__(self,
                input_dim, 
@@ -1213,7 +1213,7 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
                outer_activation=None,
                **kwargs):
     
-    super(Multi_domain_FeedForwardNetwork_v3, self).__init__(**kwargs)
+    super(Multi_domain_FeedForwardNetwork_v6, self).__init__(**kwargs)
     self.dropout = dropout
     self.domain_numb = domain_numb
     self.input_dim = input_dim
@@ -1229,7 +1229,7 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
     self.outer_activation = outer_activation
   
   def build(self, input_shape):
-    super(Multi_domain_FeedForwardNetwork_v3, self).build(input_shape)
+    super(Multi_domain_FeedForwardNetwork_v6, self).build(input_shape)
     scope_name = self.name_scope()
     print("self.domain_numb, self.input_dim, self.inner_dim: ", self.domain_numb, self.input_dim, self.inner_dim)
     self.inner_kernel = self.add_weight("%s_inner_weight"%scope_name, shape=[self.domain_numb, self.input_dim*self.inner_dim])
