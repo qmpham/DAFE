@@ -1260,7 +1260,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
       dom_inner_kernel = tf.nn.embedding_lookup(self.inner_kernel, domain_)
       dom_inner_bias = tf.nn.embedding_lookup(self.inner_bias, domain_)
       dom_inner_kernel = tf.reshape(dom_inner_kernel, [-1, self.inner_dim])
-      return tf.matmul(x, dom_inner_kernel, transpose_b=self.inner_transpose) + dom_inner_bias
+      return tf.matmul(tf.expand_dims(x,0), dom_inner_kernel, transpose_b=self.inner_transpose) + dom_inner_bias
 
     inner = tf.map_fn(inner_map, (inputs), dtype=tf.float32)
 
@@ -1282,7 +1282,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
       dom_outer_kernel = tf.nn.embedding_lookup(self.outer_kernel, domain_)
       dom_outer_bias = tf.nn.embedding_lookup(self.outer_bias, domain_)
       dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
-      return tf.matmul(x, dom_outer_kernel, transpose_b=self.outer_transpose) + dom_outer_bias
+      return tf.matmul(tf.expand_dims(x,0), dom_outer_kernel, transpose_b=self.outer_transpose) + dom_outer_bias
 
     outputs = tf.map_fn(outer_map, (inner), dtype=tf.float32)
 
