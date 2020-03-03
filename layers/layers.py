@@ -1248,12 +1248,17 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
     rank = len(shape)      
     if rank > 2:
       inputs = tf.reshape(inputs, [-1, shape[-1]])
-    dom_inner_kernel = tf.nn.embedding_lookup(self.inner_kernel, domain)
-    dom_inner_bias = tf.nn.embedding_lookup(self.inner_bias, domain)
-    dom_inner_kernel = tf.reshape(dom_inner_kernel, [-1, self.inner_dim])
-    inner = tf.matmul(inputs, dom_inner_kernel, transpose_b=self.inner_transpose)
-    if self.inner_use_bias:
-      inner = tf.nn.bias_add(inner, dom_inner_bias)
+    domain_numb = self.domain_numb
+    def inner_map(x):
+      keeping = tf.keras.backend.random_binomial([1],0.9,dtype=tf.int64)[0]
+      domain_ =  tf.math.mod(keeping * domain + (1-keeping) * tf.random.categorical(tf.math.log([[1.0/domain_numb]*domain_numb]), 1)[0,0], domain_numb)
+      dom_inner_kernel = tf.nn.embedding_lookup(self.inner_kernel, domain_)
+      dom_inner_bias = tf.nn.embedding_lookup(self.inner_bias, domain_)
+      dom_inner_kernel = tf.reshape(dom_inner_kernel, [-1, self.inner_dim])
+      return tf.matmul(x, dom_inner_kernel, transpose_b=self.inner_transpose) + dom_inner_bias
+
+    inner = tf.map_fn(inner_map, (inputs), dtype=tf.float32)
+
     if self.inner_activation is not None:
       inner = self.inner_layer_norm(inner)
       inner = self.inner_activation(inner)  # pylint: disable=not-callable
@@ -1265,14 +1270,20 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
     rank = len(shape)      
     if rank > 2:
       inner = tf.reshape(inner, [-1, shape[-1]])
-    dom_outer_kernel = tf.nn.embedding_lookup(self.outer_kernel, domain)
-    dom_outer_bias = tf.nn.embedding_lookup(self.outer_bias, domain)
-    dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
-    outputs = tf.matmul(inner, dom_outer_kernel, transpose_b=self.outer_transpose)
-    if self.outer_use_bias:
-      outputs = tf.nn.bias_add(outputs, dom_outer_bias)
+
+    def outer_map(x):
+      keeping = tf.keras.backend.random_binomial([1],0.9,dtype=tf.int64)[0]
+      domain_ =  tf.math.mod(keeping * domain + (1-keeping) * tf.random.categorical(tf.math.log([[1.0/domain_numb]*domain_numb]), 1)[0,0], domain_numb)
+      dom_outer_kernel = tf.nn.embedding_lookup(self.outer_kernel, domain_)
+      dom_outer_bias = tf.nn.embedding_lookup(self.outer_bias, domain_)
+      dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
+      return tf.matmul(x, dom_outer_kernel, transpose_b=self.outer_transpose) + dom_outer_bias
+
+    outputs = tf.map_fn(outer_map, (inner), dtype=tf.float32)
+
     if self.outer_activation is not None:
       outputs = self.outer_activation(outputs)  # pylint: disable=not-callable
+
     if mask is not None:
       self.add_loss(tf.divide(tf.reduce_sum(mask * tf.reduce_sum(tf.abs(outputs),axis=-1)), tf.reduce_sum(mask)))
     else:

@@ -406,9 +406,6 @@ def create_trainining_dataset_with_domain_tag(strategy, model, domain, source_fi
             length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
             maximum_features_length=maximum_length,
             maximum_labels_length=maximum_length))
-  
-  for i in len(train_datasets):
-    train_datasets[i] = train_datasets[i].map
 
   if picking_prob=="Natural":
     datasets_size = [count_lines(src) for src in source_file]
