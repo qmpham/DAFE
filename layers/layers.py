@@ -1256,7 +1256,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
 
     def inner_map(x):
       keeping = tf.cast(tf.keras.backend.random_binomial([1],1-fake_domain_prob)[0], tf.int32)
-      domain_ =  tf.math.mod(keeping * domain + (1-keeping) * tf.random.categorical(tf.math.log([[1.0/domain_numb]*domain_numb]), 1)[0,0], domain_numb)
+      domain_ =  tf.math.mod(keeping * domain + (1-keeping) * tf.cast(tf.random.categorical(tf.math.log([[1.0/domain_numb]*domain_numb]), 1)[0,0], tf.int32), domain_numb)
       dom_inner_kernel = tf.nn.embedding_lookup(self.inner_kernel, domain_)
       dom_inner_bias = tf.nn.embedding_lookup(self.inner_bias, domain_)
       dom_inner_kernel = tf.reshape(dom_inner_kernel, [-1, self.inner_dim])
@@ -1278,7 +1278,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
 
     def outer_map(x):
       keeping = tf.cast(tf.keras.backend.random_binomial([1],1-fake_domain_prob)[0], tf.int32)
-      domain_ =  tf.math.mod(keeping * domain + (1-keeping) * tf.random.categorical(tf.math.log([[1.0/domain_numb]*domain_numb]), 1)[0,0], domain_numb)
+      domain_ =  tf.math.mod(keeping * domain + (1-keeping) * tf.cast(tf.random.categorical(tf.math.log([[1.0/domain_numb]*domain_numb]), 1)[0,0], tf.int32), domain_numb)
       dom_outer_kernel = tf.nn.embedding_lookup(self.outer_kernel, domain_)
       dom_outer_bias = tf.nn.embedding_lookup(self.outer_bias, domain_)
       dom_outer_kernel = tf.reshape(dom_outer_kernel, [-1, self.output_dim])
