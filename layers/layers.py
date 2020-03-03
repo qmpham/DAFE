@@ -1318,7 +1318,6 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
     ####
     keeping = tf.keras.backend.random_binomial(tf.expand_dims(tf.shape(inputs)[0],0),1-fake_domain_prob)
     keeping = tf.tile(tf.reshape(keeping,[-1,1]),[1,512])
-    tf.print("keeping mask: ", keeping)
     outputs = outputs * keeping + (1-keeping) * noisy_outputs
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
