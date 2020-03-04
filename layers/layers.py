@@ -1209,6 +1209,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
                output_dim,
                domain_numb=6,
                dropout=0.1,
+               fake_domain_prob=0.1,
                noisy_prob=None,
                activation=tf.nn.relu,
                outer_activation=None,
@@ -1228,9 +1229,10 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
     self.outer_use_bias = True
     self.inner_activation = activation
     self.outer_activation = outer_activation
+    self.fake_domain_prob = fake_domain_prob
     if noisy_prob == None:
       self.noisy_prob = [1.0/domain_numb]*domain_numb
-      
+
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v6, self).build(input_shape)
     scope_name = self.name_scope()
@@ -1247,7 +1249,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
     mask=None
     inputs = self.layer_norm(inputs)
     if training:
-      fake_domain_prob = 0.1
+      fake_domain_prob = self.fake_domain_prob
     else:
       fake_domain_prob = 0.0
     
