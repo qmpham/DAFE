@@ -1210,7 +1210,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
                domain_numb=6,
                dropout=0.1,
                fake_domain_prob=0.1,
-               noisy_prob=None,
+               noisy_prob=[0.014967015314468146, 0.20679040170628904, 0.14494109872507957, 0.07797983876280723, 0.3068415724589217, 0.24848007303243427],
                activation=tf.nn.relu,
                outer_activation=None,
                **kwargs):
