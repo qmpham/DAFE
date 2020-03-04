@@ -1209,6 +1209,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
                output_dim,
                domain_numb=6,
                dropout=0.1,
+               noisy_prob=None,
                activation=tf.nn.relu,
                outer_activation=None,
                **kwargs):
@@ -1227,7 +1228,9 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
     self.outer_use_bias = True
     self.inner_activation = activation
     self.outer_activation = outer_activation
-  
+    if noisy_prob == None:
+      self.noisy_prob = [1.0/domain_numb]*domain_numb
+      
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v6, self).build(input_shape)
     scope_name = self.name_scope()
@@ -1248,8 +1251,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
     else:
       fake_domain_prob = 0.0
     
-    domain_numb = self.domain_numb
-    domain_ =  tf.random.categorical(tf.math.log([[1.0/domain_numb]*domain_numb]), 1)[0,0]
+    domain_ =  tf.random.categorical(tf.math.log([self.noisy_prob]), 1)[0,0]
     ##### inner layer
     shape = shape_list(inputs)
     rank = len(shape)      
@@ -1286,8 +1288,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
       self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
 
     # Noisy inputs
-          ##### inner layer
-    
+          ##### inner layer    
     noisy_dom_inner_kernel = tf.nn.embedding_lookup(self.inner_kernel, domain_)
     noisy_dom_inner_bias = tf.nn.embedding_lookup(self.inner_bias, domain_)
     noisy_dom_inner_kernel = tf.reshape(noisy_dom_inner_kernel, [-1, self.inner_dim])
@@ -1324,9 +1325,6 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
     
-    # if not training:
-    #   tf.print("###", self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_max_abs_pooling: ", 
-    #             tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, "###", sep="|")    
     return outputs
 
 class CondGRU(tf.keras.layers.Layer):
