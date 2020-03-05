@@ -1234,6 +1234,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
       self.noisy_prob = [1.0/domain_numb]*domain_numb
     else:
       self.noisy_prob = noisy_prob
+    print(self.noisy_prob)
 
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v6, self).build(input_shape)
