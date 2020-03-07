@@ -1254,6 +1254,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
     
     if training:
       print("noisy prob:", self.noisy_prob)
+      print("fake_domain_prob:", self.fake_domain_prob)
       fake_domain_prob = self.fake_domain_prob
     else:
       fake_domain_prob = 0.0
