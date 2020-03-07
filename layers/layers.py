@@ -1209,7 +1209,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
                output_dim,
                domain_numb=6,
                dropout=0.1,
-               fake_domain_prob=0.1,
+               fake_domain_prob=0.3,
                noisy_prob=[0.014967015314468146, 0.20679040170628904, 0.14494109872507957, 0.07797983876280723, 0.3068415724589217, 0.24848007303243427],
                activation=tf.nn.relu,
                outer_activation=None,
@@ -1234,7 +1234,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
       self.noisy_prob = [1.0/domain_numb]*domain_numb
     else:
       self.noisy_prob = noisy_prob
-    print(self.noisy_prob)
+    print("noisy prob:", self.noisy_prob)
 
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v6, self).build(input_shape)
