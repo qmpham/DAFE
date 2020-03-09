@@ -1535,6 +1535,7 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
             ffn_activation=ffn_activation)
         for i in range(num_layers)]
     print("isinstance(multi_domain_adapter_class, Multi_domain_FeedForwardNetwork_v6)", isinstance(multi_domain_adapter_class, Multi_domain_FeedForwardNetwork_v6))
+    print(multi_domain_adapter_class)
     self.multi_domain_layers = [
         multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
         if not isinstance(multi_domain_adapter_class, Multi_domain_FeedForwardNetwork_v6)
