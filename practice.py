@@ -502,7 +502,9 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1,
         multi_domain_adapter_gate_class=Regulation_Gate,
-        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v6),
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v6,
+        fake_domain_prob=config.get("fake_domain_prob", 0.1),
+        noisy_prob=config.get("noisy_prob", None)),
     decoder=Multi_domain_SelfAttentionDecoder_v6(
         num_layers=6,
         num_domains=num_domains,
@@ -516,7 +518,9 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1,
         multi_domain_adapter_gate_class=Regulation_Gate,
-        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v6))
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v6,
+        fake_domain_prob=config.get("fake_domain_prob", 0.1),
+        noisy_prob=config.get("noisy_prob", None)))
   elif experiment=="ldr":
     model = LDR_SequenceToSequence(
     source_inputter=LDR_inputter(embedding_size=config.get("ldr_embedding_size",464), num_domains=config.get("num_domains", 8), num_domain_units=config.get("num_embedding_domain_units", 8)),

@@ -1511,6 +1511,8 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
                multi_domain_adapter_gate_class=Multi_domain_Gate,
                ADAP_contribution=None,
                num_sources=1,
+               fake_domain_prob=0.1,
+               noisy_prob=None,
                **kwargs):
     
     super(Multi_domain_SelfAttentionDecoder_v6, self).__init__(num_sources=num_sources, **kwargs)
@@ -1534,6 +1536,8 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
         for i in range(num_layers)]
     self.multi_domain_layers = [
         multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
+        if not isinstance(multi_domain_adapter_class, Multi_domain_SelfAttentionDecoder_v6)
+        else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, fake_domain_prob= fake_domain_prob, noisy_prob=noisy_prob)
         for i in range(num_layers)]
     self.multi_domain_gates = [
         multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_gate_%d"%i)
