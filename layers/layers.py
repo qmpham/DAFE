@@ -1210,7 +1210,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
                domain_numb=6,
                dropout=0.1,
                fake_domain_prob=0.3,
-               noisy_prob=[0.014967015314468146, 0.20679040170628904, 0.14494109872507957, 0.07797983876280723, 0.3068415724589217, 0.24848007303243427],
+               noisy_prob= None, #[0.014967015314468146, 0.20679040170628904, 0.14494109872507957, 0.07797983876280723, 0.3068415724589217, 0.24848007303243427],
                activation=tf.nn.relu,
                outer_activation=None,
                **kwargs):
@@ -1231,7 +1231,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
     self.outer_activation = outer_activation
     self.fake_domain_prob = fake_domain_prob
     if noisy_prob == None:
-      self.noisy_prob = [1.0/domain_numb]*domain_numb
+      self.noisy_prob = [1.0/(domain_numb-1)]*(domain_numb-1)
     else:
       self.noisy_prob = noisy_prob
     print("noisy prob:", self.noisy_prob)
@@ -1259,7 +1259,7 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
     else:
       fake_domain_prob = 0.0
     
-    domain_ =  tf.random.categorical(tf.math.log([self.noisy_prob]), 1)[0,0]
+    domain_ =  tf.math.mod(domain + 1 + tf.random.categorical(tf.math.log([self.noisy_prob]), 1)[0,0], self.domain_numb)
     ##### inner layer
     shape = shape_list(inputs)
     rank = len(shape)      
