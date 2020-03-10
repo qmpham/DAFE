@@ -4367,7 +4367,7 @@ def visualize(config,
           batch_size = 2048,
           batch_type = "tokens",
           experiment="residual",
-          shuffle_buffer_size=0,  # Uniform shuffle.
+          shuffle_buffer_size=None,  # Uniform shuffle.
           train_steps=200000,
           save_every=5000,
           eval_every=15000,
