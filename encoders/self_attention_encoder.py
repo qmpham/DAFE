@@ -141,7 +141,7 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
       ADAP_contribution = [1.0] * num_layers
     self.ADAP_contribution = ADAP_contribution
   
-  def call(self, inputs, sequence_length=None, training=None):
+  def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     domain = inputs[1]
     domain = domain[0]
     inputs = inputs[0]    
@@ -153,10 +153,15 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
     mask = self.build_mask(inputs, sequence_length=sequence_length)
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers, self.multi_domain_layers)):
       inputs = layer(inputs, mask=mask, training=training)
+      
       if self.ADAP_layer_stopping_gradient:
-        inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
+        adapt = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training)
+        inputs = adapt * self.ADAP_contribution[i] + inputs
       else:
-        inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        inputs = adapt * self.ADAP_contribution[i] + inputs
+      if internal_node_printing:
+        tf.print("layers: ", i , "ADAP mean pooling: ", tf.reduce_mean(tf.abs(adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
     outputs = self.layer_norm(inputs)
     
     return outputs, None, sequence_length
