@@ -890,7 +890,7 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
     encoder_outputs, _, encoder_sequence_length = self.encoder(
-        [source_inputs, features["domain"]], sequence_length=source_length, training=training)
+        source_inputs, sequence_length=source_length, training=training)
     _, outputs = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
     _, adv_outputs = self.adv_classification_layer(encoder_outputs, encoder_sequence_length, training=training)
     return outputs, adv_outputs
