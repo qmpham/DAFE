@@ -4106,7 +4106,7 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
 
     # Run each layer.
     new_cache = []
-    for i, layer, domain_share_gate, domain_specific_gate, feed_forward in enumerate(zip(self.layers, self.domain_share_gates, self.domain_specific_gates, self.feed_forwards)):
+    for i, (layer, domain_share_gate, domain_specific_gate, feed_forward) in enumerate(zip(self.layers, self.domain_share_gates, self.domain_specific_gates, self.feed_forwards)):
       inputs, layer_cache, attention = layer(
           inputs,
           mask=mask,
