@@ -843,8 +843,8 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
     self.share_embeddings = share_embeddings
     self.classification_layer = Classification_layer(num_units, domain_numb=num_domains, name="On_top_encoder_domain_classification")
     self.adv_classification_layer = Classification_layer(num_units, domain_numb=num_domains, name="ADV_on_top_encoder_domain_classification")
-    self.share_gate = layers.Dense(2*num_units, use_bias=True, activation=tf.nn.sigmoid)
-    self.specific_gate = layers.Dense(2*num_units, use_bias=True, activation=tf.nn.sigmoid)
+    self.share_gate = layers.Dense(num_units, use_bias=True, activation=tf.nn.sigmoid)
+    self.specific_gate = layers.Dense(num_units, use_bias=True, activation=tf.nn.sigmoid)
 
   def auto_config(self, num_replicas=1):
     config = super(SequenceToSequence_WDC, self).auto_config(num_replicas=num_replicas)

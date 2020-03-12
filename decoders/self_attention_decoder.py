@@ -3996,7 +3996,7 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
               return_attention=False)
         for i in range(num_layers)]
 
-    self.combine_gate = common.Dense(3*self.num_units, activation=tf.nn.sigmoid)
+    self.combine_gate = common.Dense(self.num_units, activation=tf.nn.sigmoid)
 
     self.feed_forwards = [
       transformer.FeedForwardNetwork(ffn_inner_dim,
@@ -4038,7 +4038,7 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
       rank = inputs[0].shape.ndims
     else:
       rank = inputs.shape.ndims
-      
+
     if rank == 2:
       if length_or_step.shape.ndims != 0:
         raise ValueError("length_or_step should be a scalar with the current timestep")
