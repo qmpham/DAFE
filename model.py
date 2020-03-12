@@ -898,7 +898,7 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
   def classification_on_top_decoder(self, features, labels, training=None):
     outputs, _ = self.call(features, labels=labels)
     labels_lengths = self.labels_inputter.get_length(labels)
-    _, outputs = self.classification_layer(outputs, labels_lengths, training=training)
+    _, outputs = self.classification_layer(outputs["logits"], labels_lengths, training=training)
     return outputs
 
   def call(self, features, labels=None, training=None, step=None):
