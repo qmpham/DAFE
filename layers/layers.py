@@ -1258,8 +1258,8 @@ class Multi_domain_FeedForwardNetwork_v6(tf.keras.layers.Layer):
       fake_domain_prob = self.fake_domain_prob
     else:
       fake_domain_prob = 0.0
-    
-    domain_ =  tf.math.mod(tf.cast(domain,tf.int32) + tf.constant(1, dtype=tf.int32) + tf.random.categorical(tf.math.log([self.noisy_prob]), 1, dtype=tf.int32)[0,0], self.domain_numb)
+    domain_ =  tf.random.categorical(tf.math.log([self.noisy_prob]), 1, dtype=tf.int32)[0,0] 
+    #tf.math.mod(tf.cast(domain,tf.int32) + tf.constant(1, dtype=tf.int32) + tf.random.categorical(tf.math.log([self.noisy_prob]), 1, dtype=tf.int32)[0,0], self.domain_numb)
     #tf.print("noisy domain: ", domain_, "domain: ", domain, sep="|")
     ##### inner layer
     shape = shape_list(inputs)
