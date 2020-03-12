@@ -4148,7 +4148,7 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
         memory_sequence_length=memory_sequence_length,
         training=training)
     logits = self.output_layer(outputs)
-    return logits, state, attention
+    return logits, outputs, attention
 
   def step(self,
            inputs,
