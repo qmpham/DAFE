@@ -4487,8 +4487,8 @@ def train_wdc(config,
     variables = model.trainable_variables
     reported_loss = training_loss
     print("var numb: ", len(variables))
-    gradients = optimizer.get_gradients(total_loss, variables)
-    gradient_accumulator(gradients)
+    #gradients = optimizer.get_gradients(total_loss, variables)
+    #gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
 
