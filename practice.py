@@ -697,7 +697,7 @@ def main():
         ffn_dropout=0.1,
         ADAP_contribution=[0.0] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
-  elif experiment=="WCD":
+  elif experiment=="WDC":
     model = SequenceToSequence_WDC(
       source_inputter=My_inputter(embedding_size=512),
       target_inputter=My_inputter(embedding_size=512),
