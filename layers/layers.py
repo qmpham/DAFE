@@ -47,15 +47,15 @@ class Classification_layer(tf.keras.layers.Layer):
     attention_weight = tf.expand_dims(attention_weight, 1)
     logits = tf.matmul(attention_weight, inputs)
     logits = tf.squeeze(logits,1)
-    
+
     logits = common.dropout(logits, rate=0.3, training=training)
     outputs = self.ff_layer_1(logits)          
     outputs = common.dropout(outputs, rate=0.3, training=training)
     outputs = self.ff_layer_2(outputs)
     outputs = common.dropout(outputs, rate=0.3, training=training)
     outputs = self.ff_layer_end(outputs)
-    return outputs
-
+    return logits, outputs
+  
 class Multi_domain_FeedForwardNetwork(tf.keras.layers.Layer):
 
   def __init__(self,

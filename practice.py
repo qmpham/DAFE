@@ -16,7 +16,7 @@ from opennmt.optimizers import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter
 from opennmt.models.sequence_to_sequence import SequenceToSequence
-from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
+from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC
 from encoders.self_attention_encoder import *
 from decoders.self_attention_decoder import *
 import numpy as np
@@ -31,7 +31,7 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "train_wdc", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
   parser.add_argument("--ckpt", default=None)
@@ -697,6 +697,26 @@ def main():
         ffn_dropout=0.1,
         ADAP_contribution=[0.0] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
+  elif experiment=="WCD":
+    model = SequenceToSequence_WDC(
+      source_inputter=My_inputter(embedding_size=512),
+      target_inputter=My_inputter(embedding_size=512),
+      encoder=onmt.encoders.SelfAttentionEncoder(
+          num_layers=6,
+          num_units=512,
+          num_heads=8,
+          ffn_inner_dim=2048,
+          dropout=0.1,
+          attention_dropout=0.1,
+          ffn_dropout=0.1),
+      decoder= Multi_domain_SelfAttentionDecoder_WDC(
+          num_layers=6,
+          num_units=512,
+          num_heads=8,
+          ffn_inner_dim=2048,
+          dropout=0.1,
+          attention_dropout=0.1,
+          ffn_dropout=0.1))
   elif experiment=="pretrain":
     return
   warmup_steps = config.get("warmup_steps",4000)
@@ -795,6 +815,8 @@ def main():
     task.finetuning(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "debug":
     task.debug(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, picking_prob=config.get("picking_prob",None))
+  elif args.run == "train_wdc":
+    task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "experimental_translate":
     model.create_variables()
     print("translate with encoder_domain %d and decoder_domain %d"%(int(args.encoder_domain), int(args.decoder_domain)))
