@@ -31,7 +31,8 @@ class Classification_layer(tf.keras.layers.Layer):
     self.v = self.add_weight("%s_v_a"%scope_name, shape=[self.kernel_size])
     self.W = self.add_weight("%s_W_a"%scope_name, shape=[self.input_dim, self.kernel_size])
 
-  def call(self, inputs, src_length, training=True):    
+  def call(self, inputs, src_length, training=True):
+    print("inputs:", inputs)    
     v = self.v
     W = self.W
     v_a = tf.expand_dims(tf.expand_dims(v, 0),2)
