@@ -28,7 +28,7 @@ from layers.layers import Classification_layer
 from opennmt.utils.losses import _softmax_cross_entropy
 from utils.my_inputter import My_inputter
 from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder_v1, Multi_domain_SelfAttentionEncoder_v2
-from layers.common import Dense
+
 class Multi_domain_SequenceToSequence(model.SequenceGenerator):
 
   """A sequence to sequence model."""
@@ -843,8 +843,8 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
     self.share_embeddings = share_embeddings
     self.classification_layer = Classification_layer(num_units, domain_numb=num_domains, name="On_top_encoder_domain_classification")
     self.adv_classification_layer = Classification_layer(num_units, domain_numb=num_domains, name="ADV_on_top_encoder_domain_classification")
-    self.share_gate = Dense(2*num_units, activation=tf.nn.sigmoid)
-    self.specific_gate = Dense(2*num_units, activation=tf.nn.sigmoid)
+    self.share_gate = layers.Dense(2*num_units, bias=True, activation=tf.nn.sigmoid)
+    self.specific_gate = layers.Dense(2*num_units, bias=True, activation=tf.nn.sigmoid)
 
   def auto_config(self, num_replicas=1):
     config = super(SequenceToSequence_WDC, self).auto_config(num_replicas=num_replicas)
@@ -912,7 +912,7 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
     e_r, _ = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
     e_s, _ = self.adv_classification_layer(encoder_outputs, encoder_sequence_length, training=training)
     g_s = self.share_gate(tf.concat([tf.tile(tf.expand_dims(e_s,1),[1,tf.shape(encoder_outputs)(1),1]),encoder_outputs],-1))
-    g_r = self.share_gate(tf.concat([tf.tile(tf.expand_dims(e_r,1),[1,tf.shape(encoder_outputs)(1),1]),encoder_outputs],-1))
+    g_r = self.specific_gate(tf.concat([tf.tile(tf.expand_dims(e_r,1),[1,tf.shape(encoder_outputs)(1),1]),encoder_outputs],-1))
     h_r = g_r * encoder_outputs
     h_s = g_s * encoder_outputs
     encoder_mask = self.encoder.build_mask(source_inputs, sequence_length=encoder_sequence_length)
