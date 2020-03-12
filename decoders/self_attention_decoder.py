@@ -4116,7 +4116,7 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
           training=training)
       c_r, _ = domain_share_gate(inputs, memory = h_r, mask = encoder_mask)
       c_s, _ = domain_specific_gate(inputs, memory = h_s, mask = encoder_mask)
-      tf.print("h_r:", h_r.shape, "h_s", h_s.shape, "c_r", c_r.shape, "c_s", c_s.shape, sep="|")
+      #tf.print("h_r:", h_r.shape, "h_s", h_s.shape, "c_r", c_r.shape, "c_s", c_s.shape, sep="|")
       g_c = self.combine_gate(tf.concat([inputs, c_r, c_s],-1))
       c_l = inputs + g_c * c_r + (1-g_c) * c_s
       inputs = c_l + feed_forward(c_l)
