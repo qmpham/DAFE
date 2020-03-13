@@ -161,6 +161,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
     cache = (keys, values)
 
     # Dot product attention.
+    tf.print("queries:", tf.shape(queries), "keys: ", tf.shape(keys))
     dot = tf.matmul(queries, keys, transpose_b=True)
     if mask is not None:
       mask = tf.cast(mask, tf.float32)
