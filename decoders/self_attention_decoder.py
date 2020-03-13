@@ -4114,7 +4114,7 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
           memory_mask=memory_mask,
           cache=cache[i] if cache is not None else None,
           training=training)
-      tf.print("inputs: ", tf.shape(inputs), "h_r: ", tf.shape(h_r), "h_s: ", tf.shape(h_s), "encoder_mask: ", encoder_mask)
+      tf.print("inputs: ", tf.shape(inputs), "h_r: ", tf.shape(h_r), "h_s: ", tf.shape(h_s), "encoder_mask: ", tf.shape(encoder_mask))
       c_r, _ = domain_share_gate(inputs, memory = h_r, mask = encoder_mask)
       c_s, _ = domain_specific_gate(inputs, memory = h_s, mask = encoder_mask)
       #tf.print("h_r:", h_r.shape, "h_s", h_s.shape, "c_r", c_r.shape, "c_s", c_s.shape, sep="|")
