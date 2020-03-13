@@ -998,7 +998,7 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
         memory_sequence_length=encoder_sequence_length,
         initial_state=encoder_state)
     sampled_ids, sampled_length, log_probs, alignment, _ = self.decoder.dynamic_decode(
-        lambda ids: [self.labels_inputter({"ids": ids}), h_r, h_s, encoder_mask],
+        lambda ids: [self.labels_inputter({"ids": ids}), tfa.seq2seq.tile_batch(h_r, beam_size), tfa.seq2seq.tile_batch(h_s, beam_size), tfa.seq2seq.tile_batch(encoder_mask, beam_size)],
         start_ids,
         initial_state=initial_state,
         decoding_strategy=decoding.DecodingStrategy.from_params(params),
