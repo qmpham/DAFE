@@ -842,6 +842,7 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
     self.decoder = decoder
     self.share_embeddings = share_embeddings
     self.classification_layer = Classification_layer(num_units, domain_numb=num_domains, name="On_top_encoder_domain_classification")
+    self.classification_decoder_layer = Classification_layer(num_units, domain_numb=num_domains, name="On_top_decoder_domain_classification")
     self.adv_classification_layer = Classification_layer(num_units, domain_numb=num_domains, name="ADV_on_top_encoder_domain_classification")
     self.share_gate = layers.Dense(num_units, use_bias=True, activation=tf.nn.sigmoid)
     self.specific_gate = layers.Dense(num_units, use_bias=True, activation=tf.nn.sigmoid)
@@ -898,7 +899,8 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
   def classification_on_top_decoder(self, features, labels, training=None):
     outputs, _ = self.call(features, labels=labels)
     labels_lengths = self.labels_inputter.get_length(labels)
-    _, outputs = self.classification_layer(outputs["state"], labels_lengths, training=training)
+    tf.print("outputs: ", tf.shape(outputs["state"]))
+    _, outputs = self.classification_decoder_layer(outputs["state"], labels_lengths, training=training)
     return outputs
 
   def call(self, features, labels=None, training=None, step=None):

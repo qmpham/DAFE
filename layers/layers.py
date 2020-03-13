@@ -21,8 +21,8 @@ class Classification_layer(tf.keras.layers.Layer):
     self.input_dim = input_dim
     self.layer_norm = common.LayerNorm()
     self.kernel_size = kernel_size
-    self.ff_layer_1 = common.Dense(2048, activation=tf.nn.leaky_relu)
-    self.ff_layer_2 = common.Dense(2048, activation=tf.nn.leaky_relu)
+    self.ff_layer_1 = common.Dense(2048, use_bias=True)
+    #self.ff_layer_2 = common.Dense(2048, use_bias=True)
     self.ff_layer_end = common.Dense(domain_numb)
 
   def build(self, input_shape):
@@ -48,12 +48,11 @@ class Classification_layer(tf.keras.layers.Layer):
     attention_weight = tf.expand_dims(attention_weight, 1)
     logits = tf.matmul(attention_weight, inputs)
     logits = tf.squeeze(logits,1)
-
-    logits = common.dropout(logits, rate=0.3, training=training)
-    outputs = self.ff_layer_1(logits)          
-    outputs = common.dropout(outputs, rate=0.3, training=training)
-    outputs = self.ff_layer_2(outputs)
-    outputs = common.dropout(outputs, rate=0.3, training=training)
+    #logits = common.dropout(logits, rate=0.3, training=training)
+    outputs = self.ff_layer_1(tf.nn.relu(logits))          
+    #outputs = common.dropout(outputs, rate=0.3, training=training)
+    #outputs = self.ff_layer_2(outputs)
+    #outputs = common.dropout(outputs, rate=0.3, training=training)
     outputs = self.ff_layer_end(outputs)
     return logits, outputs
   
