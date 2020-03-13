@@ -4472,7 +4472,6 @@ def train_wdc(config,
         step=optimizer.iterations)
     decoder_classification_outputs = model.classification_on_top_decoder(source, labels=target, training=True)
     outputs_1, outputs_2 = model.classification_on_top_encoder(source, training=True)
-    print("outputs: ", outputs, outputs_1, outputs_2, decoder_classification_outputs)
     encoder_classification_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], outputs_1)
     adv_loss_1 = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], outputs_2)
     adv_loss_2 = tf.reduce_mean(tf.nn.softmax(outputs_2))
@@ -4487,8 +4486,8 @@ def train_wdc(config,
     variables = model.trainable_variables
     reported_loss = training_loss
     print("var numb: ", len(variables))
-    #gradients = optimizer.get_gradients(total_loss, variables)
-    #gradient_accumulator(gradients)
+    gradients = optimizer.get_gradients(total_loss, variables)
+    gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
 
