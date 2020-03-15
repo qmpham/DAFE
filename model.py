@@ -894,14 +894,7 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
         source_inputs, sequence_length=source_length, training=training)
     _, outputs = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
     _, adv_outputs = self.adv_classification_layer(encoder_outputs, encoder_sequence_length, training=training)
-    return outputs, adv_outputs
-
-  def classification_on_top_decoder(self, features, labels, training=None):
-    outputs, _ = self.call(features, labels=labels)
-    labels_lengths = self.labels_inputter.get_length(labels)
-    #tf.print("outputs: ", tf.shape(outputs["state"]))
-    _, outputs = self.classification_decoder_layer(outputs["state"], labels_lengths, training=training)
-    return outputs
+    return outputs, adv_outputs   
 
   def call(self, features, labels=None, training=None, step=None):
     # Encode the source.
