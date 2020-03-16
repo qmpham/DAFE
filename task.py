@@ -4491,7 +4491,7 @@ def train_wdc(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    total_loss = training_loss + tf.reduce_mean(adv_loss_1) + adv_loss_2 * 0.2 + tf.reduce_mean(encoder_classification_loss) + tf.reduce_mean(decoder_classification_loss)
+    total_loss = training_loss + tf.reduce_mean(adv_loss_1) + adv_loss_2 * 0.2 + tf.reduce_mean(encoder_classification_loss) #+ tf.reduce_mean(decoder_classification_loss)
     variables = model.trainable_variables
     reported_loss = training_loss
     print("var numb: ", len(variables))
