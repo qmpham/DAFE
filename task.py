@@ -86,6 +86,15 @@ def translate(source_file,
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
     elif experiment in ["DC"]:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
+    elif experiment in ["WDC"]:
+      e_r, _ = model.classification_layer(encoder_outputs, source_length, training=False)
+      e_s, _ = model.adv_classification_layer(encoder_outputs, source_length, training=False)
+      g_s = model.share_gate(tf.concat([tf.tile(tf.expand_dims(e_s,1),[1,tf.shape(encoder_outputs)[1],1]),encoder_outputs],-1))
+      g_r = model.specific_gate(tf.concat([tf.tile(tf.expand_dims(e_r,1),[1,tf.shape(encoder_outputs)[1],1]),encoder_outputs],-1))
+      h_r = g_r * encoder_outputs
+      h_s = g_s * encoder_outputs
+      encoder_mask = model.encoder.build_mask(source_inputs, sequence_length=source_length)
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), h_r, h_s, encoder_mask]
     else:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
     decoded = model.decoder.dynamic_decode(
