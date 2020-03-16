@@ -129,7 +129,7 @@ class LayerNorm_v1(tf.keras.layers.Layer):
     mean = tf.reduce_mean(x, axis=[-1], keepdims=True)
     variance = tf.reduce_mean(tf.square(x - mean), axis=[-1], keepdims=True)
     norm_x = (x - mean) * tf.math.rsqrt(variance + self.epsilon)
-    return norm_x * self.gamma[tf.reduce_sum(self.num_domain_units[:domain]) : tf.reduce_sum(self.num_domain_units[:domain+1])] + self.beta[tf.reduce_sum(self.num_domain_units[:domain]) : tf.reduce_sum(self.innum_domain_unitsner_dim[:domain+1])]
+    return norm_x * self.gamma[tf.reduce_sum(self.num_domain_units[:domain]) : tf.reduce_sum(self.num_domain_units[:domain+1])] + self.beta[tf.reduce_sum(self.num_domain_units[:domain]) : tf.reduce_sum(self.num_domain_units[:domain+1])]
 
   def map_v1_weights(self, weights):
     return [
