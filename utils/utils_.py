@@ -157,7 +157,7 @@ def variable_which(structure, path):
   print("path", path)
   print("name", name)
   print("structure", structure)
-  print([v.name for v in structure.trainable_variables])  
+  print([v.name for v in structure.variables])  
   if sum([name in v.name for v in structure.trainable_variables]):
     print([v.name for v in structure.trainable_variables])
     for v in structure.trainable_variables:
