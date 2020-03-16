@@ -154,6 +154,7 @@ def variable_which(structure, path):
     if structure==None:
       raise ValueError("Invalid path in structure: %s" % path)
   name = path.split("/")[-1]  
+  print("path", path)
   print("name", name)
   print("structure", structure)
   print([v.name for v in structure.trainable_variables])  
