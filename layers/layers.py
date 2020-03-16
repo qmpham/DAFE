@@ -403,7 +403,7 @@ class Multi_domain_FeedForwardNetwork_v7(tf.keras.layers.Layer):
     if self.inner_use_bias:
       inner = tf.nn.bias_add(inner, dom_inner_bias)
     if self.inner_activation is not None:
-      inner = self.inner_layer_norm(inner)
+      inner = self.inner_layer_norm(inner, domain)
       inner = self.inner_activation(inner)  # pylint: disable=not-callable
     if rank > 2:
       inner = tf.reshape(inner, shape[:-1] + [self.inner_dim[domain]])

@@ -106,6 +106,36 @@ class LayerNorm(tf.keras.layers.Layer):
         (self.beta, weights["beta"]),
         (self.gamma, weights["gamma"])
     ]
+  
+class LayerNorm_v1(tf.keras.layers.Layer):
+  
+  def __init__(self, epsilon=1e-6, domain_numb=6, num_domain_units=[128, 2048, 2048, 1024, 1024, 128], **kwargs):
+    
+    super(LayerNorm_v1, self).__init__(**kwargs)
+    self.epsilon = epsilon
+    self.domain_numb = domain_numb
+    self.num_domain_units = tf.constant(num_domain_units)
+
+  def build(self, input_shape):
+    """Creates the variables."""
+    self.beta = self.add_weight(
+        "beta", [sum(self.num_domain_units)], initializer=tf.keras.initializers.Constant(0))
+    self.gamma = self.add_weight(
+        "gamma", [sum(self.num_domain_units)], initializer=tf.keras.initializers.Constant(1))
+    super(LayerNorm_v1, self).build(input_shape)
+
+  def call(self, x, domain):  # pylint: disable=arguments-differ
+    """Normalizes :obj:`x`."""
+    mean = tf.reduce_mean(x, axis=[-1], keepdims=True)
+    variance = tf.reduce_mean(tf.square(x - mean), axis=[-1], keepdims=True)
+    norm_x = (x - mean) * tf.math.rsqrt(variance + self.epsilon)
+    return norm_x * self.gamma[tf.reduce_sum(self.num_domain_units[:domain]) : tf.reduce_sum(self.num_domain_units[:domain+1])] + self.beta[tf.reduce_sum(self.num_domain_units[:domain]) : tf.reduce_sum(self.innum_domain_unitsner_dim[:domain+1])]
+
+  def map_v1_weights(self, weights):
+    return [
+        (self.beta, weights["beta"]),
+        (self.gamma, weights["gamma"])
+    ]
 
 class LayerWrapper(tf.keras.layers.Layer):
   
