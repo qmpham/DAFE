@@ -154,6 +154,8 @@ def variable_which(structure, path):
     if structure==None:
       raise ValueError("Invalid path in structure: %s" % path)
   name = path.split("/")[-1]  
+  print("name", name)
+  print("structure", structure)
   if sum([name in v.name for v in structure.trainable_variables]):
     print([v.name for v in structure.trainable_variables])
     for v in structure.trainable_variables:
