@@ -364,7 +364,6 @@ class Multi_domain_FeedForwardNetwork_v7(tf.keras.layers.Layer):
     self.dropout = dropout
     self.domain_numb = domain_numb
     self.input_dim = input_dim
-    self.inner_dim = inner_dim
     self.output_dim = output_dim
     self.layer_norm = common.LayerNorm()
     self.inner_layer_norm = common.LayerNorm()
