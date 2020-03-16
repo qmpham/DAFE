@@ -970,7 +970,9 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
         input_fn=input_fn,
         sampling_probability=sampling_probability,
         training=training)
-    outputs = dict(logits=logits, state=state, attention=attention)
+    labels_lengths = self.labels_inputter.get_length(labels)
+    _, decoder_classification_outputs = self.classification_decoder_layer(state, labels_lengths, training=training)
+    outputs = dict(logits=logits, state=decoder_classification_outputs, attention=attention)
 
     return outputs
 
