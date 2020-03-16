@@ -156,6 +156,7 @@ def variable_which(structure, path):
   name = path.split("/")[-1]  
   print("name", name)
   print("structure", structure)
+  print([v.name for v in structure.trainable_variables])  
   if sum([name in v.name for v in structure.trainable_variables]):
     print([v.name for v in structure.trainable_variables])
     for v in structure.trainable_variables:
