@@ -4492,7 +4492,7 @@ def train_wdc(config,
     else:
       training_loss, reported_loss = loss, loss
     total_loss = training_loss + tf.reduce_mean(adv_loss_1) + adv_loss_2 * 0.2 + tf.reduce_mean(encoder_classification_loss) #+ tf.reduce_mean(decoder_classification_loss)
-    variables = [v if "On_top_decoder_domain_classification" not in v.name for v in model.trainable_variables]
+    variables = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name]
     reported_loss = training_loss
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(total_loss, variables)
