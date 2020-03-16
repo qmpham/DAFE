@@ -4501,7 +4501,8 @@ def train_wdc(config,
     return reported_loss, num_examples
 
   def _apply_gradients():
-    variables = model.trainable_variables
+    #variables = model.trainable_variables
+    variables = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name]
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
