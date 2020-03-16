@@ -406,7 +406,7 @@ class Multi_domain_FeedForwardNetwork_v7(tf.keras.layers.Layer):
       inner = self.inner_layer_norm(inner)
       inner = self.inner_activation(inner)  # pylint: disable=not-callable
     if rank > 2:
-      inner = tf.reshape(inner, shape[:-1] + [self.inner_dim])
+      inner = tf.reshape(inner, shape[:-1] + [self.inner_dim[domain]])
     ##### output layer
     inner = common.dropout(inner, self.dropout, training=training)
     shape = shape_list(inner)
