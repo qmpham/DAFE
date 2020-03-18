@@ -923,6 +923,7 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
           encoder_sequence_length,
           step=step,
           training=training)
+      outputs = {"outputs": outputs, "classification_logits": (logits_r, logits_s)}
 
     # When not in training, also compute the model predictions.
     if not training:
@@ -935,8 +936,6 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
           encoder_state,
           encoder_sequence_length)
     
-    outputs = {"outputs": outputs, "classification_logits": (logits_r, logits_s)}
-
     return outputs, predictions
 
   def _decode_target(self,
