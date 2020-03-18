@@ -4479,7 +4479,7 @@ def train_wdc(config,
         labels=target,
         training=True,
         step=optimizer.iterations)
-    
+    print(outputs)
     classification_logits_s, classification_logits_r = outputs["classification_logits"]
     outputs = outputs["outputs"]
     encoder_classification_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], classification_logits_r)
