@@ -3999,12 +3999,17 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
 
     self.combine_gate = common.Dense(self.num_units, activation=tf.nn.sigmoid)
 
-    self.feed_forwards = [
+    """ self.feed_forwards = [
       transformer.FeedForwardNetwork(ffn_inner_dim,
                self.num_units,
                dropout=0.1,
                activation=tf.nn.relu)
-        for i in range(num_layers)]
+        for i in range(num_layers)] """
+    
+    self.feed_forwards = [
+      common.Dense(self.num_units)
+      for i in range(num_layers)
+    ]
 
   @property
   def minimum_sources(self):
