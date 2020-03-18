@@ -4480,11 +4480,12 @@ def train_wdc(config,
         training=True,
         step=optimizer.iterations)
     
-    outputs_1, outputs_2 = model.classification_on_top_encoder(source, training=True)
-    encoder_classification_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], outputs_1)
-    adv_loss_1 = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], outputs_2)
-    adv_loss_2 = tf.reduce_mean(tf.nn.softmax(outputs_2))
-    decoder_classification_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], outputs["state"])
+    classification_logits_s, classification_logits_r = outputs["classification_logits"]
+    outputs = outputs["outputs"]
+    encoder_classification_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], classification_logits_r)
+    adv_loss_1 = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], classification_logits_s)
+    adv_loss_2 = tf.reduce_mean(tf.nn.softmax(classification_logits_s))
+    #decoder_classification_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], outputs["state"])
     loss = model.compute_loss(outputs, target, training=True)  
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]

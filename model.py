@@ -904,8 +904,8 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
         source_inputs, sequence_length=source_length, training=training)
     outputs = None
     predictions = None
-    e_r, _ = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
-    e_s, _ = self.adv_classification_layer(encoder_outputs, encoder_sequence_length, training=training)
+    e_r, logits_r = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
+    e_s, logits_s = self.adv_classification_layer(encoder_outputs, encoder_sequence_length, training=training)
     g_s = self.share_gate(tf.concat([tf.tile(tf.expand_dims(e_s,1),[1,tf.shape(encoder_outputs)[1],1]),encoder_outputs],-1))
     g_r = self.specific_gate(tf.concat([tf.tile(tf.expand_dims(e_r,1),[1,tf.shape(encoder_outputs)[1],1]),encoder_outputs],-1))
     h_r = g_r * encoder_outputs
@@ -934,6 +934,8 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
           encoder_mask,
           encoder_state,
           encoder_sequence_length)
+    
+    outputs = {"outputs": outputs, "classification_logits": (logits_r, logits_s)}
 
     return outputs, predictions
 
