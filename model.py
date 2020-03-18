@@ -924,7 +924,7 @@ class SequenceToSequence_WDC(model.SequenceGenerator):
           step=step,
           training=training)
       #outputs = {"outputs": outputs, "classification_logits": (logits_r, logits_s)}
-      outputs = dict(logits=outputs["logits"], state=outputs["state"], attention=outputs["attention"], classification_logits=(logits_r, logits_s))
+      outputs = dict(logits=outputs["logits"], state=outputs["state"], attention=outputs["attention"], classification_logits_r=logits_r,classification_logits_s=logits_s))
 
     # When not in training, also compute the model predictions.
     if not training:
