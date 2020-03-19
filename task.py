@@ -4493,15 +4493,20 @@ def train_wdc(config,
     else:
       training_loss, reported_loss = loss, loss
     total_loss = training_loss + adv_loss_2 * 0.2 + encoder_classification_loss #+ tf.reduce_mean(decoder_classification_loss)
-    non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name]
-    adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name]
+    non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name] + 
+                    [v for v in mode.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" in v.name and ("v_a" in v.name or "W_a" in v.name)]
+    adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name and not ("v_a" in v.name or "W_a" in v.name)] 
     #####
     reported_loss = training_loss
     print("var numb: ", len(non_adv_vars))
+    for v in non_adv_vars:
+      print(v.name)
     gradients = optimizer.get_gradients(total_loss, non_adv_vars)
     non_adv_gradient_accumulator(gradients)
     #####
     print("adv_var_numb: ", len(adv_vars))
+    for v in adv_vars:
+      print(v.name)
     gradients = optimizer.get_gradients(adv_loss_1, adv_vars)
     adv_gradient_accumulator(gradients)
     #####

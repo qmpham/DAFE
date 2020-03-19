@@ -27,6 +27,8 @@ from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer
 import task
 from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v6, Multi_domain_Gate_v1, Multi_domain_FeedForwardNetwork_v5, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_FeedForwardNetwork_v1, Multi_domain_FeedForwardNetwork_v0
 def main():
+  seed = 1234
+  tf.random.set_seed(seed)
   devices = tf.config.experimental.list_logical_devices(device_type="GPU")
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
