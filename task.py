@@ -4484,7 +4484,7 @@ def train_wdc(config,
     classification_logits_s = outputs["classification_logits_s"]
     encoder_classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], classification_logits_r))
     adv_loss_1 = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], classification_logits_s))
-    adv_loss_2 = -tf.reduce_mean(tf.nn.softmax(classification_logits_s) * tf.math.log(tf.nn.softmax(classification_logits_s)))
+    #adv_loss_2 = - tf.reduce_mean(tf.nn.softmax(classification_logits_s) * tf.math.log(tf.nn.softmax(classification_logits_s)))
     #decoder_classification_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], outputs["state"])
     loss = model.compute_loss(outputs, target, training=True)  
     if isinstance(loss, tuple):
@@ -4492,7 +4492,7 @@ def train_wdc(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    total_loss = training_loss + adv_loss_2 * 0.2 + encoder_classification_loss #+ tf.reduce_mean(decoder_classification_loss)
+    total_loss = training_loss - adv_loss_1 * 0.2 + encoder_classification_loss #+ tf.reduce_mean(decoder_classification_loss)
     non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name] + \
                     [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" in v.name and ("v_a" in v.name or "W_a" in v.name)]
     adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name and not ("v_a" in v.name or "W_a" in v.name)] 
@@ -4511,7 +4511,7 @@ def train_wdc(config,
     adv_gradient_accumulator(gradients)
     #####
     num_examples = tf.reduce_sum(target["length"])
-    return reported_loss, adv_loss_1, adv_loss_2, encoder_classification_loss, num_examples
+    return reported_loss, adv_loss_1, encoder_classification_loss, num_examples
 
   def _apply_gradients():
     #variables = model.trainable_variables
@@ -4547,10 +4547,10 @@ def train_wdc(config,
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)    
       adv_loss_1 = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_adv_loss_1, None) 
-      adv_loss_2 = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_adv_loss_2, None) 
+      #adv_loss_2 = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_adv_loss_2, None) 
       encoder_classification_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_encoder_classification_loss, None)   
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, adv_loss_1, adv_loss_2, encoder_classification_loss, num_examples
+    return loss, adv_loss_1, encoder_classification_loss, num_examples
   
   @tf.function
   def _step():
@@ -4568,7 +4568,7 @@ def train_wdc(config,
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   _adv_loss_1 = [] 
-  _adv_loss_2 = []
+  #_adv_loss_2 = []
   _encoder_classification_loss = []
   _number_examples = []
 
@@ -4576,10 +4576,10 @@ def train_wdc(config,
     while True:
       #####Training batch
       for _ in range(int(config.get("accumulation_step",1))):
-        loss, adv_loss_1, adv_loss_2, encoder_classification_loss, num_examples = next(train_data_flow)    
+        loss, adv_loss_1, encoder_classification_loss, num_examples = next(train_data_flow)    
         _loss.append(loss)
         _adv_loss_1.append(adv_loss_1)
-        _adv_loss_2.append(adv_loss_2)
+        #_adv_loss_2.append(adv_loss_2)
         _encoder_classification_loss.append(encoder_classification_loss)
         _number_examples.append(num_examples)
       _step()  
@@ -4588,11 +4588,11 @@ def train_wdc(config,
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; Adv_loss_1 = %f, Adv_loss_2 = %f, Encoder_classification_loss = %f, number_examples = %d, after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.mean(_adv_loss_1), np.mean(_adv_loss_2), np.mean(_encoder_classification_loss), np.sum(_number_examples), elapsed)
+            "Step = %d ; Learning rate = %f ; Loss = %f; Adv_loss_1 = %f, Encoder_classification_loss = %f, number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.mean(_adv_loss_1), np.mean(_encoder_classification_loss), np.sum(_number_examples), elapsed)
         _loss = []  
         _adv_loss_1 = [] 
-        _adv_loss_2 = []
+        #_adv_loss_2 = []
         _encoder_classification_loss = []
         _number_examples = []
         start = time.time()
