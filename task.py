@@ -4484,9 +4484,10 @@ def train_wdc(config,
     classification_logits_s = outputs["classification_logits_s"]
     encoder_classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], classification_logits_r))
     probs = tf.nn.softmax(classification_logits_s, axis=1)
-
-    adv_loss_1 = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], classification_logits_s))
-    adv_loss_2 = - tf.reduce_mean(probs * tf.math.log(probs))
+    prediction_probs = tf.nn.embedding_lookup(probs, source["domain"])
+    tf.print("prediction prob: ", prediction_probs)
+    adv_loss_1 = - tf.reduce_mean(tf.math.log(prediction_probs)) #tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], classification_logits_s))
+    adv_loss_2 = - tf.reduce_mean(prediction_probs * tf.math.log(prediction_probs)) #- tf.reduce_mean(probs * tf.math.log(probs))
     #decoder_classification_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], outputs["state"])
     loss = model.compute_loss(outputs, target, training=True)  
     if isinstance(loss, tuple):
@@ -4494,7 +4495,7 @@ def train_wdc(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    total_loss = training_loss + adv_loss_2 * 0.2 + encoder_classification_loss #+ tf.reduce_mean(decoder_classification_loss)
+    total_loss = training_loss - adv_loss_2 * 0.2 + encoder_classification_loss #+ tf.reduce_mean(decoder_classification_loss)
     non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name] + \
                     [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" in v.name and ("v_a" in v.name or "W_a" in v.name)]
     adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name and not ("v_a" in v.name or "W_a" in v.name)] 
