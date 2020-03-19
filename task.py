@@ -4552,7 +4552,7 @@ def train_wdc(config,
       adv_loss_2 = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_adv_loss_2, None) 
       encoder_classification_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_encoder_classification_loss, None)   
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, adv_loss_1, encoder_classification_loss, num_examples
+    return loss, adv_loss_1, adv_loss_2, encoder_classification_loss, num_examples
   
   @tf.function
   def _step():
