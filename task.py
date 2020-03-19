@@ -4471,8 +4471,8 @@ def train_wdc(config,
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
-    gradient_accumulator = optimizer_util.GradientAccumulator()  
-
+    non_adv_gradient_accumulator = optimizer_util.GradientAccumulator()  
+    adv_gradient_accumulator = optimizer_util.GradientAccumulator()
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
@@ -4492,26 +4492,43 @@ def train_wdc(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    total_loss = training_loss + tf.reduce_mean(adv_loss_1) + adv_loss_2 * 0.2 + tf.reduce_mean(encoder_classification_loss) #+ tf.reduce_mean(decoder_classification_loss)
-    variables = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name]
+    total_loss = training_loss + adv_loss_2 * 0.2 + tf.reduce_mean(encoder_classification_loss) #+ tf.reduce_mean(decoder_classification_loss)
+    non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name]
+    adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name]
+    #####
     reported_loss = training_loss
-    print("var numb: ", len(variables))
-    gradients = optimizer.get_gradients(total_loss, variables)
-    gradient_accumulator(gradients)
+    print("var numb: ", len(non_adv_vars))
+    gradients = optimizer.get_gradients(total_loss, non_adv_vars)
+    non_adv_gradient_accumulator(gradients)
+    #####
+    gradients = optimizer.get_gradients(tf.reduce_mean(adv_loss_1), adv_vars)
+    adv_gradient_accumulator(gradients)
+    #####
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
 
   def _apply_gradients():
     #variables = model.trainable_variables
-    variables = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name]
+    non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name]
     grads_and_vars = []
-    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+    for gradient, variable in zip(non_adv_gradient_accumulator.gradients, non_adv_vars):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(non_adv_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
-    gradient_accumulator.reset()
- 
+    non_adv_gradient_accumulator.reset()
+
+  def _apply_adv_gradients():
+    #variables = model.trainable_variables
+    adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name]
+    grads_and_vars = []
+    for gradient, variable in zip(adv_gradient_accumulator.gradients, adv_vars):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(adv_gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    adv_gradient_accumulator.reset()
+
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
@@ -4527,6 +4544,10 @@ def train_wdc(config,
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
+  
+  def _adv_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_adv_gradients)
 
   # Runs the training loop.
   import time
@@ -4544,6 +4565,7 @@ def train_wdc(config,
         _loss.append(loss)
         _number_examples.append(num_examples)
       _step()  
+      _adv_step()
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
