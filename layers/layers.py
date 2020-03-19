@@ -21,9 +21,9 @@ class Classification_layer(tf.keras.layers.Layer):
     self.input_dim = input_dim
     self.layer_norm = common.LayerNorm()
     self.kernel_size = kernel_size
-    self.ff_layer_1 = common.Dense(2048, use_bias=True)
+    #self.ff_layer_1 = common.Dense(2048, use_bias=True)
     #self.ff_layer_2 = common.Dense(2048, use_bias=True)
-    self.ff_layer_end = common.Dense(domain_numb)
+    self.ff_layer_end = common.Dense(domain_numb, use_bias=True)
 
   def build(self, input_shape):
     super(Classification_layer, self).build(input_shape)
@@ -46,15 +46,15 @@ class Classification_layer(tf.keras.layers.Layer):
     attention_weight = tf.cast(tf.nn.softmax(tf.cast(attention_weight, tf.float32)), attention_weight.dtype)
     attention_weight = tf.squeeze(attention_weight,-1)
     attention_weight = tf.expand_dims(attention_weight, 1)
-    logits = tf.matmul(attention_weight, inputs)
-    logits = tf.squeeze(logits,1)
+    e = tf.matmul(attention_weight, inputs)
+    e = tf.squeeze(e,1)
+    #e = common.dropout(e, rate=0.3, training=training)
+    #logits = self.ff_layer_1(tf.nn.relu(e))          
     #logits = common.dropout(logits, rate=0.3, training=training)
-    outputs = self.ff_layer_1(tf.nn.relu(logits))          
-    #outputs = common.dropout(outputs, rate=0.3, training=training)
-    #outputs = self.ff_layer_2(outputs)
-    #outputs = common.dropout(outputs, rate=0.3, training=training)
-    outputs = self.ff_layer_end(outputs)
-    return logits, outputs
+    #logits = self.ff_layer_2(logits)
+    #logits = common.dropout(logits, rate=0.3, training=training)
+    logits = self.ff_layer_end(tf.nn.relu(e))
+    return e, logits
   
 class Multi_domain_FeedForwardNetwork(tf.keras.layers.Layer):
 
