@@ -4484,8 +4484,8 @@ def train_wdc(config,
     classification_logits_s = outputs["classification_logits_s"]
     encoder_classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], classification_logits_r))
     probs = tf.nn.softmax(classification_logits_s, axis=1)
-    prediction_probs = tf.nn.embedding_lookup(probs, source["domain"])
-    tf.print("prediction prob: ", prediction_probs)
+    prediction_probs = tf.map_fn(lambda x: x[0][x[1]], (probs, source["domain"]), dtype=tf.float32)
+    #tf.print("prediction prob: ", prediction_probs)
     adv_loss_1 = - tf.reduce_mean(tf.math.log(prediction_probs)) #tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], classification_logits_s))
     adv_loss_2 = - tf.reduce_mean(prediction_probs * tf.math.log(prediction_probs)) #- tf.reduce_mean(probs * tf.math.log(probs))
     #decoder_classification_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], outputs["state"])
