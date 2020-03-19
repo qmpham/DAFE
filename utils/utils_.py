@@ -15,6 +15,7 @@ def make_domain_mask(num_domains, num_units, num_domain_units=8, dtype=tf.float3
     for j in range(i*num_domain_units, (i+1)*num_domain_units):
       M[i,j] = 1
   M = np.concatenate([M_,M],1) 
+  
   return tf.constant(M, dtype=dtype)
 
 def masking(ids, mask_id, noise_percentage=0.15):
