@@ -4510,7 +4510,7 @@ def train_wdc(config,
     print("adv_var_numb: ", len(adv_vars))
     for v in adv_vars:
       print(v.name)
-    gradients = optimizer.get_gradients(adv_loss_1, adv_vars)
+    gradients = optimizer.get_gradients(adv_loss_1 * tf.cast(tf.greater(optimizer.iterations,10000),tf.float32), adv_vars)
     adv_gradient_accumulator(gradients)
     #####
     num_examples = tf.reduce_sum(target["length"])
