@@ -4494,7 +4494,7 @@ def train_wdc(config,
       training_loss, reported_loss = loss, loss
     total_loss = training_loss + adv_loss_2 * 0.2 + encoder_classification_loss #+ tf.reduce_mean(decoder_classification_loss)
     non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name] + \
-                    [v for v in mode.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" in v.name and ("v_a" in v.name or "W_a" in v.name)]
+                    [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" in v.name and ("v_a" in v.name or "W_a" in v.name)]
     adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name and not ("v_a" in v.name or "W_a" in v.name)] 
     #####
     reported_loss = training_loss
