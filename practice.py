@@ -666,7 +666,7 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1,
         multi_domain_adapter_gate_class=Regulation_Gate,
-        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v6,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         fake_domain_prob=config.get("fake_domain_prob", 0.1),
         noisy_prob=config.get("noisy_prob", None)),
     decoder=Multi_domain_SelfAttentionDecoder_v12(
@@ -682,7 +682,7 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1,
         multi_domain_adapter_gate_class=Regulation_Gate,
-        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v6,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         fake_domain_prob=config.get("fake_domain_prob", 0.1),
         noisy_prob=config.get("noisy_prob", None)))
   elif experiment=="residualv17":
