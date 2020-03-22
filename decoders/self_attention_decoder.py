@@ -4374,9 +4374,21 @@ class Multi_domain_SelfAttentionDecoder_v12(Decoder):
     new_cache = []
 
     if self.ADAP_gate_stopping_gradient:
-      g = self.multi_domain_gate(tf.stop_gradient(inputs), domain, mask=mask, training=training)
+      g = self.multi_domain_gate(
+          tf.stop_gradient(inputs),
+          mask=mask,
+          memory=memory,
+          memory_mask=memory_mask,
+          cache= None,
+          training=training)
     else:
-      g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
+      g = self.multi_domain_gate(
+          inputs,
+          mask=mask,
+          memory=memory,
+          memory_mask=memory_mask,
+          cache= None,
+          training=training)
 
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
 
