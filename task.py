@@ -4612,7 +4612,156 @@ def train_wdc(config,
       tf.summary.flush()
       if step > train_steps:
         break
+
+def train_ldr(config,
+          optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
+  #####
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+    
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_train_size = config["batch_train_size"]  
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config["domain"]
   
+  print("There are %d in-domain corpora"%len(source_file))
+
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=True,picking_prob=config.get("picking_prob",None))
+  generic_dataset = create_trainining_dataset(strategy, model, config["generic_domain"], config["generic_source_file"], config["generic_target_file"], batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=True,picking_prob=config.get("picking_prob",None))
+  #####
+  with strategy.scope():
+    model.create_variables(optimizer=optimizer)
+    gradient_accumulator = optimizer_util.GradientAccumulator()  
+
+  def _accumulate_gradients(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    
+    loss = model.compute_loss(outputs, target, training=True)
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+
+    variables = model.trainable_variables
+    print("var numb: ", len(variables))
+    gradients = optimizer.get_gradients(training_loss, variables)
+    gradient_accumulator(gradients)
+    num_examples = tf.reduce_sum(target["length"])
+    tf.print("domain: ", source["domain"][0])
+    return reported_loss, num_examples
+
+  def _apply_gradients():
+    variables = model.trainable_variables
+    grads_and_vars = []
+    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    gradient_accumulator.reset()
+ 
+  @tf.function
+  def _step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_gradients)
+      
+  @dataset_util.function_on_next(train_dataset)
+  def _train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, num_examples
+
+  @dataset_util.function_on_next(generic_dataset)
+  def _generic_train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, num_examples
+
+  # Runs the training loop.
+  import time
+  start = time.time()  
+  train_data_flow = iter(_train_forward())
+  generic_data_flow = iter(_generic_train_forward())
+  print("number of replicas: %d"%strategy.num_replicas_in_sync)
+  _loss = []  
+  _number_examples = []
+  step = optimizer.iterations.numpy()    
+
+  with _summary_writer.as_default():
+    while True:
+      #####Training batch
+      for _ in range(int(config.get("accumulation_step",1))):
+        loss, num_examples = next(train_data_flow)    
+        _, _ = next(generic_data_flow)
+        _loss.append(loss)
+        _number_examples.append(num_examples)
+      _step()  
+      step = optimizer.iterations.numpy()
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+        _loss = []
+        _number_examples = []
+        start = time.time()
+      if step % save_every == 0:
+        tf.get_logger().info("Saving checkpoint for step %d", step)
+        checkpoint_manager.save(checkpoint_number=step)
+      if step % eval_every == 0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+      tf.summary.flush()
+      if step > train_steps:
+        break 
+
 def averaged_checkpoint_translate(config, source_file,
               reference,
               model,
