@@ -4680,7 +4680,6 @@ def train_ldr(config,
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
-    tf.print("domain: ", source["domain"][0])
     return reported_loss, num_examples
 
   def _apply_gradients():
@@ -4697,7 +4696,7 @@ def train_ldr(config,
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
-      
+
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
