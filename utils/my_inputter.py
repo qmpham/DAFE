@@ -155,7 +155,7 @@ class LDR_inputter(WordEmbedder):
         self.dropout = dropout
         self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)
         self.domain_mask = make_domain_mask(num_domains, embedding_size, num_domain_units=num_domain_units)
-        tf.print("generic_mask: ", tf.nn.embedding_lookup(self.domain_mask,6))
+        tf.print("generic_mask: ", tf.nn.embedding_lookup(self.domain_mask,6), summarize=1000)
         self.num_domain_units = num_domain_units
         self.num_domains = num_domains
 
