@@ -4374,7 +4374,7 @@ class Multi_domain_SelfAttentionDecoder_v12(Decoder):
     new_cache = []
 
     if self.ADAP_gate_stopping_gradient:
-      g = self.multi_domain_gate(
+      g, _, _ = self.multi_domain_gate(
           tf.stop_gradient(inputs),
           mask=mask,
           memory=memory,
@@ -4382,7 +4382,7 @@ class Multi_domain_SelfAttentionDecoder_v12(Decoder):
           cache= None,
           training=training)
     else:
-      g = self.multi_domain_gate(
+      g, _, _ = self.multi_domain_gate(
           inputs,
           mask=mask,
           memory=memory,
