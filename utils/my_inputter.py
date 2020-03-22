@@ -155,6 +155,7 @@ class LDR_inputter(WordEmbedder):
         self.dropout = dropout
         self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)
         self.domain_mask = make_domain_mask(num_domains, embedding_size, num_domain_units=num_domain_units)
+        tf.print("generic_mask: ", tf.nn.embedding_lookup(self.domain_mask,6))
         self.num_domain_units = num_domain_units
         self.num_domains = num_domains
 
@@ -189,9 +190,9 @@ class LDR_inputter(WordEmbedder):
             domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
             domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,0),tf.shape(outputs))
 
-        print("domain_mask", domain_mask)
+        #print("domain_mask", domain_mask)
         outputs = outputs * domain_mask
-        print("outputs", outputs)
+        #print("outputs", outputs)
         return self.fusion_layer(outputs)
     
     def make_inference_dataset(self,
