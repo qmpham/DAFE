@@ -1569,7 +1569,7 @@ def train(config,
         domain = source["domain"][0]
         layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
         layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
-        tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
+        #tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
       if isinstance(output_activity_regularization_loss_scale, list):
         domain = source["domain"][0]
         output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
