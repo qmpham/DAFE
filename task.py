@@ -4560,7 +4560,7 @@ def train_wdc(config,
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
-  
+  @tf.function
   def _adv_step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_adv_gradients)
