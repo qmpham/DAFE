@@ -3969,12 +3969,6 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
     self.layer_norm = common.LayerNorm()
-    self.self_attention = MultiHeadAttention(
-        num_heads,
-        num_units,
-        dropout=attention_dropout)
-    self.self_attention = TransformerLayerWrapper(
-        self.self_attention, dropout)
     self.layers = [
         transformer.SelfAttentionDecoderLayer_v1(
             self.num_units,
