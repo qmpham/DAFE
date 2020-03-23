@@ -4109,7 +4109,7 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
     # Run each layer.
     new_cache = []
     for i, (layer, domain_share_gate, domain_specific_gate, feed_forward) in enumerate(zip(self.layers, self.domain_share_gates, self.domain_specific_gates, self.feed_forwards)):
-      inputs, layer_cache, attention = layer(
+      inputs, _ = layer(
           inputs,
           mask=mask,
           cache=None,
@@ -4120,9 +4120,9 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
       g_c = self.combine_gate(tf.concat([inputs, c_r, c_s],-1))
       c_l = inputs + g_c * c_r + (1-g_c) * c_s
       inputs = c_l + feed_forward(c_l)
-      new_cache.append(layer_cache)
+      new_cache.append(None)
     outputs = self.layer_norm(inputs)
-    return outputs, new_cache, attention
+    return outputs, new_cache, None
 
   def forward(self,
               inputs,
