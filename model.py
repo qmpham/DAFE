@@ -488,6 +488,8 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
                target_inputter,
                encoder,
                decoder,
+               num_units=512,
+               num_domains=6,
                share_embeddings=EmbeddingsSharingLevel.NONE):
     """
     if not isinstance(target_inputter, inputters.WordEmbedder):
@@ -511,7 +513,8 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
     self.encoder = encoder
     self.decoder = decoder
     self.share_embeddings = share_embeddings
-
+    self.classification_layer = Classification_layer(num_units, domain_numb=num_domains, name="On_top_encoder_domain_classification")
+    
   def auto_config(self, num_replicas=1):
     config = super(LDR_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
@@ -557,6 +560,7 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
     source_inputs = self.features_inputter(features, training=training)
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         source_inputs, sequence_length=source_length, training=training)
+    _, domain_classification_logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
 
     outputs = None
     predictions = None
@@ -570,6 +574,7 @@ class LDR_SequenceToSequence(model.SequenceGenerator):
           encoder_sequence_length,
           step=step,
           training=training)
+      outputs = dict(logits=outputs["logits"], attention=outputs["attention"], domain_classification_logits=domain_classification_logits)
 
     # When not in training, also compute the model predictions.
     if not training:
