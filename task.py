@@ -4588,7 +4588,7 @@ def train_wdc(config,
         _number_examples.append(num_examples)
       _step()  
       _adv_step()
-      step = optimizer.iterations.numpy()
+      step = optimizer.iterations.numpy() // 2
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
