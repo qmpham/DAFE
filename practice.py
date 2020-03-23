@@ -830,7 +830,9 @@ def main():
         ffn_inner_dim=2048,
         dropout=0.1,
         attention_dropout=0.1,
-        ffn_dropout=0.1))
+        ffn_dropout=0.1),
+    num_domains=num_domains,
+    num_units=512)
   elif experiment=="baselinev1":
     model = Multi_domain_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
@@ -880,7 +882,9 @@ def main():
           ffn_inner_dim=2048,
           dropout=0.1,
           attention_dropout=0.1,
-          ffn_dropout=0.1))
+          ffn_dropout=0.1),
+      num_domains=num_domains,
+      num_units=512)
   elif experiment=="pretrain":
     return
   warmup_steps = config.get("warmup_steps",4000)
