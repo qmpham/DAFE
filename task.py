@@ -4844,10 +4844,7 @@ def train_denny_britz(config,
     return reported_loss, encoder_classification_loss, num_examples
 
   def _apply_gradients():
-    #variables = model.trainable_variables
-    #non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name]
-    non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name] + \
-                    [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" in v.name and ("v_a" in v.name or "W_a" in v.name)]
+    non_adv_vars = [v for v in model.trainable_variables if "classification_layer" not in v.name]
     grads_and_vars = []
     for gradient, variable in zip(non_adv_gradient_accumulator.gradients, non_adv_vars):
       # optimizer.apply_gradients will sum the gradients accross replicas.
@@ -4857,9 +4854,7 @@ def train_denny_britz(config,
     non_adv_gradient_accumulator.reset()
 
   def _apply_adv_gradients():
-    #variables = model.trainable_variables
-    #adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name]
-    adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name and not ("v_a" in v.name or "W_a" in v.name)] 
+    adv_vars = [v for v in model.trainable_variables if "classification_layer" in v.name]  
     grads_and_vars = []
     for gradient, variable in zip(adv_gradient_accumulator.gradients, adv_vars):
       # optimizer.apply_gradients will sum the gradients accross replicas.
