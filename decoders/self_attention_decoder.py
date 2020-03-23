@@ -3969,16 +3969,11 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
     self.layer_norm = common.LayerNorm()
-    self.layers = [
-        transformer.SelfAttentionDecoderLayer(
-            self.num_units,
-            self.num_heads,
-            ffn_inner_dim,
-            num_sources=num_sources,
-            dropout=dropout,
-            attention_dropout=attention_dropout,
-            ffn_dropout=ffn_dropout,
-            ffn_activation=ffn_activation)
+    self.self_attention_layers = [
+        transformer.TransformerLayerWrapper(transformer.MultiHeadAttention(
+        num_heads,
+        num_units,
+        dropout=attention_dropout), dropout)
         for i in range(num_layers)]
 
     self.domain_share_gates = [
@@ -3999,17 +3994,18 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
 
     self.combine_gate = common.Dense(self.num_units, activation=tf.nn.sigmoid)
 
-    """ self.feed_forwards = [
+    self.feed_forwards = [
       transformer.FeedForwardNetwork(ffn_inner_dim,
                self.num_units,
                dropout=0.1,
                activation=tf.nn.relu)
-        for i in range(num_layers)] """
-    
+        for i in range(num_layers)] 
+    """
     self.feed_forwards = [
       common.Dense(self.num_units)
       for i in range(num_layers)
     ]
+    """
 
   @property
   def minimum_sources(self):
@@ -4112,16 +4108,14 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
 
     # Run each layer.
     new_cache = []
-    for i, (layer, domain_share_gate, domain_specific_gate, feed_forward) in enumerate(zip(self.layers, self.domain_share_gates, self.domain_specific_gates, self.feed_forwards)):
+    for i, (layer, domain_share_gate, domain_specific_gate, feed_forward) in enumerate(zip(self.self_attention_layers, self.domain_share_gates, self.domain_specific_gates, self.feed_forwards)):
       inputs, layer_cache, attention = layer(
           inputs,
           mask=mask,
-          memory=memory,
-          memory_mask=memory_mask,
-          cache=cache[i] if cache is not None else None,
+          cache=None,
           training=training)
-      c_r, _ = domain_share_gate(inputs, memory = h_r, mask = encoder_mask)
-      c_s, _ = domain_specific_gate(inputs, memory = h_s, mask = encoder_mask)
+      c_r, _ = domain_share_gate(inputs, memory = h_r, mask = memory_mask, training=training)
+      c_s, _ = domain_specific_gate(inputs, memory = h_s, mask = memory_mask, training=training)
       #tf.print("h_r:", h_r.shape, "h_s", h_s.shape, "c_r", c_r.shape, "c_s", c_s.shape, sep="|")
       g_c = self.combine_gate(tf.concat([inputs, c_r, c_s],-1))
       c_l = inputs + g_c * c_r + (1-g_c) * c_s
@@ -4405,8 +4399,10 @@ class Multi_domain_SelfAttentionDecoder_v12(Decoder):
         inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) * g + inputs * (1-g)
       else:
         inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * g + inputs * (1-g)
+
       if internal_node_printing:
         tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(tf.abs(g),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
+
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
 
