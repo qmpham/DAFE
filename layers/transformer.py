@@ -423,4 +423,52 @@ class SelfAttentionDecoderLayer(tf.keras.layers.Layer):
     cache = dict(self_kv=self_kv, memory_kv=memory_kv)
     return outputs, cache, attention
 
+class SelfAttentionDecoderLayer_v1(tf.keras.layers.Layer):
+  """Implements one self-attention decoding layer."""
+
+  def __init__(self,
+               num_units,
+               num_heads,
+               ffn_inner_dim,
+               num_sources=1,
+               dropout=0.1,
+               attention_dropout=0.1,
+               ffn_dropout=0.1,
+               ffn_activation=tf.nn.relu,
+               **kwargs):
+    
+    super(SelfAttentionDecoderLayer_v1, self).__init__(**kwargs)
+    self.self_attention = MultiHeadAttention(
+        num_heads,
+        num_units,
+        dropout=attention_dropout)
+    self.self_attention = TransformerLayerWrapper(
+        self.self_attention, dropout)
+
+  def map_v1_weights(self, weights):
+    m = []
+    m += self.self_attention.map_v1_weights(weights["masked_multi_head"])
+    m += self.attention[0].map_v1_weights(weights["multi_head"])
+    m += self.ffn.map_v1_weights(weights["ffn"])
+    return m
+
+  # pylint: disable=arguments-differ
+  def call(self,
+           inputs,
+           mask=None,
+           memory=None,
+           memory_mask=None,
+           cache=None,
+           training=None):
+    """Runs the decoder layer."""
+    if cache is None:
+      cache = {}
+
+    outputs, self_kv = self.self_attention(
+        inputs,
+        mask=mask,
+        cache=cache.get("self_kv"),
+        training=training)
+
+    return outputs
   
