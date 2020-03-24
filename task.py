@@ -4557,7 +4557,7 @@ def train_wdc(config,
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_adv_loss_1, per_replica_adv_loss_2, per_replica_encoder_classification_loss, per_replica_num_examples = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_adv_loss_2, per_replica_encoder_classification_loss, per_replica_num_examples = strategy.experimental_run_v2(
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)    
