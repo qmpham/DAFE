@@ -469,6 +469,5 @@ class SelfAttentionDecoderLayer_v1(tf.keras.layers.Layer):
         mask=mask,
         cache=cache.get("self_kv"),
         training=training)
-    cache = dict(self_kv=self_kv)
-    return outputs, cache
+    return outputs, self_kv
   

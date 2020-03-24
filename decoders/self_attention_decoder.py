@@ -3986,7 +3986,7 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
               self.num_heads,
               self.num_units,
               dropout=0.1,
-              return_attention=False,)
+              return_attention=True,)
         for i in range(num_layers)]
 
     self.domain_specific_gates = [
@@ -4113,19 +4113,19 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
     # Run each layer.
     new_cache = []
     for i, (layer, domain_share_gate, domain_specific_gate, feed_forward) in enumerate(zip(self.layers, self.domain_share_gates, self.domain_specific_gates, self.feed_forwards)):
-      inputs, layer_cache = layer(
+      inputs, self_kv = layer(
           inputs,
           mask=mask,
           memory=memory,
           memory_mask=memory_mask,
           cache=cache[i] if cache is not None else None,
           training=training)
-      c_r, attention = domain_share_gate(inputs, memory = h_r, mask = encoder_mask)
+      c_r, memory_kv, attention = domain_share_gate(inputs, memory = h_r, mask = encoder_mask, )
       c_s, _ = domain_specific_gate(inputs, memory = h_s, mask = encoder_mask)
-      #tf.print("h_r:", h_r.shape, "h_s", h_s.shape, "c_r", c_r.shape, "c_s", c_s.shape, sep="|")
       g_c = self.combine_gate(tf.concat([inputs, c_r, c_s],-1))
       c_l = inputs + g_c * c_r + (1-g_c) * c_s
       inputs = c_l + feed_forward(c_l)
+      layer_cache = dict(self_kv=self_kv, memory_kv=[memory_kv])
       new_cache.append(layer_cache)
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
