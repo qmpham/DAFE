@@ -114,7 +114,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
       encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         [source_inputs, features["domain"]], sequence_length=source_length, training=training)
 
-    _, domain_classification_logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
+    #_, domain_classification_logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
 
     outputs = None
     predictions = None
@@ -128,7 +128,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           encoder_sequence_length,
           step=step,
           training=training)
-      outputs = dict(logits=outputs["logits"], attention=outputs["attention"], domain_classification_logits=domain_classification_logits)
+      #outputs = dict(logits=outputs["logits"], attention=outputs["attention"], domain_classification_logits=domain_classification_logits)
 
     # When not in training, also compute the model predictions.
     if not training:
