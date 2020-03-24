@@ -184,10 +184,10 @@ class LDR_inputter(WordEmbedder):
         if domain==None:
             domain = features["domain"][0]
             ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
-            ldr_inputs = ldr_inputs[:,self.num_domain_units * domain : self.num_domain_units * (domain+1)]
+            ldr_inputs = ldr_inputs[:,:,self.num_domain_units * domain : self.num_domain_units * (domain+1)]
         else:
-            ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, domain)
-            ldr_inputs = tf.tile(tf.expand_dims(ldr_inputs,0), (tf.shape(outputs)[0],1))
+            ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
+            ldr_inputs = ldr_inputs[:,self.num_domain_units * domain : self.num_domain_units * (domain+1)]
 
         outputs = tf.concat([outputs, ldr_inputs],-1)
         return self.fusion_layer(outputs)
