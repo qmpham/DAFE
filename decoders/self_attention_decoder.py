@@ -4127,6 +4127,7 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
       inputs = c_l + feed_forward(c_l)
       layer_cache = dict(self_kv=self_kv, memory_kv=[memory_kv])
       new_cache.append(layer_cache)
+      attention = attention[:, 0]
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
 
