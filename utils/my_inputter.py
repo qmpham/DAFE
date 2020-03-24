@@ -195,7 +195,7 @@ class LDR_inputter(WordEmbedder):
     def build(self, input_shape):
         self.ldr_embed = self.add_weight(
                                 "domain_embedding",
-                                [self.num_domains, self.num_domain_units * self.num_domains],
+                                [self.vocabulary_size, self.num_domain_units * self.num_domains],
                                 initializer=None,
                                 trainable=True)
         super(LDR_inputter, self).build(input_shape)
