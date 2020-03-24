@@ -4120,11 +4120,11 @@ class Multi_domain_SelfAttentionDecoder_WDC(Decoder):
           memory_mask=memory_mask,
           cache=cache[i] if cache is not None else None,
           training=training)
-      c_r, memory_kv, attention = domain_share_gate(inputs, memory = h_r, mask = encoder_mask, )
-      c_s, _ = domain_specific_gate(inputs, memory = h_s, mask = encoder_mask)
+      c_r, memory_kv, attention = domain_share_gate(inputs, memory = h_r, mask = encoder_mask, training=training)
+      c_s, _ = domain_specific_gate(inputs, memory = h_s, mask = encoder_mask, training=training)
       g_c = self.combine_gate(tf.concat([inputs, c_r, c_s],-1))
       c_l = inputs + g_c * c_r + (1-g_c) * c_s
-      inputs = c_l + feed_forward(c_l)
+      inputs = c_l + feed_forward(c_l, training=training)
       layer_cache = dict(self_kv=self_kv, memory_kv=[memory_kv])
       new_cache.append(layer_cache)
       attention = attention[:, 0]

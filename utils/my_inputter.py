@@ -154,8 +154,6 @@ class LDR_inputter(WordEmbedder):
         self.embedding_file = None
         self.dropout = dropout
         self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)
-        self.domain_mask = make_domain_mask(num_domains, embedding_size, num_domain_units=num_domain_units)
-        tf.print("generic_mask: ", tf.nn.embedding_lookup(self.domain_mask,6), summarize=1000)
         self.num_domain_units = num_domain_units
         self.num_domains = num_domains
 
@@ -184,17 +182,24 @@ class LDR_inputter(WordEmbedder):
         outputs = common.dropout(outputs, self.dropout, training=training)
                 
         if domain==None:
-            domain_mask = tf.nn.embedding_lookup(self.domain_mask, features["domain"])
-            domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,1),tf.shape(outputs))
+            domain = features["domain"][0]
+            ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
+            ldr_inputs = ldr_inputs[:,self.num_domain_units * domain : self.num_domain_units * (domain+1)]
         else:
-            domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
-            domain_mask = tf.broadcast_to(tf.expand_dims(domain_mask,0),tf.shape(outputs))
+            ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, domain)
+            ldr_inputs = tf.tile(tf.expand_dims(ldr_inputs,0), (tf.shape(outputs)[0],1))
 
-        #print("domain_mask", domain_mask)
-        outputs = outputs * domain_mask
-        #print("outputs", outputs)
+        outputs = tf.concat([outputs, ldr_inputs],-1)
         return self.fusion_layer(outputs)
     
+    def build(self, input_shape):
+        self.ldr_embed = self.add_weight(
+                                "domain_embedding",
+                                [self.num_domains, self.num_domain_units * self.num_domains],
+                                initializer=None,
+                                trainable=True)
+        super(LDR_inputter, self).build(input_shape)
+
     def make_inference_dataset(self,
                              feature_file,
                              batch_size,
