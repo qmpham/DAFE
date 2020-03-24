@@ -16,7 +16,7 @@ from opennmt.optimizers import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter
 from opennmt.models.sequence_to_sequence import SequenceToSequence
-from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC
+from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1
 from encoders.self_attention_encoder import *
 from decoders.self_attention_decoder import *
 import numpy as np
@@ -813,6 +813,28 @@ def main():
         ffn_dropout=0.1))
   elif experiment=="baseline":
     model = LDR_SequenceToSequence(
+    source_inputter=My_inputter(embedding_size=512),
+    target_inputter=My_inputter(embedding_size=512),
+    encoder=onmt.encoders.SelfAttentionEncoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1),
+    decoder=onmt.decoders.SelfAttentionDecoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1),
+    num_domains=num_domains,
+    num_units=512)
+  elif experiment=="baselinev2":
+    model = LDR_SequenceToSequence_v1(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
     encoder=onmt.encoders.SelfAttentionEncoder(
