@@ -4500,7 +4500,6 @@ def train_wdc(config,
     total_loss = training_loss - adv_loss_2 * 0.2 + encoder_classification_loss #+ tf.reduce_mean(decoder_classification_loss)
     non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name] + \
                     [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" in v.name and ("v_a" in v.name or "W_a" in v.name)]
-    adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name and not ("v_a" in v.name or "W_a" in v.name)] 
     #####
     reported_loss = training_loss
     print("var numb: ", len(non_adv_vars))
@@ -4508,7 +4507,22 @@ def train_wdc(config,
       print(v.name)
     gradients = optimizer.get_gradients(total_loss, non_adv_vars)
     non_adv_gradient_accumulator(gradients)
-    #####
+
+    num_examples = tf.reduce_sum(target["length"])
+    return reported_loss, adv_loss_2, encoder_classification_loss, num_examples
+
+  def _accumulate_adv_gradients(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    classification_logits_r = outputs["classification_logits_r"]
+    classification_logits_s = outputs["classification_logits_s"]
+    probs = tf.nn.softmax(classification_logits_s, axis=1)
+    prediction_probs = tf.map_fn(lambda x: x[0][x[1]], (probs, source["domain"]), dtype=tf.float32)
+    adv_loss_1 = - tf.reduce_mean(tf.math.log(prediction_probs)) 
+    adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name and not ("v_a" in v.name or "W_a" in v.name)] 
     print("adv_var_numb: ", len(adv_vars))
     for v in adv_vars:
       print(v.name)
@@ -4516,11 +4530,9 @@ def train_wdc(config,
     adv_gradient_accumulator(gradients)
     #####
     num_examples = tf.reduce_sum(target["length"])
-    return reported_loss, adv_loss_1, adv_loss_2, encoder_classification_loss, num_examples
+    return adv_loss_1, num_examples
 
   def _apply_gradients():
-    #variables = model.trainable_variables
-    #non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name]
     non_adv_vars = [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" not in v.name] + \
                     [v for v in model.trainable_variables if "On_top_decoder_domain_classification" not in v.name and "ADV_on_top_encoder_domain_classification" in v.name and ("v_a" in v.name or "W_a" in v.name)]
     grads_and_vars = []
@@ -4532,8 +4544,6 @@ def train_wdc(config,
     non_adv_gradient_accumulator.reset()
 
   def _apply_adv_gradients():
-    #variables = model.trainable_variables
-    #adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name]
     adv_vars = [v for v in model.trainable_variables if "ADV_on_top_encoder_domain_classification" in v.name and not ("v_a" in v.name or "W_a" in v.name)] 
     grads_and_vars = []
     for gradient, variable in zip(adv_gradient_accumulator.gradients, adv_vars):
@@ -4551,11 +4561,21 @@ def train_wdc(config,
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)    
-      adv_loss_1 = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_adv_loss_1, None) 
       adv_loss_2 = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_adv_loss_2, None) 
       encoder_classification_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_encoder_classification_loss, None)   
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, adv_loss_1, adv_loss_2, encoder_classification_loss, num_examples
+    return loss, adv_loss_2, encoder_classification_loss, num_examples
+
+  @dataset_util.function_on_next(train_dataset)
+  def _train_adv_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_adv_loss_1, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      adv_loss_1 = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_adv_loss_1, None) 
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return adv_loss_1, num_examples
   
   @tf.function
   def _step():
@@ -4570,6 +4590,7 @@ def train_wdc(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
+  train_adv_data_flow = iter(_train_adv_forward())
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   _adv_loss_1 = [] 
@@ -4581,7 +4602,8 @@ def train_wdc(config,
     while True:
       #####Training batch
       for _ in range(int(config.get("accumulation_step",1))):
-        loss, adv_loss_1, adv_loss_2, encoder_classification_loss, num_examples = next(train_data_flow)    
+        loss, adv_loss_2, encoder_classification_loss, num_examples = next(train_data_flow)    
+        adv_loss_1, _ = next(train_adv_data_flow)
         _loss.append(loss)
         _adv_loss_1.append(adv_loss_1)
         _adv_loss_2.append(adv_loss_2)
