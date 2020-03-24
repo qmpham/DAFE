@@ -190,6 +190,7 @@ class LDR_inputter(WordEmbedder):
             ldr_inputs = ldr_inputs[:,self.num_domain_units * domain : self.num_domain_units * (domain+1)]
 
         outputs = tf.concat([outputs, ldr_inputs],-1)
+        tf.print("output shape: ", tf.shape(outputs))
         return outputs
     
     def build(self, input_shape):
