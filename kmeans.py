@@ -12,6 +12,6 @@ args = parser.parse_args()
 
 kmeans_save_path = args.kmeans_save_path
 emb_files = args.emb_files
-n_clusters = args.n_clusters
+n_clusters = int(args.n_clusters)
 labels_ouput_path = args.output
 task.kmeans_clustering(emb_files, n_clusters, kmeans_save_path, labels_ouput_path)
