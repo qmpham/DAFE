@@ -4309,7 +4309,6 @@ def sentence_encode(source_file,
       src_sentence_embedding__ = src_sentence_embedding_.numpy()      
       src_sentence_embedding_list.append(src_sentence_embedding__)
       count += src_sentence_embedding__.shape[0]
-      print(count)
       if count > maxcount:
         src_sentences = np.concatenate(src_sentence_embedding_list, axis=0)
         np.savez(output_file+str(index),sentence_embeddings=src_sentences)
