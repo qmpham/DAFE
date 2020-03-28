@@ -2,7 +2,6 @@ import argparse
 import task
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument("--config", required=True , help="configuration file")
 parser.add_argument("--src")
 parser.add_argument("--emb_files", nargs="+")
 parser.add_argument("--n_clusters", default=30)
