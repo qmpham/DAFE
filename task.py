@@ -4966,7 +4966,7 @@ def train_denny_britz(config,
         break
 
 def kmeans_clustering(emb_files, n_clusters, kmeans_save_path, labels_ouput_path):
-  import sklearn
+  from sklearn.cluster import KMeans
   emb_list = []
   for emb_file in emb_files:
     emb_storage = np.load(emb_file)
@@ -4976,7 +4976,7 @@ def kmeans_clustering(emb_files, n_clusters, kmeans_save_path, labels_ouput_path
   X = np.concatenate(emb_list,0)
   print("Input shape: ", X.shape)
   print("n_cluster: ", n_clusters)
-  kmeans = sklearn.cluster.KMeans(n_clusters=n_clusters, init='k-means++', n_init=10, max_iter=300, tol=0.0001, precompute_distances='auto', 
+  kmeans = KMeans(n_clusters=n_clusters, init='k-means++', n_init=10, max_iter=300, tol=0.0001, precompute_distances='auto', 
                                   verbose=0, random_state=None, copy_x=True, n_jobs=-1, algorithm='auto').fit(X)
 
   label_predictions = kmeans.predict(X)
