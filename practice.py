@@ -1019,12 +1019,6 @@ def main():
     task.sentence_encode(source_file, model, checkpoint_manager, checkpoint, domain, output_file, experiment=experiment, batch_size=1)
   elif args.run == "train_denny_britz":
     task.train_denny_britz(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
-  elif args.run == "kmeans":
-    kmeans_save_path = args.kmeans_save_path
-    emb_files = args.emb_files
-    n_clusters = args.n_clusters
-    labels_ouput_path = args.output
-    task.kmeans_clustering(emb_files, n_clusters, kmeans_save_path, labels_ouput_path)
   elif args.run == "experimental_translate":
     model.create_variables()
     print("translate with encoder_domain %d and decoder_domain %d"%(int(args.encoder_domain), int(args.decoder_domain)))
