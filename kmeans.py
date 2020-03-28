@@ -6,6 +6,7 @@ parser.add_argument("--src")
 parser.add_argument("--emb_files", nargs="+")
 parser.add_argument("--n_clusters", default=30)
 parser.add_argument("--kmeans_save_path")
+parser.add_argument("--output", default="trans")
 
 args = parser.parse_args()
 
