@@ -27,6 +27,7 @@ from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
 from utils.utils_ import average_checkpoints
 from utils.dataprocess import count_lines
+
 def update(v,g,lr=1.0):
   if isinstance(g, tf.IndexedSlices):
     return tf.tensor_scatter_nd_sub(v/lr,tf.expand_dims(g.indices,1),g.values)*lr
@@ -4963,6 +4964,27 @@ def train_denny_britz(config,
       tf.summary.flush()
       if step > train_steps:
         break
+
+def kmeans_clustering(emb_files, n_clusters, kmeans_save_path, labels_ouput_path):
+  import sklearn
+  emb_list = []
+  for emb_file in emb_files:
+    emb_storage = np.load(emb_file)
+    embs = emb_storage["sentence_embeddings"]
+    emb_list.append(embs)
+  
+  X = np.concatenate(emb_list,0)
+  print("Input shape: ", X.shape)
+  print("n_cluster: ", n_clusters)
+  kmeans = sklearn.cluster.KMeans(n_clusters=n_clusters, init='k-means++', n_init=10, max_iter=300, tol=0.0001, precompute_distances='auto', 
+                                  verbose=0, random_state=None, copy_x=True, n_jobs=-1, algorithm='auto').fit(X)
+
+  label_predictions = kmeans.predict(X)
+  kmeans_params = kmeans.get_params()
+  np.savez(kmeans_save_path, **kmeans_params)
+  with open(labels_ouput_path, "w") as f:
+    for l in label_predictions:
+      print(l,file=f)
 
 def averaged_checkpoint_translate(config, source_file,
               reference,
