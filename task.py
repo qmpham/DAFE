@@ -4272,6 +4272,56 @@ def domain_predict(source_file,
   from sklearn.metrics import classification_report
   print(classification_report(true_domain, predicted_domain))
 
+def sentence_encode(source_file,
+              model,
+              checkpoint_manager,
+              checkpoint,
+              domain,
+              output_file,
+              experiment="ldr",
+              batch_size=10):
+  
+  # Create the inference dataset.
+  checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  tf.get_logger().info("Evaluating model %s", checkpoint_manager.latest_checkpoint)
+  print("In domain %d"%domain)
+  dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
+  iterator = iter(dataset)
+
+  # Create the mapping for target ids to tokens.
+
+  @tf.function
+  def encode_next():    
+    source = next(iterator)  
+    emb = model.sentence_encode(source, training=False)
+    return emb
+
+  # Iterates on the dataset.
+  
+  print("output file: ", output_file)
+  src_sentence_embedding_list = []  
+  maxcount = 1000000
+  count = 0
+  index = 0
+  while True:    
+    try:
+      src_sentence_embedding_ = encode_next()
+      src_sentence_embedding__ = src_sentence_embedding_.numpy()      
+      src_sentence_embedding_list.append(src_sentence_embedding__)
+      count += src_sentence_embedding__.shape[0]
+      print(count)
+      if count > maxcount:
+        src_sentences = np.concatenate(src_sentence_embedding_list, axis=0)
+        np.savez(output_file+str(index),sentence_embeddings=src_sentences)
+        count = 0
+        src_sentence_embedding_list = []
+        index +=1
+    except tf.errors.OutOfRangeError:
+      break
+  if len(src_sentence_embedding_list)>0:
+    src_sentences = np.concatenate(src_sentence_embedding_list, axis=0)
+    np.savez(output_file+str(index),sentence_embeddings=src_sentences)
+
 def experimental_translate(source_file,
               reference,
               model,

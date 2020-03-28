@@ -137,6 +137,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           encoder_outputs,
           encoder_state,
           encoder_sequence_length)
+    
     return outputs, predictions
 
   def adv_call(self, features, labels=None, training=None, step=None):
@@ -479,6 +480,13 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         [source_inputs, features["domain"]], sequence_length=source_length, training=training)
     _, logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
     return logits
+
+  def sentence_encode(self, features, training=False):
+    source_length = self.features_inputter.get_length(features)
+    source_inputs = self.features_inputter(features, training=training)
+    mask = self.encoder.build_mask(source_inputs, source_length, dtype=tf.float32)
+    mask = tf.expand_dims(mask,2)
+    return tf.reduce_mean(source_inputs * tf.broadcast_to(mask, tf.shape(source_inputs)))
 
 class LDR_SequenceToSequence_v1(model.SequenceGenerator):
   """A sequence to sequence model."""
