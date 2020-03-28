@@ -486,7 +486,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     source_inputs = self.features_inputter(features, training=training)
     mask = self.encoder.build_mask(source_inputs, source_length, dtype=tf.float32)
     mask = tf.expand_dims(mask,2)
-    return tf.reduce_mean(source_inputs * tf.broadcast_to(mask, tf.shape(source_inputs)))
+    return tf.reduce_mean(source_inputs * tf.broadcast_to(mask, tf.shape(source_inputs)),-1)
 
 class LDR_SequenceToSequence_v1(model.SequenceGenerator):
   """A sequence to sequence model."""
