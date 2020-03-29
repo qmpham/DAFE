@@ -16,8 +16,7 @@ def kmeans_clustering(emb_files, n_clusters, kmeans_save_path, labels_ouput_path
     kmeans.set_params(**data)
 
   label_predictions = kmeans.predict(X)
-  #kmeans_params = kmeans.get_params()
-  #np.savez(kmeans_save_path, **kmeans_params)
+  
   with open(labels_ouput_path, "w") as f:
     for l in label_predictions:
       print(l,file=f)
