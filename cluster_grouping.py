@@ -24,8 +24,8 @@ with open(src_path,"r") as f1:
             tgt_ls = [l.strip() for l in f3.readlines()]
             domains = [int(l.strip()) for l in f2.readlines()]
             for src_l, tgt_l, domain in zip(src_ls, tgt_ls, domains):
-                print(l,file=src_files[domain])
-                print(l,file=tgt_files[domain])
+                print(src_l,file=src_files[domain])
+                print(tgt_l,file=tgt_files[domain])
                 print("Domain=%d %s"%(domain,src_l),file=src_tag_files[domain])
                 print("Domain=%d %s"%(domain,tgt_l),file=tgt_tag_files[domain])
 
