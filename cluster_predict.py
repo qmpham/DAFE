@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+import pickle
 def kmeans_clustering(emb_files, n_clusters, kmeans_save_path, labels_ouput_path):
   from sklearn.cluster import KMeans
   emb_list = []
@@ -11,11 +12,7 @@ def kmeans_clustering(emb_files, n_clusters, kmeans_save_path, labels_ouput_path
   X = np.concatenate(emb_list,0)
   print("Input shape: ", X.shape)
   print("n_cluster: ", n_clusters)
-  with np.load(kmeans_save_path, allow_pickle=True) as data:
-    print(data)
-    print(data.files)
-    kmeans = KMeans(n_clusters=n_clusters, init='k-means++', n_init=10, max_iter=300, tol=0.0001, precompute_distances='auto', verbose=0, random_state=None, copy_x=True, n_jobs=-1, algorithm='auto')
-    kmeans.set_params(**data)
+  kmeans = pickle.load(open(kmeans_save_path, 'rb'))
 
   label_predictions = kmeans.predict(X)
   
