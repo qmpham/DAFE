@@ -21,6 +21,5 @@ with open(path,"r") as f1:
             print(l,file=files[domain])
             print(domain,file=tag_files[domain])
 
-print(files)
-[f.closed() for f in files]
-[f.closed() for f in tag_files]
+[f.close() for f in files]
+[f.close() for f in tag_files]
