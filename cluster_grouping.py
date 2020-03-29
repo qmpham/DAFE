@@ -27,5 +27,7 @@ with open(path,"r") as f1:
             print("Domain=%d %s"%(domain,l),file=src_tag_files[domain])
             print("Domain=%d %s"%(domain,l),file=tgt_tag_files[domain])
 
-[f.close() for f in files]
-[f.close() for f in tag_files]
+[f.close() for f in src_files]
+[f.close() for f in tgt_files]
+[f.close() for f in src_tag_files]
+[f.close() for f in tgt_tag_files]
