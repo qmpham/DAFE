@@ -12,7 +12,7 @@ def kmeans_clustering(emb_files, n_clusters, kmeans_save_path, labels_ouput_path
   X = np.concatenate(emb_list,0)
   print("Input shape: ", X.shape)
   print("n_cluster: ", n_clusters)
-  kmeans = KMeans(n_clusters=n_clusters, init='k-means++', n_init=10, max_iter=3, tol=0.0001, precompute_distances='auto', verbose=1, random_state=None, copy_x=True, n_jobs=-1, algorithm='auto').fit(X)
+  kmeans = KMeans(n_clusters=n_clusters, init='k-means++', n_init=10, max_iter=3, tol=0.0001, precompute_distances='auto', verbose=1, random_state=None, copy_x=True, n_jobs=-1, algorithm='auto').fit(X[:100,:])
 
   label_predictions = kmeans.predict(X)
   pickle.dump(kmeans, open(kmeans_save_path, 'wb'))
