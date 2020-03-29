@@ -12,6 +12,7 @@ def kmeans_clustering(emb_files, n_clusters, kmeans_save_path, labels_ouput_path
   print("Input shape: ", X.shape)
   print("n_cluster: ", n_clusters)
   with np.load(kmeans_save_path, allow_pickle=True) as data:
+    print(data)
     kmeans = KMeans(n_clusters=n_clusters, init='k-means++', n_init=10, max_iter=300, tol=0.0001, precompute_distances='auto', verbose=0, random_state=None, copy_x=True, n_jobs=-1, algorithm='auto')
     kmeans.set_params(**data)
 
