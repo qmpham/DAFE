@@ -135,6 +135,113 @@ def translate(source_file,
     else:
       return score
 
+
+def translate_with_tag_file(source_file,
+              tag_file,
+              reference,
+              model,
+              checkpoint_manager,
+              checkpoint,              
+              output_file,
+              length_penalty,
+              checkpoint_path=None,
+              experiment="ldr",
+              score_type="MultiBLEU",
+              batch_size=1,
+              beam_size=5):
+  
+  # Create the inference dataset.
+  if checkpoint_path == None:
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
+  print("with domain tag: %s"%tag_file)
+  checkpoint.restore(checkpoint_path)
+  domain = 0
+  dataset = model.examples_inputter.make_inference_dataset(source_file, 1, domain)
+  tag_dataset = tf.data.TextLineDataset(tag_dataset)
+  tag_dataset = tag_dataset.batch(1)
+  iterator = iter(dataset)
+  tag_iterator = iter(tag_dataset)
+  # Create the mapping for target ids to tokens.
+  ids_to_tokens = model.labels_inputter.ids_to_tokens
+
+  @tf.function
+  def predict_next():    
+    source = next(iterator)
+    tag = next(tag_iterator)
+    source_length = source["length"]
+    batch_size = tf.shape(source_length)[0]
+    source_inputs = model.features_inputter(source)
+    tag_inputs = tf.strings.to_number(tag, out_type=tf.int64)
+    if experiment in ["residual","residualv15","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
+      encoder_outputs, _, _ = model.encoder([source_inputs, tag_inputs], source_length)
+    else:
+      encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
+
+    # Prepare the decoding strategy.
+    if beam_size > 1:
+      encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
+      source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
+      decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
+    else:
+      decoding_strategy = onmt.utils.GreedySearch()
+
+    # Run dynamic decoding.
+    decoder_state = model.decoder.initial_state(
+        memory=encoder_outputs,
+        memory_sequence_length=source_length)
+    if experiment in ["residual","residualv2","residualv15","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv1","residualv3","residualv5","residualv6","residualv7","residualv13","residualv12","residualv11","residualv8","residualv9","baselinev1"]:
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), tag_inputs[0]), tf.int64)]
+    elif experiment in ["DC"]:
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=tag_inputs[0])
+    elif experiment in ["WDC"]:
+      e_r, _ = model.classification_layer(encoder_outputs, source_length, training=False)
+      e_s, _ = model.adv_classification_layer(encoder_outputs, source_length, training=False)
+      g_s = model.share_gate(tf.concat([tf.tile(tf.expand_dims(e_s,1),[1,tf.shape(encoder_outputs)[1],1]),encoder_outputs],-1))
+      g_r = model.specific_gate(tf.concat([tf.tile(tf.expand_dims(e_r,1),[1,tf.shape(encoder_outputs)[1],1]),encoder_outputs],-1))
+      h_r = g_r * encoder_outputs
+      h_s = g_s * encoder_outputs
+      encoder_mask = model.encoder.build_mask(source_inputs, sequence_length=source_length)
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), h_r, h_s, encoder_mask]
+    else:
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
+    decoded = model.decoder.dynamic_decode(
+        map_input_fn,
+        tf.fill([batch_size], START_OF_SENTENCE_ID),
+        end_id=END_OF_SENTENCE_ID,
+        initial_state=decoder_state,
+        decoding_strategy=decoding_strategy,
+        maximum_iterations=250)
+    target_lengths = decoded.lengths
+    target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64))
+    return target_tokens, target_lengths
+
+  # Iterates on the dataset.
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  print("output file: ", output_file)
+  with open(output_file, "w") as output_:
+    while True:    
+      try:
+        batch_tokens, batch_length = predict_next()
+        for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
+          sentence = b" ".join(tokens[0][:length[0]])
+          print_bytes(sentence, output_)
+          #print_bytes(sentence)
+      except tf.errors.OutOfRangeError:
+        break
+  if reference!=None:
+    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
+    score = scorer(reference, output_file)
+    if score is None:
+      return 0.0
+    else:
+      return score
+
 def debug(config,
           optimizer,          
           learning_rate,
@@ -1684,9 +1791,14 @@ def train(config,
       if step % eval_every == 0:
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
+        if config.get("unsupervised_clustering",False):
+          target_files = config.get("target_files")
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          if config.get("unsupervised_clustering",False):
+            score = translate_with_tag_file(src, target_files[i], ref, model, checkpoint_manager, checkpoint, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          else:
+            score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
       tf.summary.flush()
       if step > train_steps:
