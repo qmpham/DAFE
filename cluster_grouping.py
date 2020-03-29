@@ -11,7 +11,7 @@ n_clusters = int(args.n_clusters)
 path = args.src
 label_path = args.label
 files = [open(path+".cluster.%d"%i,"w") for i in range(n_clusters)]
-tag_files = [open(path+".cluster.%d.tag.0"%i,"w") for i in range(n_clusters)]
+tag_files = [open(path+".cluster.%d.tagged"%i,"w") for i in range(n_clusters)]
 
 with open(path,"r") as f1:
     with open(label_path,"r") as f2:
@@ -19,7 +19,7 @@ with open(path,"r") as f1:
         domains = [int(l.strip()) for l in f2.readlines()]
         for l, domain in zip(ls,domains):
             print(l,file=files[domain])
-            print(domain,file=tag_files[domain])
+            print("Domain=%d %s"%(domain,l),file=tag_files[domain])
 
 [f.close() for f in files]
 [f.close() for f in tag_files]
