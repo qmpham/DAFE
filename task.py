@@ -135,7 +135,6 @@ def translate(source_file,
     else:
       return score
 
-
 def translate_with_tag_file(source_file,
               tag_file,
               reference,
@@ -158,7 +157,7 @@ def translate_with_tag_file(source_file,
   checkpoint.restore(checkpoint_path)
   domain = 0
   dataset = model.examples_inputter.make_inference_dataset(source_file, 1, domain)
-  tag_dataset = tf.data.TextLineDataset(tag_dataset)
+  tag_dataset = tf.data.TextLineDataset(tag_file)
   tag_dataset = tag_dataset.batch(1)
   iterator = iter(dataset)
   tag_iterator = iter(tag_dataset)
@@ -173,7 +172,7 @@ def translate_with_tag_file(source_file,
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
     tag_inputs = tf.strings.to_number(tag, out_type=tf.int64)
-    if experiment in ["residual","residualv15","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
+    if experiment in ["residual","residualv15","DC1","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
       encoder_outputs, _, _ = model.encoder([source_inputs, tag_inputs], source_length)
     else:
       encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
@@ -1792,11 +1791,11 @@ def train(config,
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         if config.get("unsupervised_clustering",False):
-          target_files = config.get("target_files")
+          tag_files = config.get("tag_files")
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
           if config.get("unsupervised_clustering",False):
-            score = translate_with_tag_file(src, target_files[i], ref, model, checkpoint_manager, checkpoint, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+            score = translate_with_tag_file(src, tag_files[i], ref, model, checkpoint_manager, checkpoint, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           else:
             score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
