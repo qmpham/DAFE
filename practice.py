@@ -1000,7 +1000,7 @@ def main():
     root = args.src
     for i in range(30):
       task.averaged_checkpoint_translate(config, "%s.cluster.%d.tagged"%(root,i), None, model, checkpoint_manager,
-              checkpoint, int(i), "%s.cluster.%d.tagged.trans"%(root,i), length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))
+              checkpoint, int(i), os.path.join(config["model_dir"],"eval","%s.cluster.%d.tagged.trans"%(root,i)), length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))
   elif args.run == "translatev3":
     model.create_variables()
     translate_config_file = args.src
