@@ -5092,7 +5092,9 @@ def averaged_checkpoint_translate(config, source_file,
               max_count=3):
   
   # Create the inference dataset.
-  new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+  from os import path
+  if not path.exists(path.join("%s/averaged_checkpoint"%config["model_dir"],"ckpt-200000.data-00000-of-00002")):
+    new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
                         max_count=max_count,
                         model_key="model")
   checkpoint.restore(new_checkpoint_manager.latest_checkpoint)
