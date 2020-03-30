@@ -5097,7 +5097,9 @@ def averaged_checkpoint_translate(config, source_file,
     new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
                         max_count=max_count,
                         model_key="model")
-  checkpoint.restore(new_checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(new_checkpoint_manager.latest_checkpoint)
+  else:
+    checkpoint.restore(path.join("%s/averaged_checkpoint"%config["model_dir"],"ckpt-200000"))
   tf.get_logger().info("Evaluating model %s", new_checkpoint_manager.latest_checkpoint)
   print("In domain %d"%domain)
   dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
