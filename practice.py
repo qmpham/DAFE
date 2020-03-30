@@ -33,7 +33,7 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "kmeans", "translatev5", "sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
   parser.add_argument("--config", required=True , help="configuration file")
   parser.add_argument("--src")
   parser.add_argument("--emb_files", nargs="+")
@@ -1001,6 +1001,12 @@ def main():
     for i in range(30):
       task.averaged_checkpoint_translate(config, "%s.cluster.%d.tagged"%(root,i), None, model, checkpoint_manager,
               checkpoint, int(i), os.path.join(config["model_dir"],"eval","%s.cluster.%d.tagged.trans"%(root,i)), length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))
+  elif args.run == "translatev6":
+    model.create_variables()
+    root = args.src
+    for i in range(30):
+      task.averaged_checkpoint_translate(config, "%s.cluster.%d"%(root,i), None, model, checkpoint_manager,
+              checkpoint, int(i), os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(root,i)), length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))
   elif args.run == "translatev3":
     model.create_variables()
     translate_config_file = args.src
