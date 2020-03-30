@@ -4970,6 +4970,7 @@ def train_denny_britz(config,
     else:
       training_loss, reported_loss = loss, loss
     if config["adv_training"]:
+      print("adv_training")
       total_loss = training_loss - encoder_classification_loss
     else:
       total_loss = training_loss + encoder_classification_loss
