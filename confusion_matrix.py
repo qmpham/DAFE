@@ -8,7 +8,7 @@ args = parser.parse_args()
 
 n_clusters = int(args.n_clusters)
 label_paths = args.label
-domain_numb = len(label_path)
+domain_numb = len(label_paths)
 confusion_matrix = np.zeros([domain_numb, n_clusters])
 
 for i in range(domain_numb):
