@@ -976,7 +976,7 @@ def main():
         test_file = [config["test_src"][i], config["test_src"][j]] 
         test_domain = [0,1]
         proxy_distance = task.proxy_distance(config, meta_test_optimizer, learning_rate, model, source_file, target_file, training_domain,
-          eval_file, eval_domain, test_file, test_domain, strategy, checkpoint_manager, checkpoint, experiment=experiment, 
+          eval_file, eval_domain, test_file, test_domain, strategy, checkpoint_manager, checkpoint, save_dir="%d_%d"%(i,j), experiment=experiment, 
           save_every=config.get("save_every",1000), eval_every=config.get("eval_every",2000))
         print(proxy_distance)
   elif args.run == "trainv2":

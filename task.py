@@ -4334,15 +4334,14 @@ def domain_classification_on_top_encoder(config,
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-          output_file=""
-          domain_predict(src, model, checkpoint_manager, checkpoint, i, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          domain_predict(src, model, checkpoint_path, checkpoint, i, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
       tf.summary.flush()
       if step > train_steps:
         break
 
 def domain_predict(source_file,
               model,
-              checkpoint_manager,
+              checkpoint_path,
               checkpoint,
               domain,
               length_penalty,
@@ -4352,8 +4351,8 @@ def domain_predict(source_file,
               beam_size=5):
   
   # Create the inference dataset.
-  checkpoint.restore(checkpoint_manager.latest_checkpoint)
-  tf.get_logger().info("Evaluating model %s", checkpoint_manager.latest_checkpoint)
+  checkpoint.restore(checkpoint_path)
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
   print("In domain %d"%domain)
   dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
   iterator = iter(dataset)
@@ -5090,6 +5089,7 @@ def proxy_distance(config,
           strategy,  
           checkpoint_manager,
           checkpoint,
+          save_dir,
           maximum_length=80,
           batch_size = 2048,
           batch_type = "tokens",
@@ -5109,7 +5109,9 @@ def proxy_distance(config,
     checkpoint_path = checkpoint_manager.latest_checkpoint  
     tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
     checkpoint.restore(checkpoint_path)
-    
+  output_dir = os.path.join(config["model_dir"],save_dir)
+  new_checkpoint_manager = tf.train.CheckpointManager(checkpoint, output_dir, max_to_keep=None)
+  
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -5195,10 +5197,12 @@ def proxy_distance(config,
         _number_examples = []
         start = time.time()
       if step % eval_every == 0:
-        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.get_logger().info("Saving checkpoint for step %d", step)
+        new_checkpoint_manager.save(checkpoint_number=step)
+        checkpoint_path = new_checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         for src,i in zip(eval_file, eval_domain):
-          domain_predict(src, model, checkpoint_manager, checkpoint, i, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          domain_predict(src, model, checkpoint_path, checkpoint, i, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
       tf.summary.flush()
       if step > train_steps:
         break
