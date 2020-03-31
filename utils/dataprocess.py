@@ -253,6 +253,7 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
 
   train_datasets = [] 
   if multi_domain:
+    print(batch_type)
     for i,src,tgt in zip(domain,source_file,target_file):
       train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
               batch_size=batch_train_size,
