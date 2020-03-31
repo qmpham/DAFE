@@ -965,10 +965,20 @@ def main():
   elif args.run == "dcote":
     task.domain_classification_on_top_encoder(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",1000), eval_every=config.get("eval_every",2000))
   elif args.run == "proxy":
-    for 
-    task.proxy_distance(config, meta_test_optimizer, learning_rate, model, source_file, target_file, training_domain,
+    for i in range(num_domains-1):
+      for j in range(i+1,num_domains):
+        print(config["src"][i],"\t",config["src"][j])
+        source_file = [config["src"][i], config["src"][j]] 
+        target_file = [config["tgt"][i], config["tgt"][j]] 
+        training_domain = [0,1]
+        eval_file = [config["eval_src"][i], config["eval_src"][j]]  
+        eval_domain = [0,1] 
+        test_file = [config["test_src"][i], config["test_src"][j]] 
+        test_domain = [0,1]
+        proxy_distance = task.proxy_distance(config, meta_test_optimizer, learning_rate, model, source_file, target_file, training_domain,
           eval_file, eval_domain, test_file, test_domain, strategy, checkpoint_manager, checkpoint, experiment=experiment, 
           save_every=config.get("save_every",1000), eval_every=config.get("eval_every",2000))
+        print(proxy_distance)
   elif args.run == "trainv2":
     task.train_v2(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "trainv3":
