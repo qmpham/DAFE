@@ -4341,12 +4341,10 @@ def domain_classification_on_top_encoder(config,
         break
 
 def domain_predict(source_file,
-              reference,
               model,
               checkpoint_manager,
               checkpoint,
               domain,
-              output_file,
               length_penalty,
               experiment="ldr",
               score_type="MultiBLEU",
@@ -4382,7 +4380,9 @@ def domain_predict(source_file,
       break
   true_domain = [domain] * len(predicted_domain)
   from sklearn.metrics import classification_report
+  from sklearn.metrics import accuracy_score
   print(classification_report(true_domain, predicted_domain))
+  return accuracy_score(true_domain, predicted_domain)
 
 def sentence_encode(source_file,
               model,
@@ -5076,6 +5076,136 @@ def train_denny_britz(config,
       tf.summary.flush()
       if step > train_steps:
         break
+
+def proxy_distance(config,
+          optimizer,          
+          learning_rate,
+          model,  
+          source_file,
+          target_file,
+          training_domain,
+          eval_file,
+          eval_domain,
+          test_file,
+          test_domain,
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100):
+  
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
+  #####
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+    
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_train_size = config["batch_train_size"]  
+  batch_type = batch_type
+  
+  print("There are %d in-domain corpora"%len(source_file))
+
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, 
+                                                                        batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=(config["experiment"]!="baseline"),picking_prob=config.get("picking_prob",None))
+  #####
+  with strategy.scope():
+    model.create_variables(optimizer=optimizer)
+    gradient_accumulator = optimizer_util.GradientAccumulator()  
+
+  def _accumulate_gradients(source, target):
+    logits = model.classification_on_top_encoder(source, training=True)
+    training_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], logits)    
+    variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name]
+    print("var numb: ", len(variables))
+    gradients = optimizer.get_gradients(training_loss, variables)
+    gradient_accumulator(gradients)
+    num_examples = tf.reduce_sum(target["length"])    
+    return tf.reduce_mean(training_loss), num_examples
+
+  def _apply_gradients():
+    variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name]
+    grads_and_vars = []
+    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    gradient_accumulator.reset()
+ 
+  @dataset_util.function_on_next(train_dataset)
+  def _train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, num_examples
+
+  @dataset_util.function_on_next(train_dataset)
+  def _train_iteration(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      return per_replica_source, per_replica_target
+  
+  @tf.function
+  def _step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_gradients)
+
+  # Runs the training loop.
+  import time
+  start = time.time()  
+  train_data_flow = iter(_train_forward())
+  
+  print("number of replicas: %d"%strategy.num_replicas_in_sync)
+  _loss = []  
+  _number_examples = []      
+
+  with _summary_writer.as_default():
+    while True:
+      #####Training batch
+      for _ in range(int(config.get("accumulation_step",1))):
+        loss, num_examples = next(train_data_flow)    
+        _loss.append(loss)
+        _number_examples.append(num_examples)
+      _step()  
+      step = optimizer.iterations.numpy()
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+        _loss = []
+        _number_examples = []
+        start = time.time()
+      if step % eval_every == 0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        for src,i in zip(eval_file, eval_domain):
+          domain_predict(src, model, checkpoint_manager, checkpoint, i, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+      if step > train_steps:
+        break
+  errors = []
+  for src,i in zip(test_file, test_domain):
+    accuracy = domain_predict(src, model, checkpoint_manager, checkpoint, i, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+    errors.append(1-accuracy)
+  return 2 * (1 - 2 * np.mean(errors))
 
 def averaged_checkpoint_translate(config, source_file,
               reference,
