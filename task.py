@@ -5110,7 +5110,7 @@ def proxy_distance(config,
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
     checkpoint_path = checkpoint_manager.latest_checkpoint
-    
+  
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -5118,6 +5118,7 @@ def proxy_distance(config,
   batch_type = batch_type
   
   print("There are %d in-domain corpora"%len(source_file))
+  print("batch type: ", batch_type)
 
   train_dataset = create_trainining_dataset(strategy, model, training_domain, source_file, target_file, 
                                                                         batch_train_size, batch_type, shuffle_buffer_size, maximum_length, multi_domain=(config["experiment"]!="baseline"),picking_prob=config.get("picking_prob",None))
