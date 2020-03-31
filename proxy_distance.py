@@ -21,7 +21,7 @@ def proxy_distance(emb_files_domain_A, emb_files_domain_B, tst_emb_files_domain_
   X = np.concatenate([X_A, X_B],0)
   Y = np.concatenate([Y_A, Y_B])
   print("Input shape: ", X.shape)
-  clf = SVC(class_weight="balanced")
+  clf = SVC(class_weight="balanced", max_iter=max_iter)
   clf.fit(X,Y)
   
   tst_emb_files_domain_A_list = []
