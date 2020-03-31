@@ -5131,8 +5131,7 @@ def proxy_distance(config,
   def _accumulate_gradients(source, target):
     logits = model.classification_on_top_encoder(source, training=True)
     training_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], logits)    
-    #variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name]
-    variables = model.trainable_variables
+    variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name or "encoder" in var.name or "My_inputter_0" in v.name]
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
@@ -5140,8 +5139,9 @@ def proxy_distance(config,
     return tf.reduce_mean(training_loss), num_examples
 
   def _apply_gradients():
-    variables = model.trainable_variables
+    #variables = model.trainable_variables
     #variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name]
+    variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name or "encoder" in var.name or "My_inputter_0" in v.name]
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
