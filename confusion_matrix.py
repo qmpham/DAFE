@@ -17,5 +17,7 @@ for i in range(domain_numb):
         domains = [int(l.strip()) for l in f2.readlines()]
         for domain in domains:
             confusion_matrix[i, domain] += 1
+A = confusion_matrix/np.sum(confusion_matrix,0).reshape(1,-1)
 
-print(confusion_matrix/np.sum(confusion_matrix,0).reshape(1,-1))
+for i in range(domain_numb):
+    print("\t".join([str(p) for p in A[i,:]]))
