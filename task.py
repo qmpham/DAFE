@@ -5173,7 +5173,7 @@ def proxy_distance(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  
+  data_iter = iter(_train_iteration())
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   _number_examples = []      

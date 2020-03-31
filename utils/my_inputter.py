@@ -95,7 +95,7 @@ class My_inputter(TextInputter):
                             labels_file,
                             batch_size,
                             domain=1,
-                            batch_type="examples",
+                            batch_type="tokens",
                             batch_multiplier=1,
                             batch_size_multiple=1,
                             shuffle_buffer_size=None,
@@ -111,6 +111,7 @@ class My_inputter(TextInputter):
         _ = labels_file
         dataset = self.make_dataset(features_file, training=True)
         map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), domain=domain, training=True)
+        print("batch_type", batch_type)
         dataset = dataset.apply(dataset_util.training_pipeline(
             batch_size,
             batch_type=batch_type,
