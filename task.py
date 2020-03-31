@@ -5199,6 +5199,7 @@ def proxy_distance(config,
         tf.summary.experimental.set_step(step)
         for src,i in zip(eval_file, eval_domain):
           domain_predict(src, model, checkpoint_manager, checkpoint, i, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+      tf.summary.flush()
       if step > train_steps:
         break
   errors = []
