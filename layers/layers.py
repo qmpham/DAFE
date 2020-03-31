@@ -249,7 +249,7 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v3, self).build(input_shape)
     scope_name = self.name_scope()
-    print("self.domain_numb, self.input_dim, self.inner_dim: ", self.domain_numb, self.input_dim, self.inner_dim)
+    #print("self.domain_numb, self.input_dim, self.inner_dim: ", self.domain_numb, self.input_dim, self.inner_dim)
     self.inner_kernel = self.add_weight("%s_inner_weight"%scope_name, shape=[self.domain_numb, self.input_dim*self.inner_dim])
     self.inner_bias = self.add_weight("%s_inner_bias"%scope_name, shape=[self.domain_numb, self.inner_dim])
     self.outer_kernel = self.add_weight("%s_outer_weight"%scope_name, shape=[self.domain_numb, self.inner_dim*self.output_dim])
