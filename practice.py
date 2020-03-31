@@ -967,17 +967,44 @@ def main():
   elif args.run == "proxy":
     for i in range(num_domains-1):
       for j in range(i+1,num_domains):
-        print(config["src"][i],"\t",config["src"][j])
-        source_file = [config["src"][i], config["src"][j]] 
-        target_file = [config["tgt"][i], config["tgt"][j]] 
-        training_domain = [0,1]
-        eval_file = [config["eval_src"][i], config["eval_src"][j]]  
-        eval_domain = [0,1] 
-        test_file = [config["test_src"][i], config["test_src"][j]] 
-        test_domain = [0,1]
-        proxy_distance = task.proxy_distance(config, meta_test_optimizer, learning_rate, model, source_file, target_file, training_domain,
-          eval_file, eval_domain, test_file, test_domain, strategy, checkpoint_manager, checkpoint, save_dir="%d_%d"%(i,j), experiment=experiment, 
-          save_every=config.get("save_every",1000), eval_every=config.get("eval_every",2000))
+        local_config_file = "/gpfsdswork/projects/rech/sfz/utt84zy/DAFE/configs/proxy_configs/config_%d_%d.yml"%(i,j)
+        with open(local_config_file, "r") as stream:
+          local_config = yaml.load(stream)
+        local_learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
+        local_model = LDR_SequenceToSequence(
+                      source_inputter=My_inputter(embedding_size=512),
+                      target_inputter=My_inputter(embedding_size=512),
+                      encoder=onmt.encoders.SelfAttentionEncoder(
+                          num_layers=6,
+                          num_units=512,
+                          num_heads=8,
+                          ffn_inner_dim=2048,
+                          dropout=0.1,
+                          attention_dropout=0.1,
+                          ffn_dropout=0.1),
+                      decoder=onmt.decoders.SelfAttentionDecoder(
+                          num_layers=6,
+                          num_units=512,
+                          num_heads=8,
+                          ffn_inner_dim=2048,
+                          dropout=0.1,
+                          attention_dropout=0.1,
+                          ffn_dropout=0.1),
+                      num_domains=num_domains,
+                      num_units=512)
+        local_optimizer = tfa.optimizers.LazyAdam(local_learning_rate)
+        local_checkpoint = tf.train.Checkpoint(model=local_model, optimizer=local_optimizer)  
+        local_data_config = {
+                  "source_vocabulary": local_config["src_vocab"],
+                  "target_vocabulary": local_config["tgt_vocab"]
+              } 
+        local_model.initialize(local_data_config)
+        local_checkpoint_manager = tf.train.CheckpointManager(local_checkpoint, config["model_dir"], max_to_keep=5)
+        ######
+        model.params.update({"label_smoothing": 0.1})
+        model.params.update({"average_loss_in_time": True})
+        model.params.update({"beam_width": 5})
+        proxy_distance = task.train_tag(local_config, local_optimizer, local_learning_rate, local_model, strategy, local_checkpoint_manager, local_checkpoint, experiment="baseline", save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
         print(proxy_distance)
   elif args.run == "trainv2":
     task.train_v2(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
