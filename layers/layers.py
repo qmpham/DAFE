@@ -21,8 +21,8 @@ class Classification_layer(tf.keras.layers.Layer):
     self.input_dim = input_dim
     self.layer_norm = common.LayerNorm()
     self.kernel_size = kernel_size
-    self.ff_layer_1 = common.Dense(2048, use_bias=True)
-    self.ff_layer_2 = common.Dense(2048, use_bias=True)
+    self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.leaky_relu)
+    self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.leaky_relu)
     self.ff_layer_end = common.Dense(domain_numb, use_bias=True, activation=tf.nn.tanh)
 
   def build(self, input_shape):
@@ -49,11 +49,11 @@ class Classification_layer(tf.keras.layers.Layer):
     e = tf.matmul(attention_weight, inputs)
     e = tf.squeeze(e,1)
     e = common.dropout(e, rate=0.3, training=training)
-    logits = self.ff_layer_1(tf.nn.relu(e))          
+    logits = self.ff_layer_1(e)          
     logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_2(logits)
     logits = common.dropout(logits, rate=0.3, training=training)
-    logits = self.ff_layer_end(tf.nn.relu(e))
+    logits = self.ff_layer_end(logits)
     return e, logits
   
 class Multi_domain_FeedForwardNetwork(tf.keras.layers.Layer):
