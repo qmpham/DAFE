@@ -5133,7 +5133,7 @@ def proxy_distance(config,
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
-    num_examples = tf.reduce_sum(target["length"])    
+    num_examples = tf.shape(source["length"])[0] 
     return tf.reduce_mean(training_loss), num_examples
 
   def _apply_gradients():
