@@ -4368,7 +4368,6 @@ def domain_predict(source_file,
 
   # Iterates on the dataset.
   
-  print("output file: ", output_file)
   predicted_domain = []
   
   while True:    
