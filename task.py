@@ -1631,7 +1631,7 @@ def train(config,
       from opennmt import Runner
       runner = Runner(model, model_config)
       output_dir = os.path.join(config["model_dir"],"new_vocab")
-      output_dir = runner.update_vocab(output_dir=output_dir, src_vocab=config.get("new_src_vocab"), tgt_vocab=config.get("new_tgt_vocab"))
+      output_dir = runner.update_vocab(output_dir=output_dir, src_vocab=config.get("src_vocab"), tgt_vocab=config.get("tgt_vocab"))
       checkpoint_manager = tf.train.CheckpointManager(checkpoint, output_dir, max_to_keep=5)
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)

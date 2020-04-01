@@ -53,10 +53,16 @@ def main():
       config = yaml.load(stream)
   if not os.path.exists(os.path.join(config["model_dir"],"eval")):
     os.makedirs(os.path.join(config["model_dir"],"eval"))
-  data_config = {
+  if config.get("new_vocab",False):
+    data_config = {
+        "source_vocabulary": config["old_src_vocab"],
+        "target_vocabulary": config["old_tgt_vocab"]
+    }
+  else:
+    data_config = {
       "source_vocabulary": config["src_vocab"],
       "target_vocabulary": config["tgt_vocab"]
-  }
+    }
   experiment = config.get("experiment","residual")
   print("running experiment: ", experiment)
   ADAP_layer_stopping_gradient = config.get("ADAP_layer_stopping_gradient",False)
