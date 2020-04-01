@@ -985,7 +985,15 @@ def main():
   elif args.run == "metatrainv1":
     task.meta_train_v1(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "train":
-    task.train(config, model_config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, old_model=old_model, old_model_config=old_model_config, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+    if config.get("new_vocab",False):
+      checkpoint_path = task.add_vocab(config,
+          optimizer,          
+          learning_rate,
+          old_model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint) 
+    task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=None, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_ldr":
     task.train_ldr(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "dcote":

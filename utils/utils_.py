@@ -98,7 +98,6 @@ def new_checkpoints(model_dir,
   num_checkpoints = len(checkpoints_path)
   last_step = int(checkpoints_path[-1].split("-")[-1])
 
-  tf.get_logger().info("Averaging %d checkpoints...", num_checkpoints)
   for i, checkpoint_path in enumerate(reversed(checkpoints_path)):
     tf.get_logger().info("Reading checkpoint %s...", checkpoint_path)
     if i == 0:

@@ -1604,14 +1604,12 @@ def meta_train_v6(config,
         break
 
 def train(config,
-          model_config,
           optimizer,          
           learning_rate,
           model,  
           strategy,  
           checkpoint_manager,
           checkpoint,
-          old_model=None, old_model_config=None,
           maximum_length=80,
           batch_size = 2048,
           batch_type = "tokens",
@@ -1626,11 +1624,9 @@ def train(config,
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
   #####
-  new_vocab = config.get("new_vocab",False)
-  if not new_vocab:
-    if checkpoint_manager.latest_checkpoint is not None:
-      tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-      checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -1748,10 +1744,6 @@ def train(config,
   train_data_flow = iter(_train_forward())
   _, _ = next(train_data_flow)
 
-  if new_vocab:
-      checkpoint_manager = new_checkpoints(config["model_dir"], output_dir="%s/new_vocab"%config["model_dir"], trackables={"model":model}, model_key="model")
-      checkpoint.restore(checkpoint_manager.latest_checkpoint)
-  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   _number_examples = []
@@ -5209,6 +5201,84 @@ def proxy_distance(config,
     accuracy = domain_predict(src, model, checkpoint_manager, checkpoint, i, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
     errors.append(1-accuracy)
   return 2 * (1 - 2 * np.mean(errors))
+
+def add_vocab(config,
+          model_config,
+          optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          checkpoint_path=None,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
+  
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_train_size = config["batch_train_size"]  
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config["domain"]
+  
+  print("There are %d in-domain corpora"%len(source_file))
+
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=True,picking_prob=config.get("picking_prob",None))
+  #####
+  with strategy.scope():
+    model.create_variables(optimizer=optimizer)
+
+  def _accumulate_gradients(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+    if isinstance(loss, tuple):
+      reported_loss = loss[0] / loss[2]
+    else:
+      _, reported_loss = loss, loss
+    variables = model.trainable_variables
+    print("var numb: ", len(variables))
+    num_examples = tf.reduce_sum(target["length"])
+    return reported_loss, num_examples
+
+  @dataset_util.function_on_next(train_dataset)
+  def _train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, num_examples
+
+  train_data_flow = iter(_train_forward())
+  _,_ = next(train_data_flow)    
+  step = optimizer.iterations.numpy()
+  tf.get_logger().info("Saving checkpoint for step %d", step)
+  for v in model.trainable_variables:
+    if "_embedding" in v.name:
+      v.assign(tf.cast(tf.concat([v, tf.Variable(np.zeros(1,512),dtype=v.dtype)],0),v.dtype), validate_shape=False)
+
+  checkpoint_manager.save(checkpoint_number=step)
+  return checkpoint_manager.latest_checkpoint
 
 def averaged_checkpoint_translate(config, source_file,
               reference,
