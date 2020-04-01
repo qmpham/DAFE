@@ -48,11 +48,11 @@ class Classification_layer(tf.keras.layers.Layer):
     attention_weight = tf.expand_dims(attention_weight, 1)
     e = tf.matmul(attention_weight, inputs)
     e = tf.squeeze(e,1)
-    e = common.dropout(e, rate=0.3, training=training)
+    #e = common.dropout(e, rate=0.3, training=training)
     logits = self.ff_layer_1(e)          
-    logits = common.dropout(logits, rate=0.3, training=training)
-    logits = self.ff_layer_2(logits)
-    logits = common.dropout(logits, rate=0.3, training=training)
+    #logits = common.dropout(logits, rate=0.3, training=training)
+    #logits = self.ff_layer_2(logits)
+    #logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_end(logits)
     return e, logits
   

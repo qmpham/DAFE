@@ -4362,7 +4362,7 @@ def domain_predict(source_file,
   @tf.function
   def predict_next():    
     source = next(iterator)  
-    logits = model.classification_on_top_encoder(source, training=False)
+    e, logits = model.classification_on_top_encoder(source, training=False)
     return tf.argmax(logits,-1)
 
   # Iterates on the dataset.
@@ -5130,7 +5130,7 @@ def proxy_distance(config,
 
   def _accumulate_gradients(source, target):
     e, logits = model.classification_on_top_encoder(source, training=True)
-    tf.print("logits: ", e)
+    tf.print("logits: ", logits)
     training_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], logits)    
     #variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name or "encoder" in var.name or "My_inputter_0" in var.name]
     variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name]
