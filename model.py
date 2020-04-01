@@ -478,8 +478,8 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     source_inputs = self.features_inputter(features, training=training)
     encoder_outputs, _, encoder_sequence_length = self.encoder(
         [source_inputs, features["domain"]], sequence_length=source_length, training=training)
-    _, logits = self.classification_layer(source_inputs, encoder_sequence_length, training=training)
-    return logits
+    e, logits = self.classification_layer(source_inputs, encoder_sequence_length, training=training)
+    return e, logits
 
   def sentence_encode(self, features, training=False):
     source_length = self.features_inputter.get_length(features)
