@@ -930,7 +930,7 @@ def main():
     "average_loss_in_time": True,
     "beam_width": 5
   }
-  model_config = {"data": data_config, "params": params_config}
+  model_config = {"data": data_config, "params": params_config, "model_dir": config["model_dir"]}
   ######
   if args.run == "inspect":
     task.model_inspect(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
