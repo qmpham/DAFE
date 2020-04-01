@@ -5130,6 +5130,7 @@ def proxy_distance(config,
 
   def _accumulate_gradients(source, target):
     logits = model.classification_on_top_encoder(source, training=True)
+    tf.print("logits: ", logits)
     training_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], logits)    
     #variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name or "encoder" in var.name or "My_inputter_0" in var.name]
     variables = [var for var in model.trainable_variables if "On_top_encoder_domain_classification" in var.name]
@@ -5161,12 +5162,6 @@ def proxy_distance(config,
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
-
-  @dataset_util.function_on_next(train_dataset)
-  def _train_iteration(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      return per_replica_source, per_replica_target
   
   @tf.function
   def _step():
@@ -5177,7 +5172,6 @@ def proxy_distance(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  data_iter = iter(_train_iteration())
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   _number_examples = []      
