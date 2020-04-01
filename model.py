@@ -1885,6 +1885,29 @@ class Multi_domain_SequenceToSequence_v2(model.SequenceGenerator):
               weight=params.get("guided_alignment_weight", 1))
     return loss, loss_normalizer, loss_token_normalizer
   
+  def transfer_weights(self, new_model, new_optimizer=None, optimizer=None, ignore_weights=None):
+    updated_variables = []
+
+    def _map_variables(inputter_fn, vars_fn):
+      mapping, _ = vocab.get_mapping(
+          inputter_fn(self).vocabulary_file,
+          inputter_fn(new_model).vocabulary_file)
+      vars_a, vocab_axes = vars_fn(self)
+      vars_b, _ = vars_fn(new_model)
+      for var_a, var_b, vocab_axis in zip(vars_a, vars_b, vocab_axes):
+        if new_optimizer is not None and optimizer is not None:
+          variables = vocab.update_variable_and_slots(
+              var_a,
+              var_b,
+              optimizer,
+              new_optimizer,
+              mapping,
+              vocab_axis=vocab_axis)
+        else:
+          variables = [vocab.update_variable(var_a, var_b, mapping, vocab_axis=vocab_axis)]
+        updated_variables.extend(variables)
+      return vars_b
+
   def print_prediction(self, prediction, params=None, stream=None):
     if params is None:
       params = {}
