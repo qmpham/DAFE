@@ -964,6 +964,34 @@ def main():
     task.train_ldr(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "dcote":
     task.domain_classification_on_top_encoder(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",1000), eval_every=config.get("eval_every",2000))
+  
+  elif args.run == "proxy1":
+    for i in range(num_domains-1):
+      for j in range(i+1,num_domains):
+        source_file = [config["src"][i], config["src"][j]]
+        target_file = [config["tgt"][i], config["tgt"][j]]
+        training_domain = [0,1]
+        eval_file = [config["eval_src"][i], config["eval_src"][j]]
+        eval_domain = [0, 1]
+        test_file = [config["test_src"][i], config["test_src"][j]]
+        test_domain = [0, 1]
+        save_dir = "%d_%d"%(i,j)
+        dist = task.proxy_distance(config, meta_test_optimizer,          
+          learning_rate,
+          model,  
+          source_file,
+          target_file,
+          training_domain,
+          eval_file,
+          eval_domain,
+          test_file,
+          test_domain,
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          save_dir)
+        print("distance %d_%d: "%(i,j), dist)
+
   elif args.run == "proxy":
     for i in range(num_domains-1):
       for j in range(i+1,num_domains):
