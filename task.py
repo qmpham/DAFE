@@ -25,7 +25,7 @@ from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
-from utils.utils_ import average_checkpoints
+from utils.utils_ import average_checkpoints, new_checkpoints
 from utils.dataprocess import count_lines
 
 def update(v,g,lr=1.0):
@@ -1629,11 +1629,7 @@ def train(config,
   new_vocab = config.get("new_vocab",False)
   if checkpoint_manager.latest_checkpoint is not None:
     if new_vocab:
-      from opennmt import Runner
-      runner = Runner(old_model, old_model_config)
-      output_dir = os.path.join(config["model_dir"],"new_vocab")
-      output_dir = runner.update_vocab(output_dir=output_dir, src_vocab=config.get("src_vocab"), tgt_vocab=config.get("tgt_vocab"))
-      checkpoint_manager = tf.train.CheckpointManager(checkpoint, output_dir, max_to_keep=5)
+      checkpoint_manager = new_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model}, model_key="model")
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
     checkpoint_path = checkpoint_manager.latest_checkpoint
