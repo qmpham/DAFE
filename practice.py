@@ -968,6 +968,7 @@ def main():
     for i in range(num_domains-1):
       for j in range(i+1,num_domains):
         local_config_file = "/gpfsdswork/projects/rech/sfz/utt84zy/DAFE/configs/proxy_configs/config_%d_%d.yml"%(i,j)
+        print(local_config_file)
         with open(local_config_file, "r") as stream:
           local_config = yaml.load(stream)
         local_learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
