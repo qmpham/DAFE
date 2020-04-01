@@ -426,6 +426,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           labels["noisy_length"],
           eta=params.get("max_margin_eta", 0.1))
     labels_lengths = self.labels_inputter.get_length(labels)
+    print("average_loss_in_time", params.get("average_loss_in_time", False))
     loss, loss_normalizer, loss_token_normalizer = losses.cross_entropy_sequence_loss(
         logits,
         labels["ids_out"],

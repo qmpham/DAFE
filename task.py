@@ -1662,6 +1662,8 @@ def train(config,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, target, training=True)
     if isinstance(loss, tuple):
+      tf.print("loss 2", loss[2])
+      tf.print("loss 1", loss[1])
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
     else:
