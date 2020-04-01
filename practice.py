@@ -1004,7 +1004,7 @@ def main():
         model.params.update({"label_smoothing": 0.1})
         model.params.update({"average_loss_in_time": True})
         model.params.update({"beam_width": 5})
-        proxy_distance = task.train_tag(local_config, local_optimizer, local_learning_rate, local_model, strategy, local_checkpoint_manager, local_checkpoint, experiment="baseline", save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+        proxy_distance = task.train_tag(local_config, local_optimizer, local_learning_rate, local_model, strategy, local_checkpoint_manager, local_checkpoint, experiment="baseline", save_every=config.get("save_every",1000), eval_every=config.get("eval_every",2000))
         print(proxy_distance)
   elif args.run == "trainv2":
     task.train_v2(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
