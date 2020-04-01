@@ -54,12 +54,12 @@ def main():
   if not os.path.exists(os.path.join(config["model_dir"],"eval")):
     os.makedirs(os.path.join(config["model_dir"],"eval"))
   if config.get("new_vocab",False):
-    data_config = {
+    old_data_config = {
         "source_vocabulary": config["old_src_vocab"],
         "target_vocabulary": config["old_tgt_vocab"]
     }
-  else:
-    data_config = {
+  
+  data_config = {
       "source_vocabulary": config["src_vocab"],
       "target_vocabulary": config["tgt_vocab"]
     }
@@ -925,6 +925,11 @@ def main():
   adv_optimizer = tfa.optimizers.LazyAdam(0.0001)
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=meta_test_optimizer)   
+  
+  if config.get("new_vocab",False):
+    from opennmt.utils import misc
+    old_model = misc.clone_layer(model)
+    old_model.initialize(old_data_config)
   model.initialize(data_config)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
   ######
@@ -938,6 +943,9 @@ def main():
     "optimizer": "LazyAdam",
     "learning_rate": 1.0
   }
+
+  if config.get("new_vocab",False):
+    old_model_config = {"data": old_data_config, "params": params_config, "model_dir": config["model_dir"]}
   model_config = {"data": data_config, "params": params_config, "model_dir": config["model_dir"]}
   ######
   if args.run == "inspect":
@@ -973,7 +981,7 @@ def main():
   elif args.run == "metatrainv1":
     task.meta_train_v1(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "train":
-    task.train(config, model_config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+    task.train(config, model_config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, old_model=None, old_model_config=None, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_ldr":
     task.train_ldr(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "dcote":
