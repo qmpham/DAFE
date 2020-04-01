@@ -21,8 +21,8 @@ class Classification_layer(tf.keras.layers.Layer):
     self.input_dim = input_dim
     self.layer_norm = common.LayerNorm()
     self.kernel_size = kernel_size
-    self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.leaky_relu)
-    self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.leaky_relu)
+    self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
+    self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
     self.ff_layer_end = common.Dense(domain_numb, use_bias=True, activation=tf.nn.tanh)
 
   def build(self, input_shape):
