@@ -971,6 +971,8 @@ def main():
         print(local_config_file)
         with open(local_config_file, "r") as stream:
           local_config = yaml.load(stream)
+        if not os.path.exists(os.path.join(local_config["model_dir"],"eval")):
+          os.makedirs(os.path.join(local_config["model_dir"],"eval"))
         local_learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
         local_model = LDR_SequenceToSequence(
                       source_inputter=My_inputter(embedding_size=512),
