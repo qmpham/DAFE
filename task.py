@@ -1627,19 +1627,10 @@ def train(config,
     batch_type = config.get("batch_type")
   #####
   new_vocab = config.get("new_vocab",False)
-  if checkpoint_manager.latest_checkpoint is not None:
-    if new_vocab:
-      checkpoint_manager = new_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model}, model_key="model")
-    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-    checkpoint.restore(checkpoint_manager.latest_checkpoint)
-    checkpoint_path = checkpoint_manager.latest_checkpoint
-    #tf.summary.experimental.set_step(step)
-    """
-    model.create_variables()
-    for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-      score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-    """
+  if not new_vocab:
+    if checkpoint_manager.latest_checkpoint is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+      checkpoint.restore(checkpoint_manager.latest_checkpoint)
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -1756,6 +1747,11 @@ def train(config,
   start = time.time()  
   train_data_flow = iter(_train_forward())
   _, _ = next(train_data_flow)
+
+  if new_vocab:
+      checkpoint_manager = new_checkpoints(config["model_dir"], output_dir="%s/new_vocab"%config["model_dir"], trackables={"model":model}, model_key="model")
+      checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   _number_examples = []
