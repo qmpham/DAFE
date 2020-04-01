@@ -929,7 +929,8 @@ def main():
     "label_smoothing": 0.1,
     "average_loss_in_time": True,
     "beam_width": 5,
-    "optimizer": "LazyAdam"
+    "optimizer": "LazyAdam",
+    "learning_rate": 1.0
   }
   model_config = {"data": data_config, "params": params_config, "model_dir": config["model_dir"]}
   ######
