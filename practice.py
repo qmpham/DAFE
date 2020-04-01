@@ -925,6 +925,12 @@ def main():
   model.params.update({"label_smoothing": 0.1})
   model.params.update({"average_loss_in_time": True})
   model.params.update({"beam_width": 5})
+  params_config = {
+    "label_smoothing": 0.1,
+    "average_loss_in_time": True,
+    "beam_width": 5
+  }
+  model_config = {"data": data_config, "params": params_config}
   ######
   if args.run == "inspect":
     task.model_inspect(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
@@ -959,7 +965,7 @@ def main():
   elif args.run == "metatrainv1":
     task.meta_train_v1(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "train":
-    task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+    task.train(config, model_config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_ldr":
     task.train_ldr(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "dcote":

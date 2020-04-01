@@ -1604,6 +1604,7 @@ def meta_train_v6(config,
         break
 
 def train(config,
+          model_config,
           optimizer,          
           learning_rate,
           model,  
@@ -1624,7 +1625,14 @@ def train(config,
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
   #####
+  new_vocab = config.get("new_vocab",False)
   if checkpoint_manager.latest_checkpoint is not None:
+    if new_vocab:
+      from opennmt import Runner
+      runner = Runner(model, model_config)
+      output_dir = os.path.join(config["model_dir"],"new_vocab")
+      output_dir = runner.update_vocab(output_dir=output_dir, src_vocab=config.get("new_src_vocab"), tgt_vocab=config.get("new_tgt_vocab"))
+      checkpoint_manager = tf.train.CheckpointManager(checkpoint, output_dir, max_to_keep=5)
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
     checkpoint_path = checkpoint_manager.latest_checkpoint
@@ -1662,8 +1670,6 @@ def train(config,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, target, training=True)
     if isinstance(loss, tuple):
-      #tf.print("loss 2", loss[2])
-      #tf.print("loss 1", loss[1])
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
     else:
