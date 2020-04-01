@@ -999,7 +999,7 @@ def main():
                   "target_vocabulary": local_config["tgt_vocab"]
               } 
         local_model.initialize(local_data_config)
-        local_checkpoint_manager = tf.train.CheckpointManager(local_checkpoint, config["model_dir"], max_to_keep=5)
+        local_checkpoint_manager = tf.train.CheckpointManager(local_checkpoint, local_config["model_dir"], max_to_keep=5)
         ######
         model.params.update({"label_smoothing": 0.1})
         model.params.update({"average_loss_in_time": True})
