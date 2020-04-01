@@ -989,7 +989,8 @@ def main():
           strategy,  
           checkpoint_manager,
           checkpoint,
-          save_dir)
+          save_dir, save_every=config.get("save_every",1000),
+          eval_every=config.get("eval_every",1000))
         print("distance %d_%d: "%(i,j), dist)
 
   elif args.run == "proxy":
