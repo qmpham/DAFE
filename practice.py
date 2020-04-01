@@ -930,6 +930,8 @@ def main():
     from opennmt.utils import misc
     old_model = misc.clone_layer(model)
     old_model.initialize(old_data_config)
+  else:
+    old_model = None
   model.initialize(data_config)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
   ######
@@ -946,6 +948,8 @@ def main():
 
   if config.get("new_vocab",False):
     old_model_config = {"data": old_data_config, "params": params_config, "model_dir": config["model_dir"]}
+  else:
+    old_model_config = None
   model_config = {"data": data_config, "params": params_config, "model_dir": config["model_dir"]}
   ######
   if args.run == "inspect":
@@ -981,7 +985,7 @@ def main():
   elif args.run == "metatrainv1":
     task.meta_train_v1(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "train":
-    task.train(config, model_config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, old_model=None, old_model_config=None, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+    task.train(config, model_config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, old_model=old_model, old_model_config=old_model_config, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_ldr":
     task.train_ldr(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "dcote":
