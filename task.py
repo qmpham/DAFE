@@ -5283,7 +5283,7 @@ def train_tag(config,
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
-    num_examples = tf.reduce_sum(target["length"])
+    num_examples = tf.reduce_sum(source["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
