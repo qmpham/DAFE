@@ -5025,6 +5025,11 @@ def train_denny_britz(config,
     with strategy.scope():
       strategy.experimental_run_v2(_apply_adv_gradients)
 
+  # Runs the training loop.
+  import time
+  start = time.time()  
+  train_data_flow = iter(_train_forward())
+
   ### Running one step to compile graph
   _, _, _ = next(train_data_flow)
 
@@ -5036,11 +5041,7 @@ def train_denny_britz(config,
                         checkpoint_path,
                         trackables={"model":model},
                         model_key="model")
-
-  # Runs the training loop.
-  import time
-  start = time.time()  
-  train_data_flow = iter(_train_forward())
+                        
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   _encoder_classification_loss = []
