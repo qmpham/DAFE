@@ -25,7 +25,7 @@ from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
-from utils.utils_ import average_checkpoints, new_checkpoints
+from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckpt
 from utils.dataprocess import count_lines
 
 def update(v,g,lr=1.0):
@@ -5024,6 +5024,14 @@ def train_denny_britz(config,
   def _adv_step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_adv_gradients)
+
+  if config.get("continual_learning", False):
+    assert config.get("checkpoint_path") != None
+    checkpoint_path = config.get("checkpoint_path")
+    load_and_update_if_needed_from_ckpt(config["model_dir"],   
+                        checkpoint_path,
+                        trackables={"model":model},
+                        model_key="model")
 
   # Runs the training loop.
   import time

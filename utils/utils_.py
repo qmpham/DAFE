@@ -73,14 +73,11 @@ class MultiBLEUScorer(object):
     except subprocess.CalledProcessError:      
       return None
 
-def new_checkpoints(model_dir,
-                        output_dir,
+def load_and_update_if_needed_from_ckpt(model_dir,   
+                        checkpoint_path,
                         trackables,
-                        max_count=8,
                         model_key="model"):
-  
-  if model_dir == output_dir:
-    raise ValueError("Model and output directory must be different")
+
   model = trackables.get(model_key)
   if model is None:
     raise ValueError("%s not found in trackables %s" % (model_key, trackables))
@@ -88,29 +85,19 @@ def new_checkpoints(model_dir,
     raise ValueError("The model should be built before calling this function")
 
   checkpoint = tf.train.Checkpoint(**trackables)
-  checkpoint_manager = tf.train.CheckpointManager(checkpoint, model_dir, max_to_keep=None)
-
-  checkpoints_path = checkpoint_manager.checkpoints
-  if not checkpoints_path:
-    raise ValueError("No checkpoints found in %s" % model_dir)
-  if len(checkpoints_path) > max_count:
-    checkpoints_path = checkpoints_path[-max_count:]
-  num_checkpoints = len(checkpoints_path)
-  last_step = int(checkpoints_path[-1].split("-")[-1])
-
-  for i, checkpoint_path in enumerate(reversed(checkpoints_path)):
-    tf.get_logger().info("Reading checkpoint %s...", checkpoint_path)
-    if i == 0:
-      checkpoint.restore(checkpoint_path).assert_existing_objects_matched()
-      for variable in model.variables:
-        if "_embedding" in variable.name:
-          variable.assign(tf.concat([variable, tf.zeros((1,512))],0))
-        else:
-          variable.assign(variable)
-
-  new_checkpoint_manager = tf.train.CheckpointManager(checkpoint, output_dir, max_to_keep=None)
-  new_checkpoint_manager.save(checkpoint_number=last_step)
-  return new_checkpoint_manager
+  
+  tf.get_logger().info("Reading checkpoint %s...", checkpoint_path)
+  reader = tf.train.load_checkpoint(checkpoint_path)
+  for path in six.iterkeys(reader.get_variable_to_shape_map()):
+    if not path.startswith(model_key) or ".OPTIMIZER_SLOT" in path:
+      continue
+    variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
+    variable = variable_which(trackables, variable_path)
+    value = reader.get_tensor(path)
+    if "_domain_classification" in variable.name:
+      continue
+    else:
+      variable.assign(value)
 
 def average_checkpoints(model_dir,
                         output_dir,
