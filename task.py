@@ -5025,6 +5025,10 @@ def train_denny_britz(config,
     with strategy.scope():
       strategy.experimental_run_v2(_apply_adv_gradients)
 
+  ### Running one step to compile graph
+  _, _, _ = next(train_data_flow)
+
+  ### Initialize weights or update if needed for Continual Learning
   if config.get("continual_learning", False):
     assert config.get("checkpoint_path") != None
     checkpoint_path = config.get("checkpoint_path")
