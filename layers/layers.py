@@ -21,19 +21,19 @@ class Classification_layer(tf.keras.layers.Layer):
     self.input_dim = input_dim
     self.layer_norm = common.LayerNorm()
     self.kernel_size = kernel_size
-    self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
-    self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
+    #self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
+    #self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
     self.ff_layer_end = common.Dense(domain_numb, use_bias=True, activation=tf.nn.tanh)
 
   def build(self, input_shape):
     super(Classification_layer, self).build(input_shape)
-    #scope_name = self.name_scope()
-    #self.v = self.add_weight("%s_v_a"%scope_name, shape=[self.kernel_size])
-    #self.W = self.add_weight("%s_W_a"%scope_name, shape=[self.input_dim, self.kernel_size])
+    scope_name = self.name_scope()
+    self.v = self.add_weight("%s_v_a"%scope_name, shape=[self.kernel_size])
+    self.W = self.add_weight("%s_W_a"%scope_name, shape=[self.input_dim, self.kernel_size])
 
   def call(self, inputs, src_length, training=True):
     #print("inputs:", inputs)    
-    """ v = self.v
+    v = self.v
     W = self.W
     v_a = tf.expand_dims(tf.expand_dims(v, 0),2)
     v_a = tf.tile(v_a, [tf.shape(inputs)[0], 1, 1])
@@ -45,18 +45,15 @@ class Classification_layer(tf.keras.layers.Layer):
     attention_weight = tf.cast(tf.cast(attention_weight, tf.float32) * adv_mask + ((1.0 - adv_mask) * tf.float32.min), attention_weight.dtype)
     attention_weight = tf.cast(tf.nn.softmax(tf.cast(attention_weight, tf.float32)), attention_weight.dtype)
     attention_weight = tf.squeeze(attention_weight,-1)
-    attention_weight = tf.expand_dims(attention_weight, 1) """
-    #e = tf.matmul(attention_weight, inputs)
-    e = tf.reduce_mean(inputs, 1) 
-    #length = tf.reduce_sum(adv_mask, -1)
-    #e = e / tf.expand_dims(length, 1)
-    #e = tf.squeeze(e,1)
-    #e = common.dropout(e, rate=0.3, training=training)
-    logits = self.ff_layer_1(e)          
+    attention_weight = tf.expand_dims(attention_weight, 1)
+    e = tf.matmul(attention_weight, inputs)
+    e = tf.squeeze(e,1)
+    e = common.dropout(e, rate=0.3, training=training)
+    #logits = self.ff_layer_1(tf.nn.relu(e))          
     #logits = common.dropout(logits, rate=0.3, training=training)
     #logits = self.ff_layer_2(logits)
     #logits = common.dropout(logits, rate=0.3, training=training)
-    logits = self.ff_layer_end(logits)
+    logits = self.ff_layer_end(tf.nn.relu(e))
     return e, logits
   
 class Multi_domain_FeedForwardNetwork(tf.keras.layers.Layer):
