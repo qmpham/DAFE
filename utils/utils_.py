@@ -76,6 +76,7 @@ class MultiBLEUScorer(object):
 def load_and_update_if_needed_from_ckpt(model_dir,   
                         checkpoint_path,
                         trackables,
+                        vocab_update=False,
                         model_key="model"):
 
   model = trackables.get(model_key)
@@ -96,6 +97,10 @@ def load_and_update_if_needed_from_ckpt(model_dir,
     value = reader.get_tensor(path)
     if "_domain_classification" in variable.name:
       continue
+    elif vocab_update and "_embedding" in variable.name:
+      print(variable.name)
+      new_value = np.concatenate([value, np.zeros(1,512)],axis=0)
+      variable.assign(new_value)
     else:
       variable.assign(value)
 
