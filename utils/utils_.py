@@ -108,7 +108,7 @@ def load_and_update_if_needed_from_ckpt(model_dir,
         variable.assign(new_value)
       elif vocab_update and "dense_96/kernel" in variable.name:
         print(variable.name)
-        new_value = np.concatenate((value, np.zeros((1,512))),axis=1)
+        new_value = np.concatenate((value, np.zeros((512,1))),axis=1)
         variable.assign(new_value)
       else:
         print(variable.name)
