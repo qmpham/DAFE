@@ -1760,6 +1760,15 @@ def train(config,
         initial_value.append(variance_scaling_initialier(shape, scale=1.0, mode="fan_avg", distribution="uniform"))
       weight_reset(initial_value)       
 
+  if config.get("continual_learning", False):
+    print("Continual Learning needs to load from old model")
+    assert config.get("checkpoint_path") != None
+    checkpoint_path = config.get("checkpoint_path")
+    load_and_update_if_needed_from_ckpt(config["model_dir"],   
+                        checkpoint_path,
+                        trackables={"model":model},
+                        model_key="model")
+
   with _summary_writer.as_default():
     while True:
       #####Training batch
