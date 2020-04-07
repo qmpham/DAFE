@@ -95,7 +95,7 @@ def load_and_update_if_needed_from_ckpt(model_dir,
     variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
     variable = variable_which(trackables, variable_path)
     value = reader.get_tensor(path)
-    if variable !=None:
+    if variable:
       if "_domain_classification" in variable.name:
         continue
       elif vocab_update and "_embedding" in variable.name:
@@ -188,7 +188,7 @@ def variable_which(structure, path):
     if structure==None:
       raise ValueError("Invalid path in structure: %s" % path)
     """
-  if structure != None:
+  if structure:
     name = path.split("/")[-1]  
     if sum([name in v.name for v in structure.trainable_variables]):
       #print([v.name for v in structure.trainable_variables])
