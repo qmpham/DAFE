@@ -102,6 +102,10 @@ def load_and_update_if_needed_from_ckpt(model_dir,
         print(variable.name)
         new_value = np.concatenate((value, np.zeros((1,512))),axis=0)
         variable.assign(new_value)
+      elif vocab_update and "dense_96/bias" in variable.name:
+        print(variable.name)
+        new_value = np.concatenate((value, np.zeros((1))),axis=0)
+        variable.assign(new_value)
       else:
         print(variable.name)
         variable.assign(value)
