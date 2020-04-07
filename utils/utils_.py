@@ -95,14 +95,15 @@ def load_and_update_if_needed_from_ckpt(model_dir,
     variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
     variable = variable_which(trackables, variable_path)
     value = reader.get_tensor(path)
-    if "_domain_classification" in variable.name:
-      continue
-    elif vocab_update and "_embedding" in variable.name:
-      print(variable.name)
-      new_value = np.concatenate((value, np.zeros((1,512))),axis=0)
-      variable.assign(new_value)
-    else:
-      variable.assign(value)
+    if variable !=None:
+      if "_domain_classification" in variable.name:
+        continue
+      elif vocab_update and "_embedding" in variable.name:
+        print(variable.name)
+        new_value = np.concatenate((value, np.zeros((1,512))),axis=0)
+        variable.assign(new_value)
+      else:
+        variable.assign(value)
 
 def average_checkpoints(model_dir,
                         output_dir,
@@ -187,16 +188,16 @@ def variable_which(structure, path):
     if structure==None:
       raise ValueError("Invalid path in structure: %s" % path)
     """
-    
-  name = path.split("/")[-1]  
-  if sum([name in v.name for v in structure.trainable_variables]):
-    #print([v.name for v in structure.trainable_variables])
-    for v in structure.trainable_variables:
-      v_name = v.name.split("/")[-1].split(":")[0]
-      if name == v_name:
-        return v
-  else:
-    raise ValueError("Invalid path in structure: %s" % path)
+  if structure != None:
+    name = path.split("/")[-1]  
+    if sum([name in v.name for v in structure.trainable_variables]):
+      #print([v.name for v in structure.trainable_variables])
+      for v in structure.trainable_variables:
+        v_name = v.name.split("/")[-1].split(":")[0]
+        if name == v_name:
+          return v
+    else:
+      raise ValueError("Invalid path in structure: %s" % path)
   return structure
 
 
