@@ -1765,8 +1765,9 @@ def train(config,
     assert config.get("checkpoint_path") != None
     checkpoint_path = config.get("checkpoint_path")
     load_and_update_if_needed_from_ckpt(config["model_dir"],   
-                        checkpoint_path,
+                        checkpoint_path,                        
                         trackables={"model":model},
+                        vocab_update=True,
                         model_key="model")
 
   with _summary_writer.as_default():
