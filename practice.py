@@ -938,20 +938,7 @@ def main():
   model.params.update({"label_smoothing": 0.1})
   model.params.update({"average_loss_in_time": True})
   model.params.update({"beam_width": 5})
-  params_config = {
-    "label_smoothing": 0.1,
-    "average_loss_in_time": True,
-    "beam_width": 5,
-    "optimizer": "LazyAdam",
-    "learning_rate": 1.0
-  }
-
-  if config.get("new_vocab",False):
-    old_model_config = {"data": old_data_config, "params": params_config, "model_dir": config["model_dir"]}
-  else:
-    old_model_config = None
-  model_config = {"data": data_config, "params": params_config, "model_dir": config["model_dir"]}
-  ######
+  
   if args.run == "inspect":
     task.model_inspect(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   if args.run == "metatrainv7":
