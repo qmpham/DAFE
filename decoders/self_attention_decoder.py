@@ -2666,8 +2666,8 @@ class Multi_domain_SelfAttentionDecoder_v9(Decoder):
         f = multi_domain_forget_gate(inputs, ADAP_input, mask=mask, training=training)
         i = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
         inputs = inputs * f + ADAP_input * i
-      if not training:
-        tf.print(self.name_scope(),"forget_gate:",tf.reduce_mean(tf.abs(f)),"input gate:",tf.reduce_mean(tf.abs(i)),sep="|",stream=sys.stderr)
+      #if not training:
+      #  tf.print(self.name_scope(),"forget_gate:",tf.reduce_mean(tf.abs(f)),"input gate:",tf.reduce_mean(tf.abs(i)),sep="|",stream=sys.stderr)
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
 
