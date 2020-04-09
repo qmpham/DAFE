@@ -2661,11 +2661,10 @@ class Multi_domain_SelfAttentionDecoder_v9(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      if self.ADAP_layer_stopping_gradient: 
-        ADAP_input = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training)        
-        f = multi_domain_forget_gate(inputs, ADAP_input, mask=mask, training=training)
-        i = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
-        inputs = inputs * f + ADAP_input * i
+      ADAP_input = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training)        
+      f = multi_domain_forget_gate(inputs, ADAP_input, mask=mask, training=training)
+      i = multi_domain_input_gate(inputs, ADAP_input, mask=mask, training=training)
+      inputs = inputs * f + ADAP_input * i
       #if not training:
       #  tf.print(self.name_scope(),"forget_gate:",tf.reduce_mean(tf.abs(f)),"input gate:",tf.reduce_mean(tf.abs(i)),sep="|",stream=sys.stderr)
     outputs = self.layer_norm(inputs)
