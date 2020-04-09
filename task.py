@@ -746,7 +746,7 @@ def elastic_finetuning(config,
   star_vars = []
 
   def build_model(source, target):
-    outputs, _ = model(
+    _, _ = model(
         source,
         labels=target,
         training=True,
@@ -764,7 +764,8 @@ def elastic_finetuning(config,
     variables = model.trainable_variables
     with tf.init_scope():
       for var in variables:
-        star_vars.append(tf.zeros_like(var))
+        value=var.numpy()
+        star_vars.append(tf.constant(value))
 
   def _accumulate_gradients(source, target):
     outputs, _ = model(
@@ -852,18 +853,13 @@ def elastic_finetuning(config,
   start = time.time()  
   first_run = iter(_build_model())
   next(first_run)
-  star_vars_init()
-  """
-  train_data_flow = iter(_train_forward())
-  _, _ = next(train_data_flow)
-  """
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   _number_examples = []
   step = optimizer.iterations.numpy()     
 
-  ## 
+  ###
   if config.get("continual_learning", False):
     print("Continual Learning needs to load from old model")
     assert config.get("checkpoint_path") != None
@@ -874,9 +870,7 @@ def elastic_finetuning(config,
                         model_key="model")
 
   ## assign value to star_vars
-  variables_ = model.trainable_variables
-  for i in range(len(variables_)):
-    star_vars[i].assign(variables_[i].numpy())
+  star_vars_init()
 
   with _summary_writer.as_default():
     while True:
