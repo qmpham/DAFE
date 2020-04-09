@@ -920,7 +920,7 @@ def main():
     model = Multi_domain_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
-    encoder=Multi_domain_SelfAttentionEncoder_v9(
+    encoder=Multi_domain_SelfAttentionEncoder_v11(
         num_layers=6,
         num_domains=num_domains,
         num_domain_units=num_domain_units,
