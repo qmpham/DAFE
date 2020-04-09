@@ -847,7 +847,6 @@ def elastic_finetuning(config,
     load_and_update_if_needed_from_ckpt(config["model_dir"],   
                         checkpoint_path,                        
                         trackables={"model":model},
-                        vocab_update=config.get("vocab_update",False),
                         model_key="model")
 
   ## assign value to star_vars

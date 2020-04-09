@@ -99,6 +99,7 @@ def load_and_update_if_needed_from_ckpt(model_dir,
       if "_domain_classification" in variable.name:
         continue
       elif vocab_update and "_embedding" in variable.name:
+        print("vocab_update", vocab_update)
         print(variable.name)
         new_value = np.concatenate((value, np.zeros((1,512))),axis=0)
         variable.assign(new_value)
