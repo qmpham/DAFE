@@ -853,12 +853,10 @@ def elastic_finetuning(config,
   start = time.time()  
   first_run = iter(_build_model())
   next(first_run)
-
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
   _number_examples = []
   step = optimizer.iterations.numpy()     
-
   ###
   if config.get("continual_learning", False):
     print("Continual Learning needs to load from old model")
