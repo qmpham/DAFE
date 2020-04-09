@@ -744,6 +744,28 @@ def elastic_finetuning(config,
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
   star_vars = []
+
+  def build_model(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+  
+  @dataset_util.function_on_next(train_dataset)
+  def _build_model(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      strategy.experimental_run_v2(
+          build_model, args=(per_replica_source, per_replica_target))
+
+  @tf.function
+  def star_vars_init():
+    variables = model.trainable_variables
+    with tf.init_scope():
+      for var in variables:
+        star_vars.append(tf.zeros_like(var))
+
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
@@ -788,9 +810,6 @@ def elastic_finetuning(config,
       if len(output_activity_regularization_losses)>0:
         training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
     variables = model.trainable_variables
-    
-    for var in variables:
-      star_vars.append(tf.zeros_like(var))
     lambda_ = config.get("lambda", 0.001)
     print("elastic weights: ", lambda_)
     for i in range(len(variables)):
@@ -831,8 +850,13 @@ def elastic_finetuning(config,
   # Runs the training loop.
   import time
   start = time.time()  
+  first_run = iter(_build_model())
+  next(first_run)
+  star_vars_init()
+  """
   train_data_flow = iter(_train_forward())
   _, _ = next(train_data_flow)
+  """
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   _loss = []  
