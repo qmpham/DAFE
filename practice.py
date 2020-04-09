@@ -33,7 +33,7 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "proxy", "proxy1", "kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "proxy", "proxy1", "kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
   parser.add_argument("--config", help="configuration file")
   parser.add_argument("--src")
   parser.add_argument("--emb_files", nargs="+")
@@ -1034,6 +1034,8 @@ def main():
               checkpoint, int(domain), output_file, length_penalty=0.0, experiment=experiment, max_count=translate_config.get("max_count",3))
   elif args.run == "finetune":
     task.finetuning(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+  elif args.run == "elastic_finetune":
+    task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "debug":
     task.debug(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, picking_prob=config.get("picking_prob",None))
   elif args.run == "train_wdc":

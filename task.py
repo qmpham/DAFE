@@ -792,6 +792,7 @@ def elastic_finetuning(config,
     for var in variables:
       star_vars.append(tf.zeros_like(var))
     lambda_ = config.get("lambda", 0.001)
+    print("elastic weights: ", lambda_)
     for i in range(len(variables)):
       training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i])) * lambda_
     print("var numb: ", len(variables))
