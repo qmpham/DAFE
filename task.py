@@ -869,9 +869,11 @@ def elastic_finetuning(config,
                         trackables={"model":model},
                         model_key="model")
 
-  ## assign value to star_vars
+  ### assign value to star_vars
   star_vars_init()
 
+  ###
+  train_data_flow = iter(_train_forward())
   with _summary_writer.as_default():
     while True:
       #####Training batch
