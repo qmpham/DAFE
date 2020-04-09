@@ -1898,6 +1898,8 @@ def train(config,
         training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
     variables = model.trainable_variables
     print("var numb: ", len(variables))
+    for var in variables:
+      print(var.name)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
