@@ -916,6 +916,36 @@ def main():
           ffn_dropout=0.1),
       num_domains=num_domains,
       num_units=512)
+  elif experiment=="gated_residual_v5":
+    model = Multi_domain_SequenceToSequence(
+    source_inputter=My_inputter(embedding_size=512),
+    target_inputter=My_inputter(embedding_size=512),
+    encoder=Multi_domain_SelfAttentionEncoder_v9(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3),
+    decoder=Multi_domain_SelfAttentionDecoder_v15(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
   elif experiment=="pretrain":
     return
   warmup_steps = config.get("warmup_steps",4000)
