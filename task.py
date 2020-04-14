@@ -1817,6 +1817,7 @@ def train(config,
           strategy,  
           checkpoint_manager,
           checkpoint,
+          checkpoint_path=None,
           maximum_length=80,
           batch_size = 2048,
           batch_type = "tokens",
@@ -1834,6 +1835,10 @@ def train(config,
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  else:
+    if checkpoint_path is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+      checkpoint.restore(checkpoint_path)
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
