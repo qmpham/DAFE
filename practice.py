@@ -33,8 +33,9 @@ def main():
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "proxy", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "proxy", "proxy1","translatev7";"kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
   parser.add_argument("--config", help="configuration file")
+  parser.add_argument("--config_root")
   parser.add_argument("--src")
   parser.add_argument("--emb_files", nargs="+")
   parser.add_argument("--n_clusters", default=30)
@@ -1055,8 +1056,8 @@ def main():
     model.create_variables()
     root = args.src
     for i in range(30):
-      config_file = args.config
-      with open("%s_%d.yml"%(config_file,i), "r") as stream:
+      config_file_root = args.config_root
+      with open("%s_%d.yml"%(config_file_root,i), "r") as stream:
         config_ = yaml.load(stream)
       task.averaged_checkpoint_translate(config_, "%s.cluster.%d"%(root,i), None, model, checkpoint_manager,
               checkpoint, int(i), os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(os.path.basename(root),i)), length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))              
