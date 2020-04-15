@@ -1051,6 +1051,15 @@ def main():
     for i in range(30):
       task.averaged_checkpoint_translate(config, "%s.cluster.%d"%(root,i), None, model, checkpoint_manager,
               checkpoint, int(i), os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(os.path.basename(root),i)), length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))
+  elif args.run == "translatev7":
+    model.create_variables()
+    root = args.src
+    for i in range(30):
+      config_file = args.config
+      with open("%s_%d.yml"%(config_file,%i), "r") as stream:
+        config_ = yaml.load(stream)
+      task.averaged_checkpoint_translate(config_, "%s.cluster.%d"%(root,i), None, model, checkpoint_manager,
+              checkpoint, int(i), os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(os.path.basename(root),i)), length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))              
   elif args.run == "translatev3":
     model.create_variables()
     translate_config_file = args.src
