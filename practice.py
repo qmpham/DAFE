@@ -1060,7 +1060,7 @@ def main():
       with open("%s_%d.yml"%(config_file_root,i), "r") as stream:
         config_ = yaml.load(stream)
       task.averaged_checkpoint_translate(config_, "%s.cluster.%d"%(root,i), None, model, checkpoint_manager,
-              checkpoint, int(i), os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(os.path.basename(root),i)), length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))              
+              checkpoint, int(0), os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(os.path.basename(root),i)), length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))              
   elif args.run == "translatev3":
     model.create_variables()
     translate_config_file = args.src
