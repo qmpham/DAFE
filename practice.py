@@ -847,20 +847,18 @@ def main():
     model = SequenceToSequence(
     source_inputter=WordEmbedder(embedding_size=512),
     target_inputter=WordEmbedder(embedding_size=512),
-    encoder=onmt.encoders.rnn_encoder.RNNEncoder(
+    encoder=onmt.encoders.rnn_encoder.LSTMEncoder(
       num_layers=1,
       num_units=1024,
       bidirectional=True,
       residual_connections=True,
-      cell_class=tf.keras.layers.GRU,
       dropout=0.1),
-    decoder=onmt.decoders.rnn_decoder.RNNDecoder(
+    decoder=onmt.decoders.rnn_decoder.AttentionalRNNDecoder(
       num_layers=1,
       num_units=1024,
       bridge_class=onmt.layers.DenseBridge,
       bidirectional=True,
       residual_connections=True,
-      cell_class=tf.keras.layers.GRU,
       dropout=0.1))
   elif experiment=="baselinev2":
     model = LDR_SequenceToSequence_v1(
