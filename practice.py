@@ -847,16 +847,18 @@ def main():
     model = SequenceToSequence(
     source_inputter=WordEmbedder(embedding_size=512),
     target_inputter=WordEmbedder(embedding_size=512),
-    encoder=onmt.encoders.rnn_encoder.LSTMEncoder(
+    encoder=onmt.encoders.rnn_encoder.RNNEncoder(
       num_layers=1,
       num_units=1024,
       bidirectional=True,
       residual_connections=True,
+      cell_class=tf.compat.v1.keras.layers.GRUCell,
       dropout=0.1),
     decoder=onmt.decoders.rnn_decoder.AttentionalRNNDecoder(
       num_layers=1,
       num_units=1024,
       attention_mechanism_class=tfa.seq2seq.BahdanauAttention,
+      cell_class=tf.compat.v1.keras.layers.GRUCell,
       bridge_class=onmt.layers.DenseBridge,
       residual_connections=True,
       dropout=0.1))
