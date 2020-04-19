@@ -843,6 +843,25 @@ def main():
         ffn_dropout=0.1),
     num_domains=num_domains,
     num_units=512)
+  elif experiment=="rnn":
+    model = SequenceToSequence(
+    source_inputter=WordEmbedder(embedding_size=512),
+    target_inputter=WordEmbedder(embedding_size=512),
+    encoder=onmt.encoders.rnn_encoder.RNNEncoder(
+      num_layers=1,
+      num_units=1024,
+      bidirectional=True,
+      residual_connections=True,
+      cell_class=tf.keras.layers.GRU,
+      dropout=0.1),
+    decoder=onmt.decoders.rnn_decoder.RNNDecoder(
+      num_layers=1,
+      num_units=1024,
+      bridge_class=onmt.layers.DenseBridge,
+      bidirectional=True,
+      residual_connections=True,
+      cell_class=tf.keras.layers.GRU,
+      dropout=0.1))
   elif experiment=="baselinev2":
     model = LDR_SequenceToSequence_v1(
     source_inputter=My_inputter(embedding_size=512),
