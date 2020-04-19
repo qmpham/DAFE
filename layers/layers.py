@@ -21,8 +21,8 @@ class Classification_layer(tf.keras.layers.Layer):
     self.input_dim = input_dim
     self.layer_norm = common.LayerNorm()
     self.kernel_size = kernel_size
-    #self.ff_layer_1 = common.Dense(2048, use_bias=True)
-    #self.ff_layer_2 = common.Dense(2048, use_bias=True)
+    #self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
+    #self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
     self.ff_layer_end = common.Dense(domain_numb, use_bias=True, activation=tf.nn.tanh)
 
   def build(self, input_shape):
@@ -48,7 +48,7 @@ class Classification_layer(tf.keras.layers.Layer):
     attention_weight = tf.expand_dims(attention_weight, 1)
     e = tf.matmul(attention_weight, inputs)
     e = tf.squeeze(e,1)
-    #e = common.dropout(e, rate=0.3, training=training)
+    e = common.dropout(e, rate=0.3, training=training)
     #logits = self.ff_layer_1(tf.nn.relu(e))          
     #logits = common.dropout(logits, rate=0.3, training=training)
     #logits = self.ff_layer_2(logits)
@@ -249,7 +249,7 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
   def build(self, input_shape):
     super(Multi_domain_FeedForwardNetwork_v3, self).build(input_shape)
     scope_name = self.name_scope()
-    print("self.domain_numb, self.input_dim, self.inner_dim: ", self.domain_numb, self.input_dim, self.inner_dim)
+    #print("self.domain_numb, self.input_dim, self.inner_dim: ", self.domain_numb, self.input_dim, self.inner_dim)
     self.inner_kernel = self.add_weight("%s_inner_weight"%scope_name, shape=[self.domain_numb, self.input_dim*self.inner_dim])
     self.inner_bias = self.add_weight("%s_inner_bias"%scope_name, shape=[self.domain_numb, self.inner_dim])
     self.outer_kernel = self.add_weight("%s_outer_weight"%scope_name, shape=[self.domain_numb, self.inner_dim*self.output_dim])

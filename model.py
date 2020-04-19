@@ -38,7 +38,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
                target_inputter,
                encoder,
                decoder,
-               num_domains=6,
+               num_domains=2,
                num_units=512,
                share_embeddings=EmbeddingsSharingLevel.NONE):
 
@@ -426,6 +426,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           labels["noisy_length"],
           eta=params.get("max_margin_eta", 0.1))
     labels_lengths = self.labels_inputter.get_length(labels)
+    print("average_loss_in_time", params.get("average_loss_in_time", False))
     loss, loss_normalizer, loss_token_normalizer = losses.cross_entropy_sequence_loss(
         logits,
         labels["ids_out"],
@@ -478,8 +479,8 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     source_inputs = self.features_inputter(features, training=training)
     encoder_outputs, _, encoder_sequence_length = self.encoder(
         [source_inputs, features["domain"]], sequence_length=source_length, training=training)
-    _, logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
-    return logits
+    e, logits = self.classification_layer(source_inputs, encoder_sequence_length, training=training)
+    return e, logits
 
   def sentence_encode(self, features, training=False):
     source_length = self.features_inputter.get_length(features)
@@ -487,6 +488,29 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     mask = self.encoder.build_mask(source_inputs, source_length, dtype=tf.float32)
     mask = tf.expand_dims(mask,2)
     return tf.reduce_mean(source_inputs * tf.broadcast_to(mask, tf.shape(source_inputs)),1)
+
+  def transfer_weights(self, new_model, new_optimizer=None, optimizer=None, ignore_weights=None):
+    updated_variables = []
+
+    def _map_variables(inputter_fn, vars_fn):
+      mapping, _ = vocab.get_mapping(
+          inputter_fn(self).vocabulary_file,
+          inputter_fn(new_model).vocabulary_file)
+      vars_a, vocab_axes = vars_fn(self)
+      vars_b, _ = vars_fn(new_model)
+      for var_a, var_b, vocab_axis in zip(vars_a, vars_b, vocab_axes):
+        if new_optimizer is not None and optimizer is not None:
+          variables = vocab.update_variable_and_slots(
+              var_a,
+              var_b,
+              optimizer,
+              new_optimizer,
+              mapping,
+              vocab_axis=vocab_axis)
+        else:
+          variables = [vocab.update_variable(var_a, var_b, mapping, vocab_axis=vocab_axis)]
+        updated_variables.extend(variables)
+      return vars_b
 
 class LDR_SequenceToSequence_v1(model.SequenceGenerator):
   """A sequence to sequence model."""
@@ -1861,6 +1885,29 @@ class Multi_domain_SequenceToSequence_v2(model.SequenceGenerator):
               weight=params.get("guided_alignment_weight", 1))
     return loss, loss_normalizer, loss_token_normalizer
   
+  def transfer_weights(self, new_model, new_optimizer=None, optimizer=None, ignore_weights=None):
+    updated_variables = []
+
+    def _map_variables(inputter_fn, vars_fn):
+      mapping, _ = vocab.get_mapping(
+          inputter_fn(self).vocabulary_file,
+          inputter_fn(new_model).vocabulary_file)
+      vars_a, vocab_axes = vars_fn(self)
+      vars_b, _ = vars_fn(new_model)
+      for var_a, var_b, vocab_axis in zip(vars_a, vars_b, vocab_axes):
+        if new_optimizer is not None and optimizer is not None:
+          variables = vocab.update_variable_and_slots(
+              var_a,
+              var_b,
+              optimizer,
+              new_optimizer,
+              mapping,
+              vocab_axis=vocab_axis)
+        else:
+          variables = [vocab.update_variable(var_a, var_b, mapping, vocab_axis=vocab_axis)]
+        updated_variables.extend(variables)
+      return vars_b
+
   def print_prediction(self, prediction, params=None, stream=None):
     if params is None:
       params = {}

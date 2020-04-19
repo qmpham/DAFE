@@ -29,12 +29,15 @@ from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v7, M
 def main():
   seed = 1234
   tf.random.set_seed(seed)
+  physical_devices = tf.config.list_physical_devices('GPU')
+  [tf.config.experimental.set_memory_growth(physical_devices[i], enable=True) for i in range(len(physical_devices))]
   devices = tf.config.experimental.list_logical_devices(device_type="GPU")
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "finetune"], help="Run type.")
-  parser.add_argument("--config", required=True , help="configuration file")
+  parser.add_argument("run", choices=["train", "proxy", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
+  parser.add_argument("--config", help="configuration file")
+  parser.add_argument("--config_root")
   parser.add_argument("--src")
   parser.add_argument("--emb_files", nargs="+")
   parser.add_argument("--n_clusters", default=30)
@@ -53,10 +56,16 @@ def main():
       config = yaml.load(stream)
   if not os.path.exists(os.path.join(config["model_dir"],"eval")):
     os.makedirs(os.path.join(config["model_dir"],"eval"))
+  if config.get("new_vocab",False):
+    old_data_config = {
+        "source_vocabulary": config["old_src_vocab"],
+        "target_vocabulary": config["old_tgt_vocab"]
+    }
+  
   data_config = {
       "source_vocabulary": config["src_vocab"],
       "target_vocabulary": config["tgt_vocab"]
-  }
+    }
   experiment = config.get("experiment","residual")
   print("running experiment: ", experiment)
   ADAP_layer_stopping_gradient = config.get("ADAP_layer_stopping_gradient",False)
@@ -836,6 +845,24 @@ def main():
         ffn_dropout=0.1),
     num_domains=num_domains,
     num_units=512)
+  elif experiment=="rnn":
+    model = SequenceToSequence(
+    source_inputter=WordEmbedder(embedding_size=512),
+    target_inputter=WordEmbedder(embedding_size=512),
+    encoder=onmt.encoders.rnn_encoder.LSTMEncoder(
+      num_layers=1,
+      num_units=1024,
+      bidirectional=True,
+      residual_connections=True,
+      dropout=0.1),
+    decoder=onmt.decoders.rnn_decoder.AttentionalRNNDecoder(
+      num_layers=1,
+      num_units=1024,
+      attention_mechanism_class=tfa.seq2seq.BahdanauAttention,
+      cell_class=tf.keras.layers.LSTMCell,
+      bridge_class=onmt.layers.DenseBridge,
+      residual_connections=True,
+      dropout=0.1))
   elif experiment=="baselinev2":
     model = LDR_SequenceToSequence_v1(
     source_inputter=My_inputter(embedding_size=512),
@@ -910,6 +937,36 @@ def main():
           ffn_dropout=0.1),
       num_domains=num_domains,
       num_units=512)
+  elif experiment=="gated_residual_v5":
+    model = Multi_domain_SequenceToSequence(
+    source_inputter=My_inputter(embedding_size=512),
+    target_inputter=My_inputter(embedding_size=512),
+    encoder=Multi_domain_SelfAttentionEncoder_v11(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3),
+    decoder=Multi_domain_SelfAttentionDecoder_v15(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=ADAP_gate_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
   elif experiment=="pretrain":
     return
   warmup_steps = config.get("warmup_steps",4000)
@@ -919,13 +976,20 @@ def main():
   adv_optimizer = tfa.optimizers.LazyAdam(0.0001)
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=meta_test_optimizer)   
+  
+  if config.get("new_vocab",False):
+    from opennmt.utils import misc
+    old_model = misc.clone_layer(model)
+    old_model.initialize(old_data_config)
+  else:
+    old_model = None
   model.initialize(data_config)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
   ######
   model.params.update({"label_smoothing": 0.1})
   model.params.update({"average_loss_in_time": True})
   model.params.update({"beam_width": 5})
-  ######
+  
   if args.run == "inspect":
     task.model_inspect(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   if args.run == "metatrainv7":
@@ -959,11 +1023,12 @@ def main():
   elif args.run == "metatrainv1":
     task.meta_train_v1(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "train":
-    task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+    task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_ldr":
     task.train_ldr(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "dcote":
     task.domain_classification_on_top_encoder(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",1000), eval_every=config.get("eval_every",2000))
+  
   elif args.run == "trainv2":
     task.train_v2(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "trainv3":
@@ -1007,6 +1072,15 @@ def main():
     for i in range(30):
       task.averaged_checkpoint_translate(config, "%s.cluster.%d"%(root,i), None, model, checkpoint_manager,
               checkpoint, int(i), os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(os.path.basename(root),i)), length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))
+  elif args.run == "translatev7":
+    model.create_variables()
+    root = args.src
+    for i in range(30):
+      config_file_root = args.config_root
+      with open("%s_%d.yml"%(config_file_root,i), "r") as stream:
+        config_ = yaml.load(stream)
+      task.averaged_checkpoint_translate(config_, "%s.cluster.%d"%(root,i), None, model, checkpoint_manager,
+              checkpoint, int(0), os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(os.path.basename(root),i)), length_penalty=0.6, experiment=experiment, max_count=int(args.maxcount))              
   elif args.run == "translatev3":
     model.create_variables()
     translate_config_file = args.src
@@ -1017,9 +1091,11 @@ def main():
       print("translating %s in domain %d"%(src_file, domain))
       print("output_file: ", output_file)
       task.averaged_checkpoint_translate(config, src_file, None, model, checkpoint_manager,
-              checkpoint, int(domain), output_file, length_penalty=0.6, experiment=experiment, max_count=translate_config.get("max_count",3))
+              checkpoint, int(domain), output_file, length_penalty=0.0, experiment=experiment, max_count=translate_config.get("max_count",3))
   elif args.run == "finetune":
     task.finetuning(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+  elif args.run == "elastic_finetune":
+    task.elastic_finetuning(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "debug":
     task.debug(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, picking_prob=config.get("picking_prob",None))
   elif args.run == "train_wdc":

@@ -73,6 +73,48 @@ class MultiBLEUScorer(object):
     except subprocess.CalledProcessError:      
       return None
 
+def load_and_update_if_needed_from_ckpt(model_dir,   
+                        checkpoint_path,
+                        trackables,
+                        vocab_update=False,
+                        model_key="model"):
+
+  model = trackables.get(model_key)
+  if model is None:
+    raise ValueError("%s not found in trackables %s" % (model_key, trackables))
+  if not model.built:
+    raise ValueError("The model should be built before calling this function")
+
+  checkpoint = tf.train.Checkpoint(**trackables)
+  
+  tf.get_logger().info("Reading checkpoint %s...", checkpoint_path)
+  reader = tf.train.load_checkpoint(checkpoint_path)
+  for path in six.iterkeys(reader.get_variable_to_shape_map()):
+    if not path.startswith(model_key) or ".OPTIMIZER_SLOT" in path:
+      continue
+    variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
+    variable = variable_which(trackables, variable_path)
+    value = reader.get_tensor(path)
+    if variable:
+      if "_domain_classification" in variable.name:
+        continue
+      elif vocab_update and "_embedding" in variable.name:
+        print("vocab_update", vocab_update)
+        print(variable.name)
+        new_value = np.concatenate((value, np.zeros((1,512))),axis=0)
+        variable.assign(new_value)
+      elif vocab_update and "dense_96/bias" in variable.name:
+        print(variable.name)
+        new_value = np.concatenate((value, np.zeros((1))),axis=0)
+        variable.assign(new_value)
+      elif vocab_update and "dense_96/kernel" in variable.name:
+        print(variable.name)
+        new_value = np.concatenate((value, np.zeros((512,1))),axis=1)
+        variable.assign(new_value)
+      else:
+        print(variable.name)
+        variable.assign(value)
+
 def average_checkpoints(model_dir,
                         output_dir,
                         trackables,
@@ -152,18 +194,20 @@ def variable_which(structure, path):
       structure = structure.get(key)
     else:
       structure = getattr(structure, key, None)
+    """
     if structure==None:
       raise ValueError("Invalid path in structure: %s" % path)
-  name = path.split("/")[-1]  
-  
-  if sum([name in v.name for v in structure.trainable_variables]):
-    #print([v.name for v in structure.trainable_variables])
-    for v in structure.trainable_variables:
-      v_name = v.name.split("/")[-1].split(":")[0]
-      if name == v_name:
-        return v
-  else:
-    raise ValueError("Invalid path in structure: %s" % path)
+    """
+  if structure:
+    name = path.split("/")[-1]  
+    if sum([name in v.name for v in structure.trainable_variables]):
+      #print([v.name for v in structure.trainable_variables])
+      for v in structure.trainable_variables:
+        v_name = v.name.split("/")[-1].split(":")[0]
+        if name == v_name:
+          return v
+    else:
+      raise ValueError("Invalid path in structure: %s" % path)
   return structure
 
 
