@@ -29,6 +29,9 @@ from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v7, M
 def main():
   seed = 1234
   tf.random.set_seed(seed)
+  devices = tf.config.experimental.list_logical_devices(device_type="GPU")
+  print(devices)
+  strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("run", choices=["train", "proxy", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
   parser.add_argument("--config", help="configuration file")
@@ -963,14 +966,6 @@ def main():
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
   elif experiment=="pretrain":
     return
-
-  devices = tf.config.experimental.list_logical_devices(device_type="GPU")
-  if experiment=="rnn":
-    physical_devices = tf.config.list_physical_devices('GPU')
-    tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
-  print(devices)
-  strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
-  
   warmup_steps = config.get("warmup_steps",4000)
   print("warmup_steps: ", warmup_steps)
   learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
