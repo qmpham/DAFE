@@ -29,9 +29,8 @@ from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v7, M
 def main():
   seed = 1234
   tf.random.set_seed(seed)
-  physical_devices = tf.config.list_physical_devices('GPU')
-  tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
   devices = tf.config.experimental.list_logical_devices(device_type="GPU")
+  tf.config.experimental.set_memory_growth(devices[0], enable=True)
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
