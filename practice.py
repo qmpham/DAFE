@@ -975,7 +975,7 @@ def main():
   meta_train_optimizer = tf.keras.optimizers.SGD(0.0001)
   adv_optimizer = tfa.optimizers.LazyAdam(0.0001)
   if experiment=="rnn":
-    learning_rate=tf.keras.optimizers.schedules.ExponentialDecay(1.0, 10000, 0.8, staircase=True)
+    learning_rate=tf.keras.optimizers.schedules.ExponentialDecay(float(config.get("learning_rate",1.0)), 10000, 0.8, staircase=True)
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=meta_test_optimizer)   
   
