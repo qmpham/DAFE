@@ -30,7 +30,7 @@ def main():
   seed = 1234
   tf.random.set_seed(seed)
   physical_devices = tf.config.list_physical_devices('GPU')
-  tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+  [tf.config.experimental.set_memory_growth(physical_devices[i], enable=True) for i in range(len(physical_devices))]
   devices = tf.config.experimental.list_logical_devices(device_type="GPU")
   print(devices)
   strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in physical_devices])
