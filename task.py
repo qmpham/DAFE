@@ -1906,6 +1906,9 @@ def train(config,
     for var in variables:
       print(var.name)
     gradients = optimizer.get_gradients(training_loss, variables)
+    if experiment=="rnn":
+      gradients = [tf.clip_by_value(grad, -1.0, 1.0)
+                                  for grad in gradients]
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
