@@ -65,7 +65,8 @@ def main():
     }
 
   if config.get("cross_device",False):
-    mirrored_strategy = tf.distribute.MirroredStrategy(cross_device_ops=tf.distribute.HierarchicalCopyAllReduce())
+    print("training over ")
+    strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy(communication=tf.distribute.experimental.CollectiveCommunication.AUTO,cluster_resolver=None)
   else:
     strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
 
