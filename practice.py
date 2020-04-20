@@ -29,11 +29,8 @@ from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v7, M
 def main():
   seed = 1234
   tf.random.set_seed(seed)
-  # physical_devices = tf.config.list_physical_devices('GPU')
-  # [tf.config.experimental.set_memory_growth(physical_devices[i], enable=True) for i in range(len(physical_devices))]
   devices = tf.config.experimental.list_logical_devices(device_type="GPU")
   print(devices)
-  strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("run", choices=["train", "proxy", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
   parser.add_argument("--config", help="configuration file")
@@ -66,6 +63,12 @@ def main():
       "source_vocabulary": config["src_vocab"],
       "target_vocabulary": config["tgt_vocab"]
     }
+
+  if config.get("cross_device",False):
+    mirrored_strategy = tf.distribute.MirroredStrategy(cross_device_ops=tf.distribute.HierarchicalCopyAllReduce())
+  else:
+    strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
+
   experiment = config.get("experiment","residual")
   print("running experiment: ", experiment)
   ADAP_layer_stopping_gradient = config.get("ADAP_layer_stopping_gradient",False)
