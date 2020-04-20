@@ -853,7 +853,7 @@ def main():
       num_layers=1,
       num_units=1024,
       bidirectional=True,
-      residual_connections=True,
+      residual_connections=False,
       dropout=0.1),
     decoder=onmt.decoders.rnn_decoder.AttentionalRNNDecoder(
       num_layers=1,
@@ -861,7 +861,7 @@ def main():
       attention_mechanism_class=tfa.seq2seq.BahdanauAttention,
       cell_class=tf.keras.layers.LSTMCell,
       bridge_class=onmt.layers.DenseBridge,
-      residual_connections=True,
+      residual_connections=False,
       dropout=0.1))
   elif experiment=="baselinev2":
     model = LDR_SequenceToSequence_v1(
