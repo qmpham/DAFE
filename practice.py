@@ -68,7 +68,7 @@ def main():
     print("training over multi workers")
     jobs = {"job_1": len(devices)*2}
     strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy(communication=tf.distribute.experimental.CollectiveCommunication.AUTO,
-                cluster_resolver=tf.distribute.cluster_resolver.ClusterResolver(jobs, gpus_per_node=len(devices), gpus_per_task=1))
+                cluster_resolver=tf.distribute.cluster_resolver.SlurmClusterResolver(jobs, gpus_per_node=len(devices), gpus_per_task=1))
   else:
     strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
 
