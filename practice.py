@@ -66,7 +66,7 @@ def main():
 
   if config.get("cross_device",False):
     print("training over multi workers")
-    jobs = {"chief": 1; "worker":1}
+    jobs = {"chief": 1, "worker":1}
     strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy(communication=tf.distribute.experimental.CollectiveCommunication.AUTO,
                 cluster_resolver=tf.distribute.cluster_resolver.SlurmClusterResolver(jobs, gpus_per_node=len(devices), gpus_per_task=len(devices)))
   else:
