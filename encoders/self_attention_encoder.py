@@ -1,10 +1,11 @@
 """Define the self-attention encoder."""
+import sys
+sys.path.append("/gpfsdswork/projects/rech/sfz/utt84zy/anaconda3/envs/huggingface/lib/python3.7/site-packages")
 
 import tensorflow as tf
 
 from layers import transformer
 
-import sys
 from opennmt.encoders.encoder import Encoder
 from opennmt.encoders.self_attention_encoder import SelfAttentionEncoder
 from opennmt.layers.position import SinusoidalPositionEncoder

@@ -1,3 +1,6 @@
+import sys
+sys.path.append("/gpfsdswork/projects/rech/sfz/utt84zy/anaconda3/envs/huggingface/lib/python3.7/site-packages")
+
 from opennmt.decoders.rnn_decoder import RNNDecoder
 import tensorflow_addons as tfa
 import tensorflow as tf

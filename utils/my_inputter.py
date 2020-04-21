@@ -1,3 +1,6 @@
+import sys
+sys.path.append("/gpfsdswork/projects/rech/sfz/utt84zy/anaconda3/envs/huggingface/lib/python3.7/site-packages")
+
 from opennmt.inputters.text_inputter import WordEmbedder, _get_field, TextInputter
 import tensorflow as tf
 from opennmt import inputters
