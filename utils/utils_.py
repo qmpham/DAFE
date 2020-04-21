@@ -5,6 +5,7 @@ import io
 import re
 import os
 import six
+import json
 def make_domain_mask(num_domains, num_units, num_domain_units=8, dtype=tf.float32):
   print("num_domains", num_domains)
   print("num_units", num_units)
@@ -221,8 +222,17 @@ def create_slurm_strategy():
   print("hostnames: %s"%hostnames)
   master_addr = hostnames.split()[0].decode('utf-8')
   print("master_addr: %s"%master_addr)
-  jobs = {"worker": 2}
+  port="8888"
+  host_addrs = ["%s:%s"%(name.decode('utf-8'),port) for name in hostnames.split()]
+  os.environ['TF_CONFIG'] = json.dumps({
+    'cluster': {
+        'worker': host_addrs
+    },
+    'task': {'type': 'worker', 'index': os.environ["SLURM_PROCID"]}
+  })
+  #jobs = {"worker": 2}
   #strategy = tf.distribute.experimental.ParameterServerStrategy(cluster_resolver=tf.distribute.cluster_resolver.SlurmClusterResolver(jobs, gpus_per_node=4, gpus_per_task=1))
-  strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy(communication=tf.distribute.experimental.CollectiveCommunication.NCCL,cluster_resolver=tf.distribute.cluster_resolver.SlurmClusterResolver(jobs, gpus_per_node=4, gpus_per_task=4))
+  #strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy(communication=tf.distribute.experimental.CollectiveCommunication.NCCL,cluster_resolver=tf.distribute.cluster_resolver.SlurmClusterResolver(jobs, gpus_per_node=4, gpus_per_task=4))
+  strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy()
   return strategy
   
