@@ -1,9 +1,11 @@
+import sys
+sys.path.append("/gpfsdswork/projects/rech/sfz/utt84zy/anaconda3/envs/huggingface/lib/python3.7/site-packages")
 import argparse
 import logging
 import yaml
 import tensorflow as tf
 import tensorflow_addons as tfa
-import sys
+
 import opennmt as onmt
 import io
 import os
