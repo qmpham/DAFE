@@ -219,5 +219,6 @@ def create_slurm_strategy():
             'SLUMRM_CPUS_PER_TASK'
         ]
   for v in SLURM_VARIABLES:
-    print("%s: %s"%(vos.environ[v]))
+    print("%s: %s"%(v, os.environ[v]))
+  return None
   
