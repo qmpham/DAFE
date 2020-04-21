@@ -5663,7 +5663,7 @@ def debug_slurm_train(config,
         tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
         checkpoint.restore(checkpoint_path)
     #####
-    _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
   batch_train_size = config["batch_train_size"]  
   batch_type = batch_type
