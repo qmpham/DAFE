@@ -5681,38 +5681,7 @@ def debug_slurm_train(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    
-    if config.get("ADAP_activity_regularizing",False):
-      layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
-      output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
-      print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
-      print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
-      if isinstance(layer_activity_regularization_loss_scale, list):
-        domain = source["domain"][0]
-        layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
-        layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
-        #tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
-      if isinstance(output_activity_regularization_loss_scale, list):
-        domain = source["domain"][0]
-        output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
-        output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
-      regularization_losses = model.losses
-      print("model_name_scope", model.name_scope())
-      print(regularization_losses)
-      layer_activity_regularization_losses = []
-      output_activity_regularization_losses = []
-      for loss_ in regularization_losses:
-        if "multi_adap__dense" in loss_.name:
-          output_activity_regularization_losses.append(loss_)
-        else:
-          layer_activity_regularization_losses.append(loss_)
-      print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
-      print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
-      if len(layer_activity_regularization_losses)>0:
-        training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
-      if len(output_activity_regularization_losses)>0:
-        training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
-    variables = model.trainable_variables
+
     print("var numb: ", len(variables))
     for var in variables:
       print(var.name)
@@ -5723,16 +5692,6 @@ def debug_slurm_train(config,
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
-
-  def _apply_gradients():
-    variables = model.trainable_variables
-    grads_and_vars = []
-    for gradient, variable in zip(gradient_accumulator.gradients, variables):
-      # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
-      grads_and_vars.append((scaled_gradient, variable))
-    optimizer.apply_gradients(grads_and_vars)
-    gradient_accumulator.reset()
  
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
@@ -5751,21 +5710,6 @@ def debug_slurm_train(config,
       per_replica_source, per_replica_target = next_fn()
       return per_replica_source, per_replica_target
   
-  @tf.function
-  def _step():
-    with strategy.scope():
-      strategy.experimental_run_v2(_apply_gradients)
-
-  def _set_weight(v, w):
-    v.assign(tf.cast(w,v.dtype))
-
-  @tf.function
-  def weight_reset(snapshots):
-    with strategy.scope():
-      for snap, var in zip(snapshots, model.trainable_variables):
-        strategy.extended.update(var, _set_weight, args=(snap, ))
-
-  # Runs the training loop.
   import time
   start = time.time()  
   train_data_flow = iter(_train_iteration())
