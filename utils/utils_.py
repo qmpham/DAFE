@@ -216,8 +216,7 @@ def create_slurm_strategy():
             'SLURM_JOB_ID',
             'SLURM_JOB_NODELIST', 'SLURM_JOB_NUM_NODES', 'SLURM_NTASKS', 'SLURM_TASKS_PER_NODE',
             'SLURM_NODEID', 'SLURM_PROCID', 'SLURM_LOCALID', 'SLURM_TASK_PID']
-  for v in SLURM_VARIABLES:
-    print("%s: %s"%(v, os.environ[v]))
+  print(" ".join(["%s: %s"%(v, os.environ[v]) for v in SLURM_VARIABLES]))
   hostnames = subprocess.check_output(['scontrol', 'show', 'hostnames', os.environ['SLURM_JOB_NODELIST']])
   print("hostnames: %s"%hostnames)
   master_addr = hostnames.split()[0].decode('utf-8')
