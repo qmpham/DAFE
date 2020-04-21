@@ -221,8 +221,14 @@ def create_slurm_strategy():
   print("hostnames: %s"%hostnames)
   master_addr = hostnames.split()[0].decode('utf-8')
   print("master_addr: %s"%master_addr)
-  port="8888"
-  host_addrs = ["%s:%s"%(name.decode('utf-8'),port) for name in hostnames.split()]
+  port=12345
+  host_addrs = []
+  ntasks = int(os.environ["SLURM_NTASKS"])
+  nnodes = int(os.environ["SLURM_JOB_NUM_NODES"])
+  for name in hostnames.split():
+    name = name.decode('utf-8')
+    for i in range(ntasks//nnodes):
+      host_addrs.append("%s:%d"%(name, port+i))
   os.environ['TF_CONFIG'] = json.dumps({
     'cluster': {
         'worker': host_addrs
