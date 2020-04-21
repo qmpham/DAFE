@@ -1906,8 +1906,6 @@ def train(config,
     for var in variables:
       print(var.name)
     gradients = optimizer.get_gradients(training_loss, variables)
-    if experiment=="rnn":
-      gradients, _ = tf.clip_by_global_norm(gradients, 1.0)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
@@ -5622,3 +5620,182 @@ def averaged_checkpoint_translate(config, source_file,
       return 0.0
     else:
       return score
+
+
+
+def debug_slurm_train(config,
+          optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          checkpoint_path=None,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
+  #####
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  else:
+    if checkpoint_path is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+      checkpoint.restore(checkpoint_path)
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_train_size = config["batch_train_size"]  
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config["domain"]
+  
+  print("There are %d in-domain corpora"%len(source_file))
+
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None))
+  #####
+  with strategy.scope():
+    model.create_variables(optimizer=optimizer)
+    gradient_accumulator = optimizer_util.GradientAccumulator()  
+
+  def _accumulate_gradients(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    
+    if config.get("ADAP_activity_regularizing",False):
+      layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
+      output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
+      print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+      print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
+      if isinstance(layer_activity_regularization_loss_scale, list):
+        domain = source["domain"][0]
+        layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
+        layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
+        #tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
+      if isinstance(output_activity_regularization_loss_scale, list):
+        domain = source["domain"][0]
+        output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
+        output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
+      regularization_losses = model.losses
+      print("model_name_scope", model.name_scope())
+      print(regularization_losses)
+      layer_activity_regularization_losses = []
+      output_activity_regularization_losses = []
+      for loss_ in regularization_losses:
+        if "multi_adap__dense" in loss_.name:
+          output_activity_regularization_losses.append(loss_)
+        else:
+          layer_activity_regularization_losses.append(loss_)
+      print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
+      print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
+      if len(layer_activity_regularization_losses)>0:
+        training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
+      if len(output_activity_regularization_losses)>0:
+        training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
+    variables = model.trainable_variables
+    print("var numb: ", len(variables))
+    for var in variables:
+      print(var.name)
+    gradients = optimizer.get_gradients(training_loss, variables)
+    if experiment=="rnn":
+      gradients, _ = tf.clip_by_global_norm(gradients, 1.0)
+    gradient_accumulator(gradients)
+    num_examples = tf.reduce_sum(target["length"])
+    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
+    return reported_loss, num_examples
+
+  def _apply_gradients():
+    variables = model.trainable_variables
+    grads_and_vars = []
+    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    gradient_accumulator.reset()
+ 
+  @dataset_util.function_on_next(train_dataset)
+  def _train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, num_examples
+
+  @dataset_util.function_on_next(train_dataset)
+  def _train_iteration(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      return per_replica_source, per_replica_target
+  
+  @tf.function
+  def _step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_gradients)
+
+  def _set_weight(v, w):
+    v.assign(tf.cast(w,v.dtype))
+
+  @tf.function
+  def weight_reset(snapshots):
+    with strategy.scope():
+      for snap, var in zip(snapshots, model.trainable_variables):
+        strategy.extended.update(var, _set_weight, args=(snap, ))
+
+  # Runs the training loop.
+  import time
+  start = time.time()  
+  train_data_flow = iter(_train_iteration())
+  _, _ = next(train_data_flow)
+
+  with _summary_writer.as_default():
+    while True:
+      src, tgt =next(train_data_flow)
+      print(src)
+      
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
