@@ -23,7 +23,7 @@ import numpy as np
 from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset
 from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
-from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer
+from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, create_slurm_strategy
 import task
 from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v6, Multi_domain_Gate_v1, Multi_domain_FeedForwardNetwork_v5, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_FeedForwardNetwork_v1, Multi_domain_FeedForwardNetwork_v0
 def main():
@@ -64,7 +64,7 @@ def main():
 
   if config.get("cross_device",False):
     print("training over multi workers")
-    strategy = utils_.create_slurm_strategy()
+    strategy = create_slurm_strategy()
     jobs = {"worker": 2, "ps":1}
     strategy = tf.distribute.experimental.ParameterServerStrategy(cluster_resolver=tf.distribute.cluster_resolver.SlurmClusterResolver(jobs, gpus_per_node=4, gpus_per_task=4))
     #strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy(communication=tf.distribute.experimental.CollectiveCommunication.NCCL,cluster_resolver=tf.distribute.cluster_resolver.SlurmClusterResolver(jobs, gpus_per_node=4, gpus_per_task=4))
