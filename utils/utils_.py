@@ -214,9 +214,7 @@ def create_slurm_strategy():
   SLURM_VARIABLES = [
             'SLURM_JOB_ID',
             'SLURM_JOB_NODELIST', 'SLURM_JOB_NUM_NODES', 'SLURM_NTASKS', 'SLURM_TASKS_PER_NODE',
-            'SLURM_NODEID', 'SLURM_PROCID', 'SLURM_LOCALID', 'SLURM_TASK_PID',
-            'SLUMRM_CPUS_PER_TASK'
-        ]
+            'SLURM_NODEID', 'SLURM_PROCID', 'SLURM_LOCALID', 'SLURM_TASK_PID']
   for v in SLURM_VARIABLES:
     print("%s: %s"%(v, os.environ[v]))
   return None
