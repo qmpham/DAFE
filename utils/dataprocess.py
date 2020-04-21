@@ -293,7 +293,7 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
   else:
     print("picking probability: ", picking_prob)
 
-  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob) #tf.data.Dataset.zip(tuple(train_datasets)).map(merge_map_fn)
+  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
   with strategy.scope():
     base_dataset = train_dataset
     train_dataset = strategy.experimental_distribute_datasets_from_function(
