@@ -5621,8 +5621,6 @@ def averaged_checkpoint_translate(config, source_file,
     else:
       return score
 
-
-
 def debug_slurm_train(config,
           optimizer,          
           learning_rate,
