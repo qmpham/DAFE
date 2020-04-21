@@ -3,6 +3,80 @@
 import numpy as np
 import tensorflow as tf
 
+
+def make_cardinality_multiple_of(divisor):
+  """Transformation that ensures that the dataset cardinality is a multiple of
+  :obj:`divisor`.
+  Example:
+    >>> dataset = tf.data.Dataset.range(7)
+    >>> dataset = dataset.apply(opennmt.data.make_cardinality_multiple_of(10))
+    >>> len(list(iter(dataset)))
+    10
+  Args:
+    divisor: The value that should divide the dataset size.
+  Returns:
+    A ``tf.data.Dataset`` transformation.
+  Tip:
+    This transformation is useful when training multiple replicas on a finite
+    dataset. It ensures that each replica receives a non empty batch in the last
+    training iteration.
+  """
+  if divisor == 1:
+    return lambda dataset: dataset
+
+  def _continue_iter(num_consumed, element):
+    # Continue iterating if the current element is from the original dataset or
+    # if the number of consumed batches is not a multiple of divisor.
+    is_original = element[0]
+    return tf.math.logical_or(is_original, tf.math.not_equal(num_consumed % divisor, 0))
+
+  def _retrieve_element(num_consumed, element):
+    _ = num_consumed
+    return element[1]
+
+  def _transform(dataset):
+    # Nothing to do for infinite datasets.
+    if tf.data.experimental.cardinality(dataset) == tf.data.experimental.INFINITE_CARDINALITY:
+      return dataset
+
+    # Concatenate extra batches with a flag.
+    extra_batches = dataset.repeat()
+    dataset = dataset.map(lambda *x: (tf.constant(True), x))
+    extra_batches = extra_batches.map(lambda *x: (tf.constant(False), x))
+    dataset = dataset.concatenate(extra_batches)
+
+    # Take all original batches and the number of extra batches required.
+    dataset = dataset.enumerate()
+    dataset = dataset.apply(tf.data.experimental.take_while(_continue_iter))
+    return dataset.map(_retrieve_element)  # Retrieve the element only.
+
+  return _transform
+
+def random_shard(shard_size, dataset_size):
+  """Transformation that shards the dataset in a random order.
+  Example:
+    >>> dataset = tf.data.Dataset.range(6)
+    >>> dataset = dataset.apply(opennmt.data.random_shard(2, 6)
+    >>> list(dataset.as_numpy_iterator())
+    [0, 1, 4, 5, 2, 3]
+  Args:
+    shard_size: The number of examples in each shard.
+    dataset_size: The total number of examples in the dataset.
+  Returns:
+    A ``tf.data.Dataset`` transformation.
+  """
+  num_shards = -(-dataset_size // shard_size)  # Ceil division.
+  offsets = np.linspace(0, dataset_size, num=num_shards, endpoint=False, dtype=np.int64)
+
+  def _random_shard(dataset):
+    sharded_dataset = tf.data.Dataset.from_tensor_slices(offsets)
+    sharded_dataset = sharded_dataset.shuffle(num_shards)
+    sharded_dataset = sharded_dataset.flat_map(
+        lambda offset: dataset.skip(offset).take(shard_size))
+    return sharded_dataset
+
+  return _random_shard
+
 def count_lines(filename):
   """Returns the number of lines of the file :obj:`filename`."""
   with open(filename, mode="rb") as f:
@@ -298,6 +372,45 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
     base_dataset = train_dataset
     train_dataset = strategy.experimental_distribute_datasets_from_function(
           lambda _: base_dataset)  
+
+  return train_dataset
+
+def create_trainining_dataset_hvd(model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, num_input_pipelines, 
+                                  input_pipeline_id, num_replicas_in_sync, maximum_length, single_pass=False, length_bucket_width=None,
+                                  multi_domain=True, picking_prob=None):
+  train_datasets = [] 
+  if multi_domain:
+    print(batch_type)
+    for i,src,tgt in zip(domain,source_file,target_file):
+      train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size=batch_train_size,
+              batch_type=batch_type,
+              domain=i,
+              single_pass=single_pass,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length))
+  else:
+    for src,tgt in zip(source_file,target_file):
+      train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size=batch_train_size,
+              batch_type=batch_type,
+              single_pass=single_pass,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length))
+  train_datasets = [dataset.shard(num_input_pipelines, input_pipeline_id) for dataset in train_datasets]
+  if picking_prob=="Natural":
+    datasets_size = [count_lines(src) for src in source_file]
+    picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+    print("picking probability: ", picking_prob)
+  else:
+    print("picking probability: ", picking_prob)
+
+  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
+  train_dataset = train_dataset.apply(make_cardinality_multiple_of(num_replicas_in_sync))
 
   return train_dataset
 

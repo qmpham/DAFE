@@ -49,13 +49,6 @@ def main():
   config_file = args.config
   with open(config_file, "r") as stream:
       config = yaml.load(stream)
-  if not os.path.exists(os.path.join(config["model_dir"],"eval")):
-    os.makedirs(os.path.join(config["model_dir"],"eval"))
-  if config.get("new_vocab",False):
-    old_data_config = {
-        "source_vocabulary": config["old_src_vocab"],
-        "target_vocabulary": config["old_tgt_vocab"]
-    }
   
   data_config = {
       "source_vocabulary": config["src_vocab"],
@@ -64,10 +57,22 @@ def main():
 
   if config.get("cross_device",False):
     print("training over multi workers")
-    strategy = create_slurm_strategy()
+    import horovod.tensorflow as hvd  # pylint: disable=import-outside-toplevel
+    gpus = tf.config.list_physical_devices(device_type="GPU")
+    hvd.init()
+    is_master = hvd.rank() == 0
+    if gpus:
+      local_gpu = gpus[hvd.local_rank()]
+      tf.config.experimental.set_visible_devices(local_gpu, device_type="GPU")
+      gpus = [local_gpu]
+      if is_master and not os.path.exists(os.path.join(config["model_dir"],"eval")):
+        os.makedirs(os.path.join(config["model_dir"],"eval"))
+
   else:
     devices = tf.config.experimental.list_logical_devices(device_type="GPU")
     strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
+    if not os.path.exists(os.path.join(config["model_dir"],"eval")):
+      os.makedirs(os.path.join(config["model_dir"],"eval"))
 
   experiment = config.get("experiment","residual")
   print("running experiment: ", experiment)
@@ -977,17 +982,9 @@ def main():
   learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
   meta_train_optimizer = tf.keras.optimizers.SGD(0.0001)
   adv_optimizer = tfa.optimizers.LazyAdam(0.0001)
-  if experiment=="rnn":
-    learning_rate=tf.keras.optimizers.schedules.ExponentialDecay(float(config.get("learning_rate",1.0)), 50000, 0.8, staircase=True)
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=meta_test_optimizer)   
   
-  if config.get("new_vocab",False):
-    from opennmt.utils import misc
-    old_model = misc.clone_layer(model)
-    old_model.initialize(old_data_config)
-  else:
-    old_model = None
   model.initialize(data_config)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
   ######
@@ -1030,7 +1027,7 @@ def main():
   elif args.run == "train":
     task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "debug_slurm_train":
-    task.debug_slurm_train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+    task.debug_slurm_train(config, meta_test_optimizer, learning_rate, model, hvd, is_master, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_ldr":
     task.train_ldr(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "dcote":

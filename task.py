@@ -20,13 +20,17 @@ from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
 from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
-from utils.dataprocess import merge_map_fn, create_trainining_dataset_v1, create_multi_domain_meta_trainining_dataset_v2, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset, create_trainining_dataset_v2, create_multi_domain_meta_trainining_dataset_v1
+from utils.dataprocess import create_trainining_dataset_hvd, merge_map_fn, create_trainining_dataset_v1, create_multi_domain_meta_trainining_dataset_v2, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset, create_trainining_dataset_v2, create_multi_domain_meta_trainining_dataset_v1
 from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
 from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckpt
 from utils.dataprocess import count_lines
+
+def _assert_loss_is_finite(loss):
+  if tf.math.is_nan(loss):
+    raise RuntimeError("Model diverged with loss = NaN.")
 
 def update(v,g,lr=1.0):
   if isinstance(g, tf.IndexedSlices):
@@ -5625,7 +5629,8 @@ def debug_slurm_train(config,
           optimizer,          
           learning_rate,
           model,  
-          strategy,  
+          hvd,  
+          is_master,
           checkpoint_manager,
           checkpoint,
           checkpoint_path=None,
@@ -5638,20 +5643,25 @@ def debug_slurm_train(config,
           save_every=5000,
           eval_every=15000,
           report_every=100): 
+  #####
+  num_replicas = hvd.size()
+  is_master = hvd.rank() == 0
+  #####
   if config.get("train_steps",None)!=None:
     train_steps = config.get("train_steps")
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
   #####
-  if checkpoint_manager.latest_checkpoint is not None:
-    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-    checkpoint.restore(checkpoint_manager.latest_checkpoint)
-  else:
-    if checkpoint_path is not None:
-      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
-      checkpoint.restore(checkpoint_path)
-  #####
-  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  if is_master:
+    if checkpoint_manager.latest_checkpoint is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+      checkpoint.restore(checkpoint_manager.latest_checkpoint)
+    else:
+      if checkpoint_path is not None:
+        tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+        checkpoint.restore(checkpoint_path)
+    #####
+    _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
   batch_train_size = config["batch_train_size"]  
   batch_type = batch_type
@@ -5661,15 +5671,32 @@ def debug_slurm_train(config,
   
   print("There are %d in-domain corpora"%len(source_file))
 
-  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
-                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None))
+  dataset = lambda input_context: create_trainining_dataset_hvd(model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                                                input_context.num_input_pipelines, input_context.input_pipeline_id, input_context.num_replicas_in_sync, 
+                                                                maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                                                multi_domain=config.get("multi_domain", True),
+                                                                picking_prob=config.get("picking_prob",None))
   #####
-  with strategy.scope():
-    model.create_variables(optimizer=optimizer)
-    gradient_accumulator = optimizer_util.GradientAccumulator()  
+  model.create_variables(optimizer=optimizer)
+  gradient_accumulator = optimizer_util.GradientAccumulator()  
+  
+  dataset = dataset(tf.distribute.InputContext(
+          num_input_pipelines=hvd.size(),
+          input_pipeline_id=hvd.rank(),
+          num_replicas_in_sync=hvd.size()))
 
-  def _accumulate_gradients(source, target):
+  counter = tf.Variable(
+          tf.constant(0, dtype=tf.int64),
+          trainable=False,
+          synchronization=tf.VariableSynchronization.ON_READ,
+          aggregation=tf.VariableAggregation.SUM)
+    
+  # Wrap forward and step with tf.function.
+  def _all_reduce_sum(value):
+    return hvd.allreduce(value, op=hvd.Sum)
+
+  @tf.function(input_signature=dataset.element_spec)
+  def _forward(source, target):
     outputs, _ = model(
         source,
         labels=target,
@@ -5681,44 +5708,73 @@ def debug_slurm_train(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-
+    variables = model.trainable_variables
     print("var numb: ", len(variables))
     for var in variables:
       print(var.name)
     gradients = optimizer.get_gradients(training_loss, variables)
-    if experiment=="rnn":
-      gradients, _ = tf.clip_by_global_norm(gradients, 1.0)
     gradient_accumulator(gradients)
-    num_examples = tf.reduce_sum(target["length"])
-    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples
- 
-  @dataset_util.function_on_next(train_dataset)
-  def _train_forward(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
-      # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, num_examples
+    num_words = tf.reduce_sum(target["length"])
+    counter.assign_add(tf.cast(num_words, tf.int64))
+    return reported_loss
 
-  @dataset_util.function_on_next(train_dataset)
-  def _train_iteration(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      return per_replica_source, per_replica_target
-  
+  @tf.function
+  def _step():
+    gradient_scale = gradient_accumulator.step * num_replicas
+    gradients = [
+        _all_reduce_sum(gradient / tf.cast(gradient_scale, gradient.dtype))
+        for gradient in gradient_accumulator.gradients]
+    variables = model.trainable_variables
+    optimizer.apply_gradients(list(zip(gradients, variables)))
+    gradient_accumulator.reset()
+  @tf.function
+  def _get_words_counters():
+    tgt_word_counter = _all_reduce_sum(counter.read_value())
+    counter.assign(tf.constant(0, dtype=tf.int64))
+    return tgt_word_counter
   import time
   start = time.time()  
-  train_data_flow = iter(_train_iteration())
-  _, _ = next(train_data_flow)
+  _loss = []
 
+  accum_steps = 1
   with _summary_writer.as_default():
-    while True:
-      src, tgt =next(train_data_flow)
-      print(src)
+    for step, (source, target) in enumerate(dataset):
+      loss = _forward(source, target)
+      _assert_loss_is_finite(loss)
+      _loss.append(loss)
+      if step == 0 or (step + 1) % accum_steps == 0:
+        _step()
+        if step == 0:
+          hvd.broadcast_variables(model.variables, root_rank=0)
+          hvd.broadcast_variables(optimizer.variables(), root_rank=0)
+      
+      if is_master and step % report_every == 0:
+        elapsed = time.time() - start
+        _number_examples = _get_words_counters()
+        tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+        _loss = []
+        start = time.time()
+      if is_master and step % save_every == 0:
+        tf.get_logger().info("Saving checkpoint for step %d", step)
+        checkpoint_manager.save(checkpoint_number=step)
+      if is_master and step % eval_every == 0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        if config.get("unsupervised_clustering",False):
+          tag_files = config.get("tag_files")
+        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+          if config.get("unsupervised_clustering",False):
+            score = translate_with_tag_file(src, tag_files[i], ref, model, checkpoint_manager, checkpoint, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          else:
+            score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+      if is_master:
+        tf.summary.flush()
+      if step > train_steps:
+        break
       
 
 
