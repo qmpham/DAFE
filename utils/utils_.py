@@ -219,5 +219,10 @@ def create_slurm_strategy():
     print("%s: %s"%(v, os.environ[v]))
   hostnames = subprocess.check_output(['scontrol', 'show', 'hostnames', os.environ['SLURM_JOB_NODELIST']])
   print("hostnames: %s"%hostnames)
-  return None
+  master_addr = hostnames.split()[0].decode('utf-8')
+  print("master_addr: %s"%master_addr)
+  jobs = {"worker": 1, "ps":1}
+  strategy = tf.distribute.experimental.ParameterServerStrategy(cluster_resolver=tf.distribute.cluster_resolver.SlurmClusterResolver(jobs, gpus_per_node=4, gpus_per_task=4))
+  #strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy(communication=tf.distribute.experimental.CollectiveCommunication.NCCL,cluster_resolver=tf.distribute.cluster_resolver.SlurmClusterResolver(jobs, gpus_per_node=4, gpus_per_task=4))
+  return strategy
   

@@ -65,9 +65,6 @@ def main():
   if config.get("cross_device",False):
     print("training over multi workers")
     strategy = create_slurm_strategy()
-    jobs = {"worker": 1, "ps":1}
-    strategy = tf.distribute.experimental.ParameterServerStrategy(cluster_resolver=tf.distribute.cluster_resolver.SlurmClusterResolver(jobs, gpus_per_node=4, gpus_per_task=4))
-    #strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy(communication=tf.distribute.experimental.CollectiveCommunication.NCCL,cluster_resolver=tf.distribute.cluster_resolver.SlurmClusterResolver(jobs, gpus_per_node=4, gpus_per_task=4))
   else:
     devices = tf.config.experimental.list_logical_devices(device_type="GPU")
     strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
