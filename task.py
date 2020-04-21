@@ -5679,7 +5679,6 @@ def debug_slurm_train(config,
                                                                 multi_domain=config.get("multi_domain", True),
                                                                 picking_prob=config.get("picking_prob",None))
   #####
-  model.create_variables(optimizer=optimizer)
   gradient_accumulator = optimizer_util.GradientAccumulator()  
   
   dataset = dataset(tf.distribute.InputContext(
@@ -5712,8 +5711,8 @@ def debug_slurm_train(config,
       training_loss, reported_loss = loss, loss
     variables = model.trainable_variables
     print("var numb: ", len(variables))
-    for var in variables:
-      print(var.name)
+    # for var in variables:
+    #   print(var.name)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_words = tf.reduce_sum(target["length"])
