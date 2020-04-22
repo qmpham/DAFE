@@ -5673,7 +5673,7 @@ def debug_slurm_train(config,
   
   print("There are %d in-domain corpora"%len(source_file))
 
-  dataset = lambda input_context: create_trainining_dataset_hvd(model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+  dataset_fn = lambda input_context: create_trainining_dataset_hvd(model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                                                 input_context.num_input_pipelines, input_context.input_pipeline_id, input_context.num_replicas_in_sync, 
                                                                 maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                                                 multi_domain=config.get("multi_domain", True),
@@ -5681,7 +5681,7 @@ def debug_slurm_train(config,
   #####
   gradient_accumulator = optimizer_util.GradientAccumulator()  
   
-  dataset = dataset(tf.distribute.InputContext(
+  dataset = dataset_fn(tf.distribute.InputContext(
           num_input_pipelines=hvd.size(),
           input_pipeline_id=hvd.rank(),
           num_replicas_in_sync=hvd.size()))
@@ -5728,16 +5728,19 @@ def debug_slurm_train(config,
     variables = model.trainable_variables
     optimizer.apply_gradients(list(zip(gradients, variables)))
     gradient_accumulator.reset()
+
   @tf.function
   def _get_words_counters():
     tgt_word_counter = _all_reduce_sum(counter.read_value())
     counter.assign(tf.constant(0, dtype=tf.int64))
     return tgt_word_counter
+
   import time
   start = time.time()  
   _loss = []
 
   accum_steps = 1
+  
   with _summary_writer.as_default():
     for step, (source, target) in enumerate(dataset):
       loss = _forward(source, target)
@@ -5749,7 +5752,7 @@ def debug_slurm_train(config,
           hvd.broadcast_variables(model.variables, root_rank=0)
           hvd.broadcast_variables(optimizer.variables(), root_rank=0)
       
-      if is_master and step % report_every == 0:
+      if is_master and step % report_every == 0 and step>0:
         elapsed = time.time() - start
         _number_examples = _get_words_counters()
         tf.get_logger().info(
@@ -5757,10 +5760,10 @@ def debug_slurm_train(config,
             step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
         _loss = []
         start = time.time()
-      if is_master and step % save_every == 0:
+      if is_master and step % save_every == 0 and step>0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
-      if is_master and step % eval_every == 0:
+      if is_master and step % eval_every == 0 and step>0:
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         if config.get("unsupervised_clustering",False):
