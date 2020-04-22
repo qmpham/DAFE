@@ -5720,13 +5720,16 @@ def debug_slurm_train(config,
     return reported_loss
 
   @tf.function
-  def _step():
+  def _step(is_first_batch):
     gradient_scale = gradient_accumulator.step * num_replicas
     gradients = [
         _all_reduce_sum(gradient / tf.cast(gradient_scale, gradient.dtype))
         for gradient in gradient_accumulator.gradients]
     variables = model.trainable_variables
     optimizer.apply_gradients(list(zip(gradients, variables)))
+    if is_first_batch:
+      hvd.broadcast_variables(model.variables, root_rank=0)
+      hvd.broadcast_variables(optimizer.variables(), root_rank=0)
     gradient_accumulator.reset()
 
   @tf.function
@@ -5746,11 +5749,7 @@ def debug_slurm_train(config,
       loss = _forward(source, target)
       _assert_loss_is_finite(loss)
       _loss.append(loss)
-      if step == 0 or (step + 1) % accum_steps == 0:
-        _step()
-        if step == 0:
-          hvd.broadcast_variables(model.variables, root_rank=0)
-          hvd.broadcast_variables(optimizer.variables(), root_rank=0)
+      _step(step==0)          
       
       if is_master and step % report_every == 0 and step>0:
         elapsed = time.time() - start
