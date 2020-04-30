@@ -280,56 +280,42 @@ def debug(config,
   domain = config["domain"]
   
   print("There are %d in-domain corpora"%len(source_file))
-
-  meta_train_dataset, meta_test_dataset = create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, 
-                                                                        batch_meta_train_size, batch_meta_test_size, batch_type, 
-                                                                        shuffle_buffer_size, maximum_length, picking_prob=picking_prob)
-  #####
-  with strategy.scope():
-    model.create_variables(optimizer=optimizer)
-
-  def _accumulate_gradients(meta_train_source, meta_train_target, meta_test_source, meta_test_target):
-    num_examples = tf.reduce_sum(meta_train_target["length"])
-    domain = meta_train_source["domain"][0]
-    tf.print("domain:",domain)
-    #tf.print("token_numb:____", num_examples, "domain:____", meta_train_source["domain"][0])
-    reported_loss = 0
-    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples, domain
-
-  @utils.dataprocess.meta_learning_function_on_next(meta_train_dataset, meta_test_dataset)
-  def _meta_train_forward(next_fn):    
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None))
+  
+  def _accumulate_gradients(source, target):
+    tf.print(source)
+    return 0, 0
+ 
+  @dataset_util.function_on_next(train_dataset)
+  def _train_forward(next_fn):    
     with strategy.scope():
-      meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target = next_fn()
-      print(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target)
-      per_replica_loss, per_replica_num_word_examples, per_replica_domain = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(meta_train_per_replica_source, meta_train_per_replica_target, meta_test_per_replica_source, meta_test_per_replica_target))
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
-      num_word_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_word_examples, None) 
-      domain = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_domain, None)
-    return loss, num_word_examples, domain
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, num_examples
+
+  @dataset_util.function_on_next(train_dataset)
+  def _train_iteration(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      return per_replica_source, per_replica_target
+  
   
   # Runs the training loop.
-  import time
-  start = time.time()  
-  print("number of replicas: %d"%strategy.num_replicas_in_sync)
-  meta_train_data_flow = iter(_meta_train_forward())
-  step=0
-  count = np.array([0] * len(source_file))
-  with _summary_writer.as_default():
-    while True:
-      #####Training batch
-      _, num_examples, domain = next(meta_train_data_flow) 
-      domain = domain.numpy()
-      #print(domain)
-      count += np.array([1 if i==int(domain) else 0 for i in range(len(source_file))])
-      step +=1
-      if step % 100 == 0:
-        print([c/sum(count) for c in count])
-      #_loss.append(loss)
-      #print("number examples per replica: ", num_examples)
-      #print(next(meta_train_flow))
+  train_data_flow = iter(_train_forward())
+  _, _ = next(train_data_flow)
+
+  while True:
+    #####Training batch
+    for _ in range(int(config.get("accumulation_step",1))):
+      _, _ = next(train_data_flow)    
+
+  
 
 def meta_train_v1(config,
           optimizer,          
