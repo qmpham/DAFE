@@ -272,8 +272,7 @@ def debug(config,
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
   #####
-  batch_meta_train_size = config["batch_meta_train_size"]
-  batch_meta_test_size = config["batch_meta_test_size"]
+  batch_train_size = config["batch_train_size"]
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
