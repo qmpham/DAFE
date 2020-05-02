@@ -991,7 +991,7 @@ def main():
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=5)
   ######
   model.params.update({"label_smoothing": 0.1})
-  model.params.update({"average_loss_in_time": True})
+  model.params.update({"average_loss_in_time": config.get("average_loss_in_time",True)})
   model.params.update({"beam_width": 5})
   
   if args.run == "inspect":
