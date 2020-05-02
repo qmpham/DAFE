@@ -1866,7 +1866,7 @@ def train(config,
     else:
       training_loss, reported_loss = loss, loss
     domain = source["domain"][0]
-    training_loss = training_loss * importance_weights[domain]
+    training_loss = training_loss / importance_weights[domain]
     if config.get("ADAP_activity_regularizing",False):
       layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
       output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
