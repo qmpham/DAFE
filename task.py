@@ -314,8 +314,6 @@ def debug(config,
     for _ in range(int(config.get("accumulation_step",1))):
       _, _ = next(train_data_flow)    
 
-  
-
 def meta_train_v1(config,
           optimizer,          
           learning_rate,
@@ -1844,6 +1842,11 @@ def train(config,
   train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None))
+  from utils.dataprocess import count_lines
+  datasets_size = [count_lines(src) for src in source_file]
+  importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
+  importance_weights = tf.constant(importance_weights)
+  
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -1856,12 +1859,14 @@ def train(config,
         training=True,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, target, training=True)
+
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    
+    domain = source["domain"][0]
+    training_loss = training_loss * importance_weights[domain]
     if config.get("ADAP_activity_regularizing",False):
       layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
       output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
