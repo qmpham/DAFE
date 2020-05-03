@@ -1845,8 +1845,7 @@ def train(config,
   from utils.dataprocess import count_lines
   datasets_size = [count_lines(src) for src in source_file]
   importance_weights = [sum(datasets_size)/data_size for data_size in datasets_size]
-  min_weight= np.min(importance_weights)
-  importance_weights = [w/min_weight for w in importance_weights]
+  importance_weights = [w/sum(importance_weights) for w in importance_weights]
   importance_weights = tf.constant(importance_weights)
   
   #####
