@@ -1844,7 +1844,9 @@ def train(config,
                                             multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None))
   from utils.dataprocess import count_lines
   datasets_size = [count_lines(src) for src in source_file]
-  importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
+  importance_weights = [sum(datasets_size)/data_size for data_size in datasets_size]
+  min_weight= np.min(importance_weights)
+  importance_weights = [w/min_weight for w in importance_weights]
   importance_weights = tf.constant(importance_weights)
   
   #####
@@ -1868,7 +1870,7 @@ def train(config,
     domain = source["domain"][0]
     if config.get("apply_importance_weight", False):
       print("apply_importance_weight")
-      training_loss = training_loss / importance_weights[domain]
+      training_loss = training_loss * importance_weights[domain]
     if config.get("ADAP_activity_regularizing",False):
       layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
       output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
