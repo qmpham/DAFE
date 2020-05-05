@@ -1841,10 +1841,12 @@ def train(config,
 
   train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None))
+                                            multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
   from utils.dataprocess import count_lines
   datasets_size = [count_lines(src) for src in source_file]
   importance_weights = [sum(datasets_size)/data_size for data_size in datasets_size]
+  temperature=config.get("temperature",1.0)
+  importance_weights = [importance_weights ** temperature for data_size in datasets_size]
   importance_weights = [w/sum(importance_weights) * len(importance_weights) for w in importance_weights]
   importance_weights = tf.constant(importance_weights)
   tf.print(importance_weights)

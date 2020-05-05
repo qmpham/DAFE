@@ -325,7 +325,7 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
 
   return meta_train_dataset, meta_test_dataset
 
-def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None):
+def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0):
 
   train_datasets = [] 
   if multi_domain:
@@ -354,7 +354,9 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
   if picking_prob=="Natural":
     datasets_size = [count_lines(src) for src in source_file]
     picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+    picking_prob = [p ** temperature for p in picking_prob]
     print("picking probability: ", picking_prob)
+    print("temperature: ", temperature)
   elif picking_prob=="Anneal":
     import itertools
     datasets_size = [count_lines(src) for src in source_file]
