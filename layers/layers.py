@@ -759,8 +759,8 @@ class Multi_domain_Gate(tf.keras.layers.Layer):
   def build(self, input_shape):
     super(Multi_domain_Gate, self).build(input_shape)
     scope_name = self.name_scope()
-    self.outer_kernel = self.add_weight("%s_outer_weight"%scope_name, shape=[self.domain_numb, self.input_dim*self.output_dim])
-    self.outer_bias = self.add_weight("%s_outer_bias"%scope_name, shape=[self.domain_numb, self.output_dim])
+    self.outer_kernel = self.add_weight("%s_outer_weight"%scope_name, shape=[self.domain_numb, self.input_dim*self.output_dim],initializer=tf.zeros_initializer)
+    self.outer_bias = self.add_weight("%s_outer_bias"%scope_name, shape=[self.domain_numb, self.output_dim],initializer=tf.zeros_initializer)
     
   def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
