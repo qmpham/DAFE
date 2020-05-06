@@ -925,6 +925,7 @@ def main():
         ffn_dropout=0.1,
         ADAP_contribution=[0.0] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
+  
   elif experiment=="WDC":
     model = SequenceToSequence_WDC(
       source_inputter=My_inputter(embedding_size=512),
@@ -1118,5 +1119,6 @@ def main():
     print("translate with encoder_domain %d and decoder_domain %d"%(int(args.encoder_domain), int(args.decoder_domain)))
     task.experimental_translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.encoder_domain), int(args.decoder_domain), args.output, length_penalty=0.6, checkpoint_path=args.ckpt, experiment=experiment)
+
 if __name__ == "__main__":
   main()
