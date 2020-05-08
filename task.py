@@ -3177,38 +3177,27 @@ def model_inspect(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
 
-  def _accumulate_gradients(source, target):
+  def _build_model(source, target):
     outputs, _ = model(
         source,
         labels=target,
         training=False,
         step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
-    regularization_losses = model.losses #model.regularization_losses
-    print(regularization_losses)
-    loss = loss + tf.add_n([loss for loss in regularization_losses if model.name_scope() in loss.name])
-    variables = model.trainable_variables
-    print("trainable_variables: ")
-    for v in variables:
-      print(v.name)
-      print(v.shape)
-    return loss
+    
  
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
-      # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-      
-    return loss
+      strategy.experimental_run_v2(
+          _build_model, args=(per_replica_source, per_replica_target))
   
   # Runs the training loop.
   train_data_flow = iter(_train_forward())
-  for i in range(6):
-    _ = next(train_data_flow)
+  next(train_data_flow)
+  for v in model.trainable_variables:
+    print(v.name)
+    print(v.numpy())
 
 def src_wemb_pretrain(config,
           optimizer,          
