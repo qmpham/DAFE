@@ -5050,20 +5050,86 @@ class Multi_domain_SelfAttentionDecoder_v16(Decoder):
       cache.append(dict(self_kv=self_kv, memory_kv=memory_kv))
     return cache
 
+  def forward_fn(self,
+              inputs,
+              args_dict,
+              sequence_length=None,
+              initial_state=None,
+              memory=None,
+              memory_sequence_length=None,
+              input_fn=None,
+              sampling_probability=None,
+              training=None):
+    _ = initial_state
+    _ = input_fn
+    if sampling_probability is not None:
+      raise ValueError("Scheduled sampling is not supported by this decoder")
+    outputs, state, attention = self._run_forward_fn(
+        inputs,
+        args_dict,
+        sequence_length=sequence_length,
+        memory=memory,
+        memory_sequence_length=memory_sequence_length,
+        training=training)
+    logits = self.output_layer.forward_fn(outputs, args_dict)
+    return logits, state, attention
 
+  def _run_forward_fn(self,
+            inputs,
+            args_dict,
+            sequence_length=None,
+            cache=None,
+            memory=None,
+            memory_sequence_length=None,
+            step=None,
+            training=None):
+      domain = inputs[1]
+      domain = domain[0]
+      inputs = inputs[0]
+      inputs *= self.num_units**0.5
+      if self.position_encoder is not None:
+        inputs = self.position_encoder(inputs, position=step + 1 if step is not None else None)
+      inputs = common.dropout(inputs, self.dropout, training=training)
 
+      # Prepare query mask.
+      mask = None
+      if step is None:
+        maximum_length = tf.shape(inputs)[1]
+        if sequence_length is None:
+          batch_size = tf.shape(inputs)[0]
+          sequence_length = tf.fill([batch_size], maximum_length)
+        mask = transformer.future_mask(sequence_length, maximum_length=maximum_length)
 
+      # Prepare memory mask.
+      memory_mask = None
+      if memory is not None:
+        if not isinstance(memory, (list, tuple)):
+          memory = (memory,)
+      if memory_sequence_length is not None:
+        if not isinstance(memory_sequence_length, (list, tuple)):
+          memory_sequence_length = (memory_sequence_length,)
+        memory_mask = [
+            tf.sequence_mask(mem_length, maxlen=tf.shape(mem)[1])
+            for mem, mem_length in zip(memory, memory_sequence_length)]
+      
+      # Run each layer.
+      new_cache = []
+      total_adapt=[]
+      for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
 
-
-
-
-
-
-
-
-
-
-
+        inputs, layer_cache, attention = layer.forward_fn(
+            inputs,
+            args_dict,
+            mask=mask,          
+            memory=memory,
+            memory_mask=memory_mask,
+            cache=cache[i] if cache is not None else None,
+            training=training)
+        new_cache.append(layer_cache)
+        adapt = multi_domain_layer.forward_fn(inputs, args_dict, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
+      outputs = self.layer_norm.forward_fn(inputs+tf.add_n(total_adapt), args_dict)
+      return outputs, new_cache, attention
 
 
 

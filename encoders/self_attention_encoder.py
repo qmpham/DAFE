@@ -1392,7 +1392,23 @@ class Multi_domain_SelfAttentionEncoder_v12(Encoder):
       m += layer.map_v1_weights(weights["layer_%d" % i])
     return m
 
-
+  def forward_fn(self, inputs, args_dict, sequence_length=None, training=None):
+    domain = inputs[1]
+    domain = domain[0]
+    inputs = inputs[0]
+    inputs *= self.num_units**0.5
+    if self.position_encoder is not None:
+      inputs = self.position_encoder(inputs)
+    inputs = common.dropout(inputs, self.dropout, training=training)
+    mask = self.build_mask(inputs, sequence_length=sequence_length)
+    total_adapt=[]
+    #for layer in self.layers:
+    for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
+      inputs = layer.forward_fn(inputs, args_dict, mask=mask, training=training)
+      adapt = multi_domain_layer.forward_fn(inputs, args_dict, domain, mask=mask, training=training)
+      total_adapt.append(adapt)
+    outputs = self.layer_norm.forward_fn(inputs + tf.add_n(total_adapt), args_dict)
+    return outputs, None, sequence_length
 
 
 
