@@ -189,7 +189,7 @@ class LayerWrapper(tf.keras.layers.Layer):
     training = kwargs.get("training")
     x = inputs
     if self.input_layer_norm is not None:
-      x = self.input_layer_norm.forward_fn(x)  # pylint: disable=not-callable
+      x = self.input_layer_norm.forward_fn(x, args_dict)  # pylint: disable=not-callable
     x = dropout(x, self.input_dropout, training=training)
 
     all_outputs = self.layer.forward_fn(x, args_dict, *args, **kwargs)
