@@ -4830,7 +4830,7 @@ class Multi_domain_SelfAttentionDecoder_v16(Decoder):
                ffn_dropout=0.1,
                ffn_activation=tf.nn.relu,
                position_encoder_class=SinusoidalPositionEncoder,
-               multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v2,
+               multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
                fake_domain_prob=0.1,
                noisy_prob=None,
                ADAP_contribution=None,
@@ -4980,16 +4980,34 @@ class Multi_domain_SelfAttentionDecoder_v16(Decoder):
     new_cache = []
     total_adapt = []
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
-      inputs, layer_cache, attention = layer(
+      if self.ADAP_layer_stopping_gradient:
+        adapt = multi_domain_layer(layer(
+          tf.stop_gradient(inputs),
+          mask=mask,
+          memory=memory,
+          memory_mask=memory_mask,
+          cache=cache[i] if cache is not None else None,
+          training=training)[0], domain, mask=mask, training=training)
+        total_adapt.append(adapt)
+        inputs, layer_cache, attention = layer(
           inputs,
           mask=mask,
           memory=memory,
           memory_mask=memory_mask,
           cache=cache[i] if cache is not None else None,
           training=training)
-      new_cache.append(layer_cache)
-      adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-      total_adapt.append(adapt)
+        new_cache.append(layer_cache)
+      else:
+        inputs, layer_cache, attention = layer(
+            inputs,
+            mask=mask,
+            memory=memory,
+            memory_mask=memory_mask,
+            cache=cache[i] if cache is not None else None,
+            training=training)
+        new_cache.append(layer_cache)
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
     outputs = self.layer_norm(inputs + tf.add_n(total_adapt))
     return outputs, new_cache, attention
 
@@ -5116,8 +5134,17 @@ class Multi_domain_SelfAttentionDecoder_v16(Decoder):
       new_cache = []
       total_adapt=[]
       for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
-
-        inputs, layer_cache, attention = layer.forward_fn(
+        if self.ADAP_layer_stopping_gradient:
+          adapt = multi_domain_layer.forward_fn(layer.forward_fn(
+            tf.stop_gradient(inputs),
+            args_dict,
+            mask=mask,          
+            memory=memory,
+            memory_mask=memory_mask,
+            cache=cache[i] if cache is not None else None,
+            training=training)[0], args_dict, domain, mask=mask, training=training)
+          total_adapt.append(adapt)
+          inputs, layer_cache, attention = layer.forward_fn(
             inputs,
             args_dict,
             mask=mask,          
@@ -5125,9 +5152,20 @@ class Multi_domain_SelfAttentionDecoder_v16(Decoder):
             memory_mask=memory_mask,
             cache=cache[i] if cache is not None else None,
             training=training)
-        new_cache.append(layer_cache)
-        adapt = multi_domain_layer.forward_fn(inputs, args_dict, domain, mask=mask, training=training)
-        total_adapt.append(adapt)
+          new_cache.append(layer_cache)
+        else:
+          inputs, layer_cache, attention = layer.forward_fn(
+              inputs,
+              args_dict,
+              mask=mask,          
+              memory=memory,
+              memory_mask=memory_mask,
+              cache=cache[i] if cache is not None else None,
+              training=training)
+          new_cache.append(layer_cache)
+          adapt = multi_domain_layer.forward_fn(inputs, args_dict, domain, mask=mask, training=training)
+          total_adapt.append(adapt)
+
       outputs = self.layer_norm.forward_fn(inputs+tf.add_n(total_adapt), args_dict)
       return outputs, new_cache, attention
 

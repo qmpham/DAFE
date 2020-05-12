@@ -1375,9 +1375,15 @@ class Multi_domain_SelfAttentionEncoder_v12(Encoder):
     mask = self.build_mask(inputs, sequence_length=sequence_length)
     total_adapt = []
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers, self.multi_domain_layers)):
-      inputs = layer(inputs, mask=mask, training=training)
-      adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-      total_adapt.append(adapt)
+      if self.ADAP_layer_stopping_gradient:
+        adapt = multi_domain_layer(layer(tf.stop_gradient(inputs), mask=mask, training=training), domain, mask=mask, training=training)
+        total_adapt.append(adapt)
+        inputs = layer(inputs, mask=mask, training=training)                
+      else:
+        inputs = layer(inputs, mask=mask, training=training)
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
+
       if internal_node_printing:
         tf.print("layers: ", i , "ADAP mean pooling: ", tf.reduce_mean(tf.abs(adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
       
@@ -1404,9 +1410,14 @@ class Multi_domain_SelfAttentionEncoder_v12(Encoder):
     total_adapt=[]
     #for layer in self.layers:
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
-      inputs = layer.forward_fn(inputs, args_dict, mask=mask, training=training)
-      adapt = multi_domain_layer.forward_fn(inputs, args_dict, domain, mask=mask, training=training)
-      total_adapt.append(adapt)
+      if self.ADAP_layer_stopping_gradient:
+        adapt = multi_domain_layer.forward_fn(layer(tf.stop_gradient(inputs), args_dict, mask=mask, training=training), args_dict, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
+        inputs = layer.forward_fn(inputs, args_dict, mask=mask, training=training)                
+      else:
+        inputs = layer.forward_fn(inputs, args_dict, mask=mask, training=training)
+        adapt = multi_domain_layer.forward_fn(inputs, args_dict, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
     outputs = self.layer_norm.forward_fn(inputs + tf.add_n(total_adapt), args_dict)
     return outputs, None, sequence_length
 
