@@ -190,7 +190,7 @@ def ragged_map(*args):
 
   return src_batch, tgt_batch
 
-def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length, picking_prob=None):
+def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_file, target_file, batch_meta_train_size, batch_meta_test_size, batch_type, shuffle_buffer_size, maximum_length, meta_train_picking_prob=None, meta_test_picking_prob=None):
   meta_train_datasets = [] 
   meta_test_datasets = [] 
   print("batch_type: ", batch_type)
@@ -214,12 +214,12 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
               length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=maximum_length,
               maximum_labels_length=maximum_length))
-  if picking_prob=="Natural":
+  if meta_train_picking_prob=="Natural":
     datasets_size = [count_lines(src) for src in source_file]
-    picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+    meta_train_picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
     #picking_prob = [1.0,0.01,0.01,0.01,0.01,0.01]
-    print("picking probability: ", picking_prob)
-  elif picking_prob=="Anneal":
+    print("picking probability: ", meta_train_picking_prob)
+  elif meta_train_picking_prob=="Anneal":
     import itertools
     datasets_size = [count_lines(src) for src in source_file]
     picking_prob_ = [data_size/sum(datasets_size) for data_size in datasets_size]
@@ -228,13 +228,28 @@ def create_multi_domain_meta_trainining_dataset(strategy, model, domain, source_
       prob_ = [p**i  for p in picking_prob_]
       return [p/sum(prob_) for p in prob_]
     tensor = tf.Variable(np.array([anneal(i) for i in range(200000)]))
-    picking_prob = tf.data.Dataset.from_tensor_slices(tensor)
-    print("picking probability: ", picking_prob)
+    meta_train_picking_prob = tf.data.Dataset.from_tensor_slices(tensor)
+    print("picking probability: ", meta_train_picking_prob)
   else:
-    print("picking probability: ", picking_prob)
+    print("picking probability: ", meta_train_picking_prob)
 
-  meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets, weights=picking_prob) #tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
-  meta_test_dataset = tf.data.experimental.sample_from_datasets(meta_test_datasets, weights=None) #tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
+  if meta_test_picking_prob=="Natural":
+    datasets_size = [count_lines(src) for src in source_file]
+    meta_test_picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+    #picking_prob = [1.0,0.01,0.01,0.01,0.01,0.01]
+    print("picking probability: ", meta_test_picking_prob)
+  elif meta_test_picking_prob=="Anneal":
+    import itertools
+    datasets_size = [count_lines(src) for src in source_file]
+    picking_prob_ = [data_size/sum(datasets_size) for data_size in datasets_size]
+    tensor = tf.Variable(np.array([anneal(i) for i in range(200000)]))
+    meta_test_picking_prob = tf.data.Dataset.from_tensor_slices(tensor)
+    print("picking probability: ", meta_test_picking_prob)
+  else:
+    print("picking probability: ", meta_test_picking_prob)
+
+  meta_train_dataset = tf.data.experimental.sample_from_datasets(meta_train_datasets, weights=meta_train_picking_prob) #tf.data.Dataset.zip(tuple(meta_train_datasets)).map(merge_map_fn) #tf.data.experimental.sample_from_datasets(meta_train_datasets)
+  meta_test_dataset = tf.data.experimental.sample_from_datasets(meta_test_datasets, weights=meta_test_picking_prob) #tf.data.Dataset.zip(tuple(meta_test_datasets)).map(merge_map_fn)
   
   with strategy.scope():    
     meta_train_base_dataset = meta_train_dataset      

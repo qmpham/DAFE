@@ -1055,7 +1055,8 @@ def main():
   if args.run == "metatrainv7":
     task.meta_train_v7(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "metatrainv8":
-    task.meta_train_v8(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000), picking_prob=config.get("picking_prob",None))
+    task.meta_train_v8(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000), 
+                      meta_train_picking_prob=config.get("meta_train_picking_prob",None), meta_test_picking_prob=config.get("meta_test_picking_prob",None))
   elif args.run == "metatrainv15":
     task.meta_train_v15(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, picking_prob=config.get("picking_prob",None))
   elif args.run == "metatrainv13":
