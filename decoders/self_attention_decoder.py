@@ -5169,7 +5169,7 @@ class Multi_domain_SelfAttentionDecoder_v16(Decoder):
       outputs = self.layer_norm.forward_fn(inputs+tf.add_n(total_adapt), args_dict)
       return outputs, new_cache, attention
 
-class Multi_domain_SelfAttentionDecoder_v6(Decoder):
+class Multi_domain_SelfAttentionDecoder_v17(Decoder):
   
   def __init__(self,
                num_layers,
@@ -5193,7 +5193,7 @@ class Multi_domain_SelfAttentionDecoder_v6(Decoder):
                noisy_prob=None,
                **kwargs):
     
-    super(Multi_domain_SelfAttentionDecoder_v6, self).__init__(num_sources=num_sources, **kwargs)
+    super(Multi_domain_SelfAttentionDecoder_v17, self).__init__(num_sources=num_sources, **kwargs)
     self.num_units = num_units
     self.num_heads = num_heads
     self.dropout = dropout
