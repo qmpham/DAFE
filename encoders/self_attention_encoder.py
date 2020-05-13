@@ -1425,7 +1425,7 @@ class Multi_domain_SelfAttentionEncoder_v12(Encoder):
     return outputs, None, sequence_length
 
 
-class Multi_domain_SelfAttentionEncoder_v1(Encoder):
+class Multi_domain_SelfAttentionEncoder_v15(Encoder):
   
   def __init__(self,
                num_layers,
@@ -1448,7 +1448,7 @@ class Multi_domain_SelfAttentionEncoder_v1(Encoder):
                noisy_prob=None,
                **kwargs):
     
-    super(Multi_domain_SelfAttentionEncoder_v1, self).__init__(**kwargs)
+    super(Multi_domain_SelfAttentionEncoder_v15, self).__init__(**kwargs)
     self.num_units = num_units
     self.dropout = dropout
     self.position_encoder = None
@@ -1500,8 +1500,8 @@ class Multi_domain_SelfAttentionEncoder_v1(Encoder):
     g = multi_domain_gate(inputs, domain, mask=mask, training=training)
     total_adapt = tf.add_n(total_adapt)
     if internal_node_printing:
-      tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(tf.abs(total_adapt * (1-g)),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
-    outputs = self.layer_norm(inputs * g + total_adapt * (1-g))
+      tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(tf.abs(total_adapt * g),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
+    outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     
     return outputs, None, sequence_length
     
