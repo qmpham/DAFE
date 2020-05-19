@@ -3199,7 +3199,7 @@ def model_inspect(config,
   next(train_data_flow)
   for v in model.trainable_variables:
     print(v.name)
-    print(v.numpy())
+    print(v.numpy().shape)
 
 def src_wemb_pretrain(config,
           optimizer,          
