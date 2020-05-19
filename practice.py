@@ -1035,39 +1035,40 @@ def main():
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
   elif experiment=="residual_big_transformer":
     model = Multi_domain_SequenceToSequence(
-    source_inputter=My_inputter(embedding_size=512),
-    target_inputter=My_inputter(embedding_size=512),
-    encoder=Multi_domain_SelfAttentionEncoder_v2(
+    source_inputter=My_inputter(embedding_size=config.get("d_model",1024)),
+    target_inputter=My_inputter(embedding_size=config.get("d_model",1024)),
+    encoder=Multi_domain_SelfAttentionEncoder_v16(
         num_layers=6,
         num_domains=num_domains,
         num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
-        num_units=1024,
+        num_units=config.get("d_model",1024),
         num_heads=16,
         ffn_inner_dim=4096,
-        dropout=0.3,
-        attention_dropout=0.3,
-        ffn_dropout=0.3,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
         ADAP_contribution=[0.0] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3),
-    decoder=Multi_domain_SelfAttentionDecoder_v2(
+    decoder=Multi_domain_SelfAttentionDecoder_v18(
         num_layers=6,
         num_domains=num_domains,
         num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
-        num_units=1024,
+        num_units=config.get("d_model",1024),
         num_heads=16,
         ffn_inner_dim=4096,
-        dropout=0.3,
-        attention_dropout=0.3,
-        ffn_dropout=0.3,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
         ADAP_contribution=[0.0] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
   elif experiment=="pretrain":
     return
   warmup_steps = config.get("warmup_steps",4000)
   print("warmup_steps: ", warmup_steps)
-  learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=1.0, model_dim=512, warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
+  print("step_duration: ", config.get("step_duration",16))
+  learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=config.get("learning_rate",1.0), model_dim=config.get("d_model",1024), warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
   meta_train_optimizer = tf.keras.optimizers.SGD(0.0001)
   adv_optimizer = tfa.optimizers.LazyAdam(0.0001)
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)

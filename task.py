@@ -1849,7 +1849,7 @@ def train(config,
   importance_weights = [w ** temperature for w in importance_weights]
   importance_weights = [w/sum(importance_weights) * len(importance_weights) for w in importance_weights]
   importance_weights = tf.constant(importance_weights)
-  tf.print(importance_weights)
+  #tf.print(importance_weights)
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -1960,6 +1960,7 @@ def train(config,
   _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
+  print("accumulation step", config.get("accumulation_step",1))
   _loss = []  
   _number_examples = []
   step = optimizer.iterations.numpy()
