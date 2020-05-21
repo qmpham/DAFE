@@ -5813,7 +5813,7 @@ def meta_train_v16(config,
   
   #####
   with strategy.scope():
-    model.create_variables(optimizer=optimizer)
+    model.create_variables(optimizer=outer_optimizer)
     inner_gradient_accumulator = optimizer_util.GradientAccumulator()  
     outer_gradient_accumulator = optimizer_util.GradientAccumulator()
 
