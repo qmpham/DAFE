@@ -165,8 +165,10 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
       else:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         inputs = adapt * self.ADAP_contribution[i] + inputs
+      """
       if internal_node_printing:
         tf.print("layers: ", i , "ADAP mean pooling: ", tf.reduce_mean(tf.abs(adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
+      """
     outputs = self.layer_norm(inputs)
     
     return outputs, None, sequence_length
