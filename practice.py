@@ -1068,6 +1068,7 @@ def main():
   warmup_steps = config.get("warmup_steps",4000)
   print("warmup_steps: ", warmup_steps)
   print("step_duration: ", config.get("step_duration",16))
+  print("d_model: ", config.get("d_model",512))
   learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=config.get("learning_rate",1.0), model_dim=config.get("d_model",512), warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
   meta_train_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr"))
   adv_optimizer = tfa.optimizers.LazyAdam(0.0001)
@@ -1080,7 +1081,7 @@ def main():
   model.params.update({"label_smoothing": 0.1})
   model.params.update({"average_loss_in_time": config.get("average_loss_in_time",True)})
   model.params.update({"beam_width": 5})
-  
+
   if args.run == "inspect":
     task.model_inspect(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   if args.run == "metatrainv7":
