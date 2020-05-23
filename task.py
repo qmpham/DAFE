@@ -5943,16 +5943,16 @@ def meta_train_v16(config,
     while True:
       #####
       snapshots = [v.value() for v in model.trainable_variables]
-      snapshots_example = [v.value() for v in model.trainable_variables if v.name=="multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v12/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense/kernel"]
+      snapshots_example = [v.value() for v in model.trainable_variables if "multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v12/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense/kernel" in v.name]
       print(snapshots_example[0])
       for _ in range(int(config.get("inner_step",2))):
         loss, num_examples = next(train_data_flow)    
         _loss.append(loss)
         _number_examples.append(num_examples)
         _inner_step()
-      snapshot_1 = [v.value() for v in model.trainable_variables if v.name=="multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v12/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense/kernel"]
+      snapshot_1 = [v.value() for v in model.trainable_variables if "multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v12/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense/kernel" in v.name]
       weight_reset(snapshots)
-      snapshot_2 = [v.value() for v in model.trainable_variables if v.name=="multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v12/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense/kernel"]
+      snapshot_2 = [v.value() for v in model.trainable_variables if "multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v12/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense/kernel" in v.name]
       print(snapshot_1[0])
       print(snapshot_2[0])
       _outer_step()
