@@ -5942,7 +5942,7 @@ def meta_train_v16(config,
   with _summary_writer.as_default():
     while True:
       #####
-      #snapshots = [v.value() for v in model.trainable_variables]
+      snapshots = [v.value() for v in model.trainable_variables]
       #snapshots_example = [v.value() for v in model.trainable_variables if "multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v12/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense/kernel" in v.name]
       #print(snapshots_example[0])
       for _ in range(int(config.get("inner_step",2))):
