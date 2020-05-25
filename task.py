@@ -73,9 +73,9 @@ def translate(source_file,
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
     if experiment in ["residual","residualv15","residualv25","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
-      encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length)
+      encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length, training=False)
     else:
-      encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
+      encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
 
     # Prepare the decoding strategy.
     if beam_size > 1:
@@ -90,9 +90,9 @@ def translate(source_file,
         memory=encoder_outputs,
         memory_sequence_length=source_length)
     if experiment in ["residual","residualv2","residualv15","residualv25","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv1","residualv3","residualv5","residualv6","residualv7","residualv13","residualv12","residualv11","residualv8","residualv9","baselinev1"]:
-      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
     elif experiment in ["DC"]:
-      map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain, training=False)
     elif experiment in ["WDC"]:
       e_r, _ = model.classification_layer(encoder_outputs, source_length, training=False)
       e_s, _ = model.adv_classification_layer(encoder_outputs, source_length, training=False)
@@ -103,7 +103,7 @@ def translate(source_file,
       encoder_mask = model.encoder.build_mask(source_inputs, sequence_length=source_length)
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), h_r, h_s, encoder_mask]
     else:
-      map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
     decoded = model.decoder.dynamic_decode(
         map_input_fn,
         tf.fill([batch_size], START_OF_SENTENCE_ID),
