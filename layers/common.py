@@ -333,12 +333,11 @@ class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
 
 class Multi_LayerNorm(tf.keras.layers.Layer):
   
-  def __init__(self, domain_numb, input_dims, epsilon=1e-6, **kwargs):
+  def __init__(self, domain_numb, input_dim, epsilon=1e-6, **kwargs):
     
     super(Multi_LayerNorm, self).__init__(**kwargs)
     self.epsilon = epsilon
-    self.input_dims = tf.constant(input_dims)
-    self.input_dims_max = 1024
+    self.input_dims_max = input_dim
     self.domain_numb = domain_numb
 
   def build(self, input_shape):
@@ -356,9 +355,8 @@ class Multi_LayerNorm(tf.keras.layers.Layer):
     mean = tf.reduce_mean(x, axis=[-1], keepdims=True)
     variance = tf.reduce_mean(tf.square(x - mean), axis=[-1], keepdims=True)
     norm_x = (x - mean) * tf.math.rsqrt(variance + self.epsilon)
-    dims = self.input_dims[domain]
-    gamma = tf.nn.embedding_lookup(self.gamma, domain)[:dims]
-    beta = tf.nn.embedding_lookup(self.beta, domain)[:dims]
+    gamma = tf.nn.embedding_lookup(self.gamma, domain)
+    beta = tf.nn.embedding_lookup(self.beta, domain)
     return norm_x * gamma + beta
 
   def forward_fn(self, x, args_dict, domain):  # pylint: disable=arguments-differ
