@@ -955,6 +955,36 @@ def main():
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         inner_layer_norm=None))
+  elif experiment=="residualv27":
+    model = Multi_domain_SequenceToSequence(
+    source_inputter=My_inputter(embedding_size=512),
+    target_inputter=My_inputter(embedding_size=512),
+    encoder=Multi_domain_SelfAttentionEncoder_v12(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+        inner_layer_norm=None),
+    decoder=Multi_domain_SelfAttentionDecoder_v16(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+        inner_layer_norm=None))
   elif experiment=="residualv26":
     model = Multi_domain_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
