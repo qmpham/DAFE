@@ -333,17 +333,16 @@ class Multi_ADAP_Dense_v1(tf.keras.layers.Dense):
 
 class Multi_LayerNorm(tf.keras.layers.Layer):
   
-  def __init__(self, domain_numb, input_dim, epsilon=1e-6, **kwargs):
+  def __init__(self, domain_numb, epsilon=1e-6, **kwargs):
     
     super(Multi_LayerNorm, self).__init__(**kwargs)
     self.epsilon = epsilon
-    self.input_dims_max = input_dim
     self.domain_numb = domain_numb
 
   def build(self, input_shape):
     """Creates the variables."""
-    #depth = input_shape[-1]
-    depth = self.input_dims_max
+    depth = input_shape[-1]
+    #depth = self.input_dims_max
     self.beta = self.add_weight(
         "beta", [self.domain_numb, depth], initializer=tf.keras.initializers.Constant(0))
     self.gamma = self.add_weight(

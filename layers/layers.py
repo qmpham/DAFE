@@ -243,7 +243,7 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
     self.output_dim = output_dim
     self.layer_norm = common.LayerNorm()
     if inner_layer_norm:
-      self.inner_layer_norm = inner_layer_norm(domain_numb, input_dim)
+      self.inner_layer_norm = inner_layer_norm(domain_numb)
     else:
       self.inner_layer_norm = common.LayerNorm()
     self.inner_transpose = False
