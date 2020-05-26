@@ -9,6 +9,7 @@ from layers import common, transformer
 from opennmt.layers.position import SinusoidalPositionEncoder
 from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v6, Multi_domain_Gate_v2, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_Gate, Multi_domain_FeedForwardNetwork_v3
 from utils.utils_ import make_domain_mask
+from layers.common import Multi_LayerNorm
 from opennmt.utils import decoding
 from opennmt import constants
 from opennmt.inputters import text_inputter
@@ -4857,7 +4858,7 @@ class Multi_domain_SelfAttentionDecoder_v16(Decoder):
             ffn_activation=ffn_activation)
         for i in range(num_layers)]
     self.multi_domain_layers = [
-        multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
+        multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, inner_layer_norm=Multi_LayerNorm, name="ADAP_%d"%i)
         if not(multi_domain_adapter_class == Multi_domain_FeedForwardNetwork_v6)
         else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, fake_domain_prob= fake_domain_prob, noisy_prob=noisy_prob)
         for i in range(num_layers)]

@@ -231,6 +231,7 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
                domain_numb=6,
                dropout=0.1,
                activation=tf.nn.relu,
+               inner_layer_norm=None,
                outer_activation=None,
                **kwargs):
     
@@ -241,7 +242,10 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
     self.inner_dim = inner_dim
     self.output_dim = output_dim
     self.layer_norm = common.LayerNorm()
-    self.inner_layer_norm = common.LayerNorm()
+    if inner_layer_norm:
+      self.inner_layer_norm=inner_layer_norm()
+    else:
+      self.inner_layer_norm = common.LayerNorm()
     self.inner_transpose = False
     self.outer_transpose = False
     self.inner_use_bias = True

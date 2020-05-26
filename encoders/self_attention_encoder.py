@@ -10,7 +10,7 @@ from opennmt.encoders.encoder import Encoder
 from opennmt.encoders.self_attention_encoder import SelfAttentionEncoder
 from opennmt.layers.position import SinusoidalPositionEncoder
 from opennmt.layers import common
-from layers.common import LayerNorm
+from layers.common import LayerNorm, Multi_LayerNorm
 from utils.utils_ import make_domain_mask
 from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v6, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, Multi_domain_FeedForwardNetwork_v3, DAFE, Multi_domain_Gate, Multi_domain_Gate_v2
 class Multi_domain_SelfAttentionEncoder(Encoder):
@@ -1356,7 +1356,7 @@ class Multi_domain_SelfAttentionEncoder_v12(Encoder):
             ffn_activation=ffn_activation)
         for i in range(num_layers)]    
     self.multi_domain_layers = [
-        multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
+        multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, inner_layer_norm=Multi_LayerNorm, name="ADAP_%d"%i)
         if not(multi_domain_adapter_class == Multi_domain_FeedForwardNetwork_v6)
         else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, fake_domain_prob= fake_domain_prob, noisy_prob=noisy_prob)
         for i in range(num_layers)]
@@ -1574,8 +1574,8 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers, self.multi_domain_layers)):
       inputs = layer(inputs, mask=mask, training=training)
       if self.ADAP_contribution[i]>0:
-        inputs = adapt * self.ADAP_contribution[i] + inputs
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        inputs = adapt * self.ADAP_contribution[i] + inputs
       """
       if internal_node_printing:
         tf.print("layers: ", i , "ADAP mean pooling: ", tf.reduce_mean(tf.abs(adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
