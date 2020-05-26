@@ -1333,6 +1333,7 @@ class Multi_domain_SelfAttentionEncoder_v12(Encoder):
                ffn_activation=tf.nn.relu,
                position_encoder_class=SinusoidalPositionEncoder,
                multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+               inner_layer_norm=None,
                fake_domain_prob=0.1,
                noisy_prob=None,
                ADAP_contribution=None,
@@ -1356,7 +1357,7 @@ class Multi_domain_SelfAttentionEncoder_v12(Encoder):
             ffn_activation=ffn_activation)
         for i in range(num_layers)]    
     self.multi_domain_layers = [
-        multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, inner_layer_norm=Multi_LayerNorm, name="ADAP_%d"%i)
+        multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, inner_layer_norm=inner_layer_norm, name="ADAP_%d"%i)
         if not(multi_domain_adapter_class == Multi_domain_FeedForwardNetwork_v6)
         else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, fake_domain_prob= fake_domain_prob, noisy_prob=noisy_prob)
         for i in range(num_layers)]
