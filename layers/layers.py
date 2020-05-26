@@ -243,7 +243,7 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
     self.output_dim = output_dim
     self.layer_norm = common.LayerNorm()
     if inner_layer_norm:
-      self.inner_layer_norm=inner_layer_norm()
+      self.inner_layer_norm = inner_layer_norm(domain_numb, input_dim)
     else:
       self.inner_layer_norm = common.LayerNorm()
     self.inner_transpose = False
@@ -280,7 +280,10 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
     if self.inner_use_bias:
       inner = tf.nn.bias_add(inner, dom_inner_bias)
     if self.inner_activation is not None:
-      inner = self.inner_layer_norm(inner)
+      if isinstance(self.inner_layer_norm, common.LayerNorm):
+        inner = self.inner_layer_norm(inner)
+      else:
+        inner = self.inner_layer_norm(inner,domain)
       inner = self.inner_activation(inner)  # pylint: disable=not-callable
     if rank > 2:
       inner = tf.reshape(inner, shape[:-1] + [self.inner_dim])
