@@ -342,6 +342,7 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
 
 def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0):
 
+  print("maximum_length", maximum_length)
   train_datasets = [] 
   if multi_domain:
     print(batch_type)
