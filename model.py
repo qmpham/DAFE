@@ -109,8 +109,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     assert isinstance(self.labels_inputter, My_inputter)    
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
-    if isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v1) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v2) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v12)
-        or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v15):
+    if isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v1) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v2) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v12) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v15):
       encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         [source_inputs, features["domain"]], sequence_length=source_length, training=training, internal_node_printing=internal_node_printing)
     else:
