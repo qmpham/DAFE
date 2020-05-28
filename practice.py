@@ -1080,7 +1080,7 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1,
-        ADAP_contribution=[0.0] * 6,
+        ADAP_contribution=[1.0] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3),
     decoder=Multi_domain_SelfAttentionDecoder_v18(
         num_layers=6,
@@ -1093,7 +1093,7 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1,
-        ADAP_contribution=[0.0] * 6,
+        ADAP_contribution=[1.0] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
   elif experiment=="pretrain":
     return
