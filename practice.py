@@ -18,13 +18,13 @@ from opennmt.optimizers import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter
 from opennmt.models.sequence_to_sequence import SequenceToSequence
-from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1
+from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1, SequenceToSequence_with_dprob
 from encoders.self_attention_encoder import *
 from decoders.self_attention_decoder import *
 import numpy as np
 from utils.dataprocess import merge_map_fn, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset
 from opennmt.utils import BLEUScorer
-from opennmt.inputters.text_inputter import WordEmbedder
+from opennmt.inputters.text_inputter import WordEmbedder, TextInputter
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, create_slurm_strategy
 import task
 from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v6, Multi_domain_Gate_v1, Multi_domain_FeedForwardNetwork_v5, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_FeedForwardNetwork_v1, Multi_domain_FeedForwardNetwork_v0
@@ -1014,9 +1014,10 @@ def main():
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
   elif experiment=="residualv28":
-    model = Multi_domain_SequenceToSequence(
+    model = SequenceToSequence_with_dprob(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
+    probs_inputter=TextInputter(),
     encoder=Multi_domain_SelfAttentionEncoder_v18(
         num_layers=6,
         num_domains=num_domains,
