@@ -284,7 +284,7 @@ def debug(config,
                                             multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None))
   
   def _accumulate_gradients(source, target):
-    tf.print(source)
+    tf.print(target)
     return 0, 0
  
   @dataset_util.function_on_next(train_dataset)
