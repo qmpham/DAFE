@@ -22,7 +22,7 @@ from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
 from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
-from utils.dataprocess import create_trainining_dataset_hvd, merge_map_fn, create_trainining_dataset_v1, create_multi_domain_meta_trainining_dataset_v2, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset, create_trainining_dataset_v2, create_multi_domain_meta_trainining_dataset_v1
+from utils.dataprocess import create_trainining_dataset_with_dprob, create_trainining_dataset_hvd, merge_map_fn, create_trainining_dataset_v1, create_multi_domain_meta_trainining_dataset_v2, create_meta_trainining_dataset, create_trainining_dataset, create_multi_domain_meta_trainining_dataset, create_trainining_dataset_v2, create_multi_domain_meta_trainining_dataset_v1
 from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
@@ -276,10 +276,11 @@ def debug(config,
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
+  prob_file = config["prob"]
   domain = config["domain"]
   
   print("There are %d in-domain corpora"%len(source_file))
-  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+  train_dataset = create_trainining_dataset_with_dprob(strategy, model, source_file, target_file, prob_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None))
   

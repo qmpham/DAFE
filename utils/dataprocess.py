@@ -590,7 +590,7 @@ def meta_learning_function_on_next(metatrain_dataset, metatest_dataset, as_numpy
 
   return decorator
 
-def create_trainining_dataset_with_dprob(strategy, model, domain, source_file, target_file, prob_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0):
+def create_trainining_dataset_with_dprob(strategy, model, source_file, target_file, prob_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0):
 
   print("maximum_length", maximum_length)
   train_datasets = [] 
