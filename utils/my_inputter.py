@@ -461,7 +461,7 @@ class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
             num_threads=num_threads,
             prefetch_buffer_size=prefetch_buffer_size)
         
-        feat_prob = tf.data.Dataset.zip([prob, feature])
+        feat_prob = tf.data.Dataset.zip((prob, feature))
         def add_prob(f,p):
             f["domain"]=p
             return f
