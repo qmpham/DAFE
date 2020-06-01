@@ -2052,6 +2052,7 @@ class SequenceToSequence_with_dprob(model.SequenceGenerator):
                      internal_node_printing=False):
     params = self.params
     target_inputs = self.labels_inputter(labels, training=training)
+    print("labels: ", labels)
     print("target_inputs",target_inputs)
     input_fn = lambda ids: [self.labels_inputter({"ids": ids}, training=training), labels["domain"]]
 
