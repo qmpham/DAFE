@@ -447,27 +447,18 @@ class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
                              length_bucket_width=None,
                              num_threads=1,
                              prefetch_buffer_size=None):
-
-        prob = self.probs_inputter.make_inference_dataset(
-            probs_file,
-            batch_size,
-            length_bucket_width=length_bucket_width,
-            num_threads=num_threads,
-            prefetch_buffer_size=prefetch_buffer_size)
-        feature = self.features_inputter.make_inference_dataset(
-            features_file,
-            batch_size,
-            length_bucket_width=length_bucket_width,
-            num_threads=num_threads,
-            prefetch_buffer_size=prefetch_buffer_size)
-        
-        feat_prob = tf.data.Dataset.zip((prob, feature))
         def add_prob(f,p):
-            f["domain"]=tf.math.softmax(p["probs"])
-            return f
-        feat_prob = feat_prob.map(add_prob, num_parallel_calls=num_threads or 4)
-        print(feat_prob)
-        return feat_prob        
+            feats = self.features_inputter.make_features(f)
+            probs = self.probs_inputter.make_features(p)
+            feats["domain"] = tf.math.softmax(probs["probs"])
+            return feats
+        
+        dataset = self.make_dataset([features_file, probs_file], training=True)
+        dataset = dataset.apply(dataset_util.inference_pipeline(
+                       batch_size,
+                       process_fn=add_prob,
+                       num_threads=num_threads))
+        return dataset        
 
     def make_training_dataset(self,
                                 features_file,
