@@ -1029,8 +1029,7 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1,
-        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v9,
-        inner_layer_norm=None),
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v9),
     decoder=Multi_domain_SelfAttentionDecoder_v19(
         num_layers=6,
         num_domains=num_domains,
@@ -1042,8 +1041,7 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1,
-        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v9,
-        inner_layer_norm=None))
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v9))
   
   elif experiment=="WDC":
     model = SequenceToSequence_WDC(
