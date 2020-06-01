@@ -589,3 +589,73 @@ def meta_learning_function_on_next(metatrain_dataset, metatest_dataset, as_numpy
     return _fun
 
   return decorator
+
+def create_trainining_dataset_with_dprob(strategy, model, domain, source_file, target_file, prob_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0):
+
+  print("maximum_length", maximum_length)
+  train_datasets = [] 
+  
+  for src, tgt, prob in zip(source_file,target_file, prob_file):
+    train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt, prob,
+            batch_size=batch_train_size,
+            batch_type=batch_type,
+            single_pass=single_pass,
+            shuffle_buffer_size=shuffle_buffer_size,
+            length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
+            maximum_features_length=maximum_length,
+            maximum_labels_length=maximum_length))
+  
+  if picking_prob=="Natural":
+    datasets_size = [count_lines(src) for src in source_file]
+    picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+    picking_prob = [p ** temperature for p in picking_prob]
+    print("picking probability: ", picking_prob)
+    print("temperature: ", temperature)
+  elif picking_prob=="Anneal":
+    import itertools
+    datasets_size = [count_lines(src) for src in source_file]
+    picking_prob_ = [data_size/sum(datasets_size) for data_size in datasets_size]
+    def anneal(i, end=200000 * strategy.num_replicas_in_sync):
+      i = (end-i)/end
+      prob_ = [p**i  for p in picking_prob_]
+      return [p/sum(prob_) for p in prob_]
+    tensor = tf.Variable(np.array([anneal(i) for i in range(200000)]))
+    picking_prob = tf.data.Dataset.from_tensor_slices(tensor)
+    print("picking probability: ", picking_prob)
+  else:
+    print("picking probability: ", picking_prob)
+
+  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
+  with strategy.scope():
+    base_dataset = train_dataset
+    train_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)  
+
+  return train_dataset
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

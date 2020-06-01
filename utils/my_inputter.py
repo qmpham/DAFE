@@ -2,6 +2,7 @@ import sys
 sys.path.append("/gpfsdswork/projects/rech/sfz/utt84zy/anaconda3/envs/huggingface/lib/python3.7/site-packages")
 
 from opennmt.inputters.text_inputter import WordEmbedder, _get_field, TextInputter
+from opennmt.inputters.inputter import ParallelInputter
 import tensorflow as tf
 from opennmt import inputters
 from opennmt.models.sequence_to_sequence import _shift_target_sequence
@@ -404,4 +405,155 @@ class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
             shuffle_buffer_size=shuffle_buffer_size,
             prefetch_buffer_size=prefetch_buffer_size))
         return dataset
+
+class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
+    
+    def __init__(self,
+               features_inputter,
+               labels_inputter,
+               probs_inputter,
+               share_parameters=False):
+        super(Multi_domain_SequenceToSequenceInputter_withprob, self).__init__(
+            features_inputter, labels_inputter, probs_inputter, share_parameters=share_parameters)
+        self.features_inputter = features_inputter
+        self.labels_inputter = labels_inputter
+        self.probs_inputter = probs_inputter
+
+    def initialize(self, data_config, asset_prefix=""):
+        super(Multi_domain_SequenceToSequenceInputter_withprob, self).initialize(data_config, asset_prefix=asset_prefix)
+
+    def make_dataset(self, data_file, training=None):
+        dataset = super(Multi_domain_SequenceToSequenceInputter_withprob, self).make_dataset(
+        data_file, training=training)
+        return dataset
+
+    def make_features(self, element=None, features=None, training=None):
+        features, labels, probs = super(Multi_domain_SequenceToSequenceInputter_withprob, self).make_features(
+            element=element, features=features, training=training)
+        _shift_target_sequence(labels)
+        features["domain"] = tf.strings.to_number(probs["tokens"])
+        labels["domain"] = tf.strings.to_number(probs["tokens"])
+        
+        return features, labels   
+
+    def make_inference_dataset(self,
+                             features_file,
+                             probs_file,
+                             batch_size,
+                             domain,
+                             length_bucket_width=None,
+                             num_threads=1,
+                             prefetch_buffer_size=None):
+
+        prob = self.probs_inputter.make_inference_dataset(
+            probs_file,
+            batch_size,
+            length_bucket_width=length_bucket_width,
+            num_threads=num_threads,
+            prefetch_buffer_size=prefetch_buffer_size)
+        feature = self.features_inputter.make_inference_dataset(
+            features_file,
+            batch_size,
+            length_bucket_width=length_bucket_width,
+            num_threads=num_threads,
+            prefetch_buffer_size=prefetch_buffer_size)
+        
+        feat_prob = tf.data.Dataset.zip([prob, feature])
+        def add_prob(f,p):
+            f["domain"]=p
+            return f
+        feat_prob = feat_prob.map(add_prob, num_parallel_calls=num_threads or 4)
+        return feat_prob        
+
+    def make_training_dataset(self,
+                                features_file,
+                                labels_file,
+                                probs_file,
+                                batch_size,
+                                batch_type="examples",
+                                batch_multiplier=1,
+                                batch_size_multiple=1,
+                                shuffle_buffer_size=None,
+                                length_bucket_width=None,
+                                maximum_features_length=None,
+                                maximum_labels_length=None,
+                                single_pass=False,
+                                num_shards=1,
+                                shard_index=0,
+                                num_threads=4,
+                                prefetch_buffer_size=None):
+        
+        map_func = lambda *arg: self.make_features(arg, training=True)
+        dataset = self.make_dataset([features_file, labels_file, probs_file], training=True)
+        dataset = dataset.apply(dataset_util.training_pipeline(
+            batch_size,
+            batch_type=batch_type,
+            batch_multiplier=batch_multiplier,
+            batch_size_multiple=batch_size_multiple,
+            process_fn=map_func,
+            length_bucket_width=length_bucket_width,
+            features_length_fn=self.features_inputter.get_length,
+            labels_length_fn=self.labels_inputter.get_length,
+            maximum_features_length=maximum_features_length,
+            maximum_labels_length=maximum_labels_length,
+            single_pass=single_pass,
+            num_shards=num_shards,
+            shard_index=shard_index,
+            num_threads=num_threads,
+            shuffle_buffer_size=shuffle_buffer_size,
+            prefetch_buffer_size=prefetch_buffer_size))
+        return dataset
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
 

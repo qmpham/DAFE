@@ -1609,6 +1609,92 @@ class Multi_domain_FeedForwardNetwork_v8(tf.keras.layers.Layer):
 
     return outputs
 
+class Multi_domain_FeedForwardNetwork_v9(tf.keras.layers.Layer):
+
+  def __init__(self,
+               input_dim, 
+               inner_dim,
+               output_dim,
+               domain_numb=6,
+               dropout=0.1,
+               activation=tf.nn.relu,
+               inner_layer_norm=None,
+               outer_activation=None,
+               **kwargs):
+    
+    super(Multi_domain_FeedForwardNetwork_v9, self).__init__(**kwargs)
+    self.dropout = dropout
+    self.domain_numb = domain_numb
+    self.input_dim = input_dim
+    self.inner_dim = inner_dim
+    self.output_dim = output_dim
+    self.layer_norm = common.LayerNorm()
+    if inner_layer_norm:
+      self.inner_layer_norm = inner_layer_norm(domain_numb)
+    else:
+      self.inner_layer_norm = common.LayerNorm()
+    self.inner_transpose = False
+    self.outer_transpose = False
+    self.inner_use_bias = True
+    self.outer_use_bias = True
+    self.inner_activation = activation
+    self.outer_activation = outer_activation
+  
+  def build(self, input_shape):
+    super(Multi_domain_FeedForwardNetwork_v9, self).build(input_shape)
+    scope_name = self.name_scope()
+    #print("self.domain_numb, self.input_dim, self.inner_dim: ", self.domain_numb, self.input_dim, self.inner_dim)
+    self.inner_kernel = self.add_weight("%s_inner_weight"%scope_name, shape=[self.input_dim, self.domain_numb * self.inner_dim])
+    self.inner_bias = self.add_weight("%s_inner_bias"%scope_name, shape=[self.domain_numb * self.inner_dim])
+    self.outer_kernel = self.add_weight("%s_outer_weight"%scope_name, shape=[self.domain_numb, self.inner_dim * self.output_dim])
+    self.outer_bias = self.add_weight("%s_outer_bias"%scope_name, shape=[self.domain_numb, self.output_dim])
+    
+  def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
+    """Runs the layer."""
+    if not(mask is None):
+      mask=tf.cast(mask,tf.float32)
+    mask=None
+    inputs = self.layer_norm(inputs)
+    ##### inner layer
+    shape = shape_list(inputs)
+    rank = len(shape)      
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    inner = tf.matmul(inputs, self.inner_kernel, transpose_b=self.inner_transpose)
+    if self.inner_use_bias:
+      inner = tf.nn.bias_add(inner, self.inner_use_bias)
+    if self.inner_activation is not None:
+      inner = tf.reshape(inner, [-1, self.inner_dim])
+      inner = self.inner_layer_norm(inner)
+      inner = tf.reshape(inner, [-1, self.inner_dim * self.domain_numb])
+      inner = self.inner_activation(inner)  # pylint: disable=not-callable
+    if rank > 2:
+      inner = tf.reshape(inner, shape[:-1] + [self.inner_dim * self.domain_numb])
+    ##### output layer
+    inner = common.dropout(inner, self.dropout, training=training)
+    shape = shape_list(inner)
+    rank = len(shape)      
+    if rank > 2:
+      inner = tf.reshape(inner, [-1, shape[-1]])
+    inner = tf.transpose(inner)
+    inner = tf.reshape(inner,[self.domain_numb, self.inner_dim, -1])
+    outputs = tf.map_fn(lambda x: tf.transpose(tf.nn.bias_add(tf.matmul(tf.transpose(x[0]), x[1] , transpose_b=self.outer_transpose), x[2])), (inner, self.outer_kernel, self.outer_bias), dtype=tf.float32)
+    outputs = tf.reshape(outputs, [self.domain_numb * self.inner_dim, -1])
+    outputs = tf.transpose(outputs)
+    
+    outputs = tf.map_fn(lambda x: tf.reduce_sum(tf.reshape(x[0] * tf.reshape(tf.transpose(tf.tile(x[1],[self.output_dim,1])),[1,-1]), [self.domain_numb, self.output_dim]),0), (outputs, domain), dtype=tf.float32)
+    if mask is not None:
+      self.add_loss(tf.divide(tf.reduce_sum(mask * tf.reduce_sum(tf.abs(outputs),axis=-1)), tf.reduce_sum(mask)))
+    else:
+      self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.abs(outputs),axis=-1)))
+
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
+    # if not training:
+    #   tf.print("###", self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_max_abs_pooling: ", 
+    #             tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, "###", sep="|")    
+    return outputs
+
 class CondGRU(tf.keras.layers.Layer):
   def __init__(self,
                 num_layers,
