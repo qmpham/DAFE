@@ -418,7 +418,7 @@ class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
         self.probs_inputter = probs_inputter
         self.features_inputter.asset_prefix = "source"
         self.labels_inputter.asset_prefix = "target"
-        self.probs_inputter.asset_prefix = "prob"
+        self.probs_inputter.asset_prefix = "source"
         super(Multi_domain_SequenceToSequenceInputter_withprob, self).__init__(
             [features_inputter, labels_inputter, probs_inputter], share_parameters=share_parameters)
     def initialize(self, data_config, asset_prefix=""):
