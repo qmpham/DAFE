@@ -1017,7 +1017,7 @@ def main():
     model = SequenceToSequence_with_dprob(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
-    probs_inputter=TextInputter(),
+    probs_inputter=My_inputter(embedding_size=0),
     encoder=Multi_domain_SelfAttentionEncoder_v18(
         num_layers=6,
         num_domains=num_domains,
