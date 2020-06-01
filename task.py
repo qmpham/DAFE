@@ -1884,6 +1884,7 @@ def train(config,
       if experiment=="residualv28":
         layer_activity_regularization_losses = []
         output_activity_regularization_losses = []
+        regularization_losses = model.losses
         for loss_ in regularization_losses:
           if "multi_adap__dense" in loss_.name:
             output_activity_regularization_losses.append(loss_)
@@ -2029,15 +2030,16 @@ def train(config,
       if step % eval_every == 0:
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
-        if config.get("unsupervised_clustering",False):
-          tag_files = config.get("tag_files")
-        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-          if config.get("unsupervised_clustering",False):
-            score = translate_with_tag_file(src, tag_files[i], ref, model, checkpoint_manager, checkpoint, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-          else:
+        if experiment=="residualv28":
+          for src, ref, prob, i in zip(config["eval_src"],config["eval_ref"],config["eval_prob"], config["eval_domain"]):
+            output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+            score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), probs_file=prob, experiment=experiment)
+            tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+        else:
+          for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+            output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
             score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+            tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
       tf.summary.flush()
       if step > train_steps:
         break
