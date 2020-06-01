@@ -1838,7 +1838,7 @@ def train(config,
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
-  domain = config["domain"]
+  domain = config.get("domain",None)
   
   print("There are %d in-domain corpora"%len(source_file))
   if experiment=="residualv28":
