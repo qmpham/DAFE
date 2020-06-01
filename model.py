@@ -2052,6 +2052,7 @@ class SequenceToSequence_with_dprob(model.SequenceGenerator):
                      internal_node_printing=False):
     params = self.params
     target_inputs = self.labels_inputter(labels, training=training)
+    print("target_inputs",target_inputs)
     input_fn = lambda ids: [self.labels_inputter({"ids": ids}, training=training), labels["domain"]]
 
     sampling_probability = None
@@ -2066,6 +2067,7 @@ class SequenceToSequence_with_dprob(model.SequenceGenerator):
         memory=encoder_outputs,
         memory_sequence_length=encoder_sequence_length,
         initial_state=encoder_state)
+
     logits, _, attention = self.decoder(
         [target_inputs, labels["domain"]],
         self.labels_inputter.get_length(labels),
@@ -2074,20 +2076,7 @@ class SequenceToSequence_with_dprob(model.SequenceGenerator):
         sampling_probability=sampling_probability,
         training=training)
     outputs = dict(logits=logits, attention=attention)
-
-    noisy_ids = labels.get("noisy_ids")
-    if noisy_ids is not None and params.get("contrastive_learning"):
-      # In case of contrastive learning, also forward the erroneous
-      # translation to compute its log likelihood later.
-      noisy_inputs = self.labels_inputter({"ids": noisy_ids}, training=training)
-      noisy_logits, _, _ = self.decoder(
-          noisy_inputs,
-          labels["noisy_length"],
-          state=initial_state,
-          input_fn=input_fn,
-          sampling_probability=sampling_probability,
-          training=training)
-      outputs["noisy_logits"] = noisy_logits
+    
     return outputs
  
   def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length):
