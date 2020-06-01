@@ -2,7 +2,7 @@ import sys
 sys.path.append("/gpfsdswork/projects/rech/sfz/utt84zy/anaconda3/envs/huggingface/lib/python3.7/site-packages")
 
 from opennmt.inputters.text_inputter import WordEmbedder, _get_field, TextInputter
-from opennmt.inputters.inputter import ParallelInputter
+from opennmt.inputters.inputter import ParallelInputter, Inputter
 import tensorflow as tf
 from opennmt import inputters
 from opennmt.models.sequence_to_sequence import _shift_target_sequence
@@ -12,6 +12,7 @@ from opennmt.utils import misc
 from utils.utils_ import make_domain_mask
 from opennmt.inputters.text_inputter import load_pretrained_embeddings
 from opennmt.layers import common
+from opennmt import constants, tokenizers
 
 class My_inputter(TextInputter):
     def __init__(self, embedding_size=None, dropout=0.0, **kwargs):        
@@ -434,8 +435,8 @@ class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
         features, labels, probs = super(Multi_domain_SequenceToSequenceInputter_withprob, self).make_features(
             element=element, features=features, training=training)
         _shift_target_sequence(labels)
-        features["domain"] = tf.strings.to_number(probs["tokens"])
-        labels["domain"] = tf.strings.to_number(probs["tokens"])
+        features["domain"] = probs["probs"]
+        labels["domain"] = probs["probs"]
         
         return features, labels   
 
@@ -507,8 +508,35 @@ class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
         return dataset
 
 
+class ProbInputter(Inputter):
+  """An abstract inputter that processes text."""
 
+  def __init__(self, domain_numb, **kwargs):
+    super(ProbInputter, self).__init__(**kwargs)
+    self.domain_numb = domain_numb
+  def initialize(self, data_config, asset_prefix=""):
+    self.tokenizer = tokenizers.make_tokenizer(None)
 
+  def make_dataset(self, data_file, training=None):
+    return tf.data.TextLineDataset(
+        data_file, compression_type="GZIP" if misc.is_gzip_file(data_file) else None)
+
+  def make_features(self, element=None, features=None, training=None):
+    """Tokenizes raw text."""
+    if features is None:
+      features = {}
+    if "probs" in features:
+      return features
+    if "text" in features:
+      element = features.pop("text")
+    tokens = self.tokenizer.tokenize(element)
+    features["probs"] = tf.strings.to_number(tokens)
+    return features
+
+  def input_signature(self):
+    return {
+          "probs": tf.TensorSpec([self.domain_numb, None], tf.float32),
+      }
 
 
 
