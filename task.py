@@ -63,7 +63,8 @@ def translate(source_file,
   checkpoint.restore(checkpoint_path)
   if isinstance(model, SequenceToSequence_with_dprob):
     dataset = model.examples_inputter.make_inference_dataset(source_file, probs_file, batch_size)
-  dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
+  else:
+    dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
   iterator = iter(dataset)
 
   # Create the mapping for target ids to tokens.
