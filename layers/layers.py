@@ -1681,9 +1681,13 @@ class Multi_domain_FeedForwardNetwork_v9(tf.keras.layers.Layer):
     outputs = tf.map_fn(lambda x: tf.transpose(tf.nn.bias_add(tf.matmul(tf.transpose(x[0]), x[1] , transpose_b=self.outer_transpose), x[2])), (inner, self.outer_kernel, self.outer_bias), dtype=tf.float32)
     outputs = tf.reshape(outputs, [self.domain_numb * self.output_dim, -1])
     outputs = tf.transpose(outputs)
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.domain_numb * self.output_dim])
+    else:
+      outputs = tf.expand_dims(outputs,0)
     print(tf.shape(outputs))
     print(domain)
-    outputs = tf.map_fn(lambda x: tf.reduce_sum(tf.reshape(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(x[1],0),[self.output_dim,1])),[1,-1]), [self.domain_numb, self.output_dim]),0), (outputs, domain), dtype=tf.float32)
+    outputs = tf.map_fn(lambda x: tf.reduce_sum(tf.reshape(x[0] * tf.tile(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(x[1],0),[self.output_dim,1])),[1,-1]),[shape[-2],1]), [-1, self.domain_numb, self.output_dim]),0), (outputs, domain), dtype=tf.float32)
     
 
     if mask is not None:
