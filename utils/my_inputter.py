@@ -535,7 +535,7 @@ class ProbInputter(Inputter):
 
   def input_signature(self):
     return {
-          "probs": tf.TensorSpec([self.domain_numb, None], tf.float32),
+          "probs": tf.TensorSpec([None, self.domain_numb], tf.float32),
       }
 
 
