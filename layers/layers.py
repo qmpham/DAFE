@@ -1685,10 +1685,10 @@ class Multi_domain_FeedForwardNetwork_v9(tf.keras.layers.Layer):
       outputs = tf.reshape(outputs, shape[:-1] + [self.domain_numb * self.output_dim])
     else:
       outputs = tf.expand_dims(outputs,0)
-    print(tf.shape(outputs))
-    print(domain)
+    #print(tf.shape(outputs))
+    #print(domain)
     outputs = tf.map_fn(lambda x: tf.reduce_sum(tf.reshape(x[0] * tf.tile(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(x[1],0),[self.output_dim,1])),[1,-1]),[shape[-2],1]), [-1, self.domain_numb, self.output_dim]),1), (outputs, domain), dtype=tf.float32)
-    print(outputs)
+    #print(outputs)
 
     if mask is not None:
       self.add_loss(tf.divide(tf.reduce_sum(mask * tf.reduce_sum(tf.abs(outputs),axis=-1)), tf.reduce_sum(mask)))
