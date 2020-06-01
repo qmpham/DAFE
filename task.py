@@ -49,7 +49,7 @@ def translate(source_file,
               output_file,
               length_penalty,
               checkpoint_path=None,
-              prob_file=None,
+              probs_file=None,
               experiment="ldr",
               score_type="MultiBLEU",
               batch_size=5,
@@ -1841,8 +1841,13 @@ def train(config,
   domain = config["domain"]
   
   print("There are %d in-domain corpora"%len(source_file))
-
-  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+  if experiment=="residualv28":
+    prob_file = config["prob"]
+    train_dataset = create_trainining_dataset_with_dprob(strategy, model, source_file, target_file, prob_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None))
+  else:
+    train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
   from utils.dataprocess import count_lines
