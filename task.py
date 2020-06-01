@@ -18,7 +18,7 @@ from opennmt.optimizers import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter
 from opennmt.models.sequence_to_sequence import SequenceToSequence
-from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence
+from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_with_dprob
 from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder
 from decoders.self_attention_decoder import Multi_domain_SelfAttentionDecoder
 import numpy as np
@@ -49,6 +49,7 @@ def translate(source_file,
               output_file,
               length_penalty,
               checkpoint_path=None,
+              prob_file=None,
               experiment="ldr",
               score_type="MultiBLEU",
               batch_size=5,
@@ -60,6 +61,8 @@ def translate(source_file,
   tf.get_logger().info("Evaluating model %s", checkpoint_path)
   print("In domain %d"%domain)
   checkpoint.restore(checkpoint_path)
+  if isinstance(model, SequenceToSequence_with_dprob):
+    dataset = model.examples_inputter.make_inference_dataset(source_file, probs_file, batch_size)
   dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
   iterator = iter(dataset)
 

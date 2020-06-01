@@ -442,7 +442,6 @@ class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
                              features_file,
                              probs_file,
                              batch_size,
-                             domain,
                              length_bucket_width=None,
                              num_threads=1,
                              prefetch_buffer_size=None):

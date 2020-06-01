@@ -2042,30 +2042,6 @@ class SequenceToSequence_with_dprob(model.SequenceGenerator):
     
     return outputs, predictions
 
-  def adv_call(self, features, labels=None, training=None, step=None):
-    # Encode the source.
-    assert isinstance(self.features_inputter, My_inputter)
-    assert isinstance(self.labels_inputter, My_inputter)    
-    source_length = self.features_inputter.get_length(features)
-    source_inputs = self.features_inputter(features, training=training)
-    encoder_outputs, encoder_state, encoder_sequence_length = self.encoder.adv_call(
-        [source_inputs, features["domain"]], sequence_length=source_length, training=training)
-    
-    outputs = None
-    predictions = None
-
-    # When a target is provided, compute the decoder outputs for it.
-    if labels is not None:
-      outputs = self._adv_decode_target(
-          labels,
-          encoder_outputs,
-          encoder_state,
-          encoder_sequence_length,
-          step=step,
-          training=training)
-    
-    return outputs, predictions
-
   def _decode_target(self,
                      labels,
                      encoder_outputs,
