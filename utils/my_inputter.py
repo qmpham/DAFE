@@ -435,8 +435,8 @@ class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
         features, labels, probs = super(Multi_domain_SequenceToSequenceInputter_withprob, self).make_features(
             element=element, features=features, training=training)
         _shift_target_sequence(labels)
-        features["domain"] = probs["probs"]
-        labels["domain"] = probs["probs"]
+        features["domain"] = tf.math.softmax(probs["probs"])
+        labels["domain"] = tf.math.softmax(probs["probs"])
         
         return features, labels   
 
