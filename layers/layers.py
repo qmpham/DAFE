@@ -1662,7 +1662,7 @@ class Multi_domain_FeedForwardNetwork_v9(tf.keras.layers.Layer):
       inputs = tf.reshape(inputs, [-1, shape[-1]])
     inner = tf.matmul(inputs, self.inner_kernel, transpose_b=self.inner_transpose)
     if self.inner_use_bias:
-      inner = tf.nn.bias_add(inner, self.inner_use_bias)
+      inner = tf.nn.bias_add(inner, self.inner_bias)
     if self.inner_activation is not None:
       inner = tf.reshape(inner, [-1, self.inner_dim])
       inner = self.inner_layer_norm(inner)
