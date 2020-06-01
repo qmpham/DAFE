@@ -453,7 +453,9 @@ class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
             feats["domain"] = tf.math.softmax(probs["probs"])
             return feats
         
-        dataset = self.make_dataset([features_file, probs_file], training=True)
+        #dataset = self.make_dataset([features_file, probs_file], training=True)
+        datasets = [self.features_inputter.make_dataset(features_file), self.probs_inputter.make_dataset(probs_file)]
+        dataset = tf.data.Dataset.zip(tuple(datasets))
         dataset = dataset.apply(dataset_util.inference_pipeline(
                        batch_size,
                        process_fn=add_prob,
