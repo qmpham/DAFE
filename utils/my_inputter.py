@@ -463,9 +463,10 @@ class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
         
         feat_prob = tf.data.Dataset.zip((prob, feature))
         def add_prob(f,p):
-            f["domain"]=p
+            f["domain"]=tf.math.softmax(p["probs"])
             return f
         feat_prob = feat_prob.map(add_prob, num_parallel_calls=num_threads or 4)
+        print(feat_prob)
         return feat_prob        
 
     def make_training_dataset(self,
