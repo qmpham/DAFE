@@ -414,7 +414,7 @@ class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
                probs_inputter,
                share_parameters=False):
         super(Multi_domain_SequenceToSequenceInputter_withprob, self).__init__(
-            features_inputter, labels_inputter, probs_inputter, share_parameters=share_parameters)
+            [features_inputter, labels_inputter, probs_inputter], share_parameters=share_parameters)
         self.features_inputter = features_inputter
         self.labels_inputter = labels_inputter
         self.probs_inputter = probs_inputter
