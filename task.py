@@ -76,7 +76,7 @@ def translate(source_file,
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
-    if experiment in ["residual","residualv15","residualv25","residualv27","residualv28","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
+    if experiment in ["residual","residualv15","residualv25","residualv27","residualv28","residualv29","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
       encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length, training=False)
     else:
       encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
@@ -106,7 +106,7 @@ def translate(source_file,
       h_s = g_s * encoder_outputs
       encoder_mask = model.encoder.build_mask(source_inputs, sequence_length=source_length)
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), h_r, h_s, encoder_mask]
-    elif experiment == "residualv28":
+    elif experiment in ["residualv28","residualv29"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), source["domain"]]
     else:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
@@ -5464,7 +5464,7 @@ def averaged_checkpoint_translate(config, source_file,
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
-    if experiment in ["residual","residualv15","residualv25","residualv27","residualv28","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv11","residualv7","residualv8","residualv9","baselinev1"]:
+    if experiment in ["residual","residualv15","residualv25","residualv27","residualv28","residualv29","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv11","residualv7","residualv8","residualv9","baselinev1"]:
       encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length, internal_node_printing=True)
     else:
       encoder_outputs, _, _ = model.encoder(source_inputs, source_length)
@@ -5481,7 +5481,7 @@ def averaged_checkpoint_translate(config, source_file,
     decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
         memory_sequence_length=source_length)
-    if experiment in ["residual","residualv15","residualv25","residualv27","residualv28","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv6","residualv13","residualv12","residualv11","residualv7","residualv8","residualv9","baselinev1"]:
+    if experiment in ["residual","residualv15","residualv25","residualv27","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv6","residualv13","residualv12","residualv11","residualv7","residualv8","residualv9","baselinev1"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
     elif experiment in ["DC"]:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
@@ -5494,6 +5494,8 @@ def averaged_checkpoint_translate(config, source_file,
       h_s = g_s * encoder_outputs
       encoder_mask = model.encoder.build_mask(source_inputs, sequence_length=source_length)
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), h_r, h_s, encoder_mask]
+    elif experiment in ["residualv28","residualv29"]:
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), source["domain"]]
     else:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids})
     decoded = model.decoder.dynamic_decode(
