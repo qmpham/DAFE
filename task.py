@@ -5955,6 +5955,13 @@ def train_DRO(config,
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
   
+
+  #####
+  datasets_size = [count_lines(src) for src in source_file]
+  empirical_training_distribution = [data_size/sum(datasets_size) for data_size in datasets_size]
+  empirical_training_distribution = tf.constant(empirical_training_distribution)
+  importance_weights = tf.constant([1.0/len(datasets_size)] * len(datasets_size))
+
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -5976,7 +5983,7 @@ def train_DRO(config,
     domain = source["domain"][0]
     if config.get("apply_importance_weight", False):
       print("apply_importance_weight")
-      training_loss = training_loss * importance_weights[domain]
+      training_loss = training_loss * importance_weights[domain] / empirical_training_distribution[domain]
     
     variables = model.trainable_variables
     print("var numb: ", len(variables))
