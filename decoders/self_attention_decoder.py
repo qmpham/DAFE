@@ -5836,9 +5836,13 @@ class Multi_domain_SelfAttentionDecoder_v19(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-      total_adapt.append(adapt)
-    total_adapt = tf.add_n(total_adapt)
+      if self.ADAP_contribution[i]>0:
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
+    if len(total_adapt)>0:
+      total_adapt = tf.add_n(total_adapt)
+    else:
+      total_adapt = 0
     outputs = self.layer_norm(inputs + total_adapt)
     return outputs, new_cache, attention
 

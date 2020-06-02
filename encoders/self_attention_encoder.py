@@ -1737,10 +1737,13 @@ class Multi_domain_SelfAttentionEncoder_v18(Encoder):
     total_adapt = []
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers, self.multi_domain_layers)):
       inputs = layer(inputs, mask=mask, training=training)
-      adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-      total_adapt.append(adapt)
-      
-    total_adapt = tf.add_n(total_adapt)
+      if self.ADAP_contribution[i]>0:
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
+    if len(total_adapt)>0:
+      total_adapt = tf.add_n(total_adapt)
+    else:
+      total_adapt = 0
     if internal_node_printing:
         tf.print("Encoder ADAP mean pooling: ", tf.reduce_mean(tf.abs(total_adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
     outputs = self.layer_norm(inputs+total_adapt)
