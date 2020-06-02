@@ -1686,8 +1686,8 @@ class Multi_domain_FeedForwardNetwork_v9(tf.keras.layers.Layer):
     else:
       outputs = tf.reshape(outputs,[tf.shape(domain)[0], -1, self.domain_numb * self.output_dim])
     if not training:
-      print(tf.shape(outputs))
-      print(domain)
+      tf.print(tf.shape(outputs))
+      tf.print(domain)
     outputs = tf.map_fn(lambda x: tf.reduce_sum(tf.reshape(x[0] * tf.tile(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(x[1],0),[self.output_dim,1])),[1,-1]),[tf.shape(x[0])[0],1]), [-1, self.domain_numb, self.output_dim]),1), (outputs, domain), dtype=tf.float32)
     #print(outputs)
 
