@@ -1687,7 +1687,7 @@ class Multi_domain_FeedForwardNetwork_v9(tf.keras.layers.Layer):
     domain = tf.transpose(domain)
     outputs = my_map(lambda x: tf.transpose(tf.nn.bias_add(tf.matmul(tf.transpose(x[0]), x[1] , transpose_b=self.outer_transpose), x[2])) * tf.tile(tf.reshape(tf.tile(tf.expand_dims(x[3],0),[tf.shape(x[0])[1]//tf.shape(domain)[1],1]),[1,-1]),[self.output_dim,1]), (inner, self.outer_kernel, self.outer_bias, domain), dtype=tf.float32, parallel_iterations=self.domain_numb)
     #outputs = my_map(lambda x: x[0] * tf.tile(tf.reshape(tf.tile(tf.expand_dims(x[1],0),[tf.shape(x[0])[1]//tf.shape(domain)[1],1]),[1,-1]),[self.output_dim,1]), (outputs, domain), dtype=tf.float32, parallel_iterations=self.domain_numb)
-    tf.print("after_domain_mixing: ", tf.shape(outputs))
+    #tf.print("after_domain_mixing: ", tf.shape(outputs))
     outputs = tf.transpose(tf.reduce_sum(outputs,0))
     #######
     """
