@@ -1679,16 +1679,13 @@ class Multi_domain_FeedForwardNetwork_v9(tf.keras.layers.Layer):
     inner = tf.transpose(inner)
     inner = tf.reshape(inner,[self.domain_numb, self.inner_dim, -1])
     @tf.function
-    def outer_map(x): 
-      return tf.transpose(tf.nn.bias_add(tf.matmul(tf.transpose(x[0]), x[1] , transpose_b=self.outer_transpose), x[2]))
-    @tf.function
-    def domain_mixing(x):
-      return tf.reduce_sum(tf.reshape(x[0] * tf.tile(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(x[1],0),[self.output_dim,1])),[1,-1]),[tf.shape(x[0])[0],1]), [-1, self.domain_numb, self.output_dim]),1)
-    outputs = tf.map_fn(outer_map, (inner, self.outer_kernel, self.outer_bias), dtype=tf.float32, parallel_iterations=self.domain_numb)
+    def my_map(*args, **kwargs):
+      return tf.map_fn(*args, **kwargs)
+    outputs = my_map(lambda x: tf.transpose(tf.nn.bias_add(tf.matmul(tf.transpose(x[0]), x[1] , transpose_b=self.outer_transpose), x[2])), (inner, self.outer_kernel, self.outer_bias), dtype=tf.float32, parallel_iterations=self.domain_numb)
     outputs = tf.reshape(outputs, [self.domain_numb * self.output_dim, -1])
     outputs = tf.transpose(outputs)
     outputs = tf.reshape(outputs,[tf.shape(domain)[0], -1, self.domain_numb * self.output_dim])
-    outputs = tf.map_fn(domain_mixing, (outputs, domain), dtype=tf.float32, parallel_iterations=100)
+    outputs = my_map(lambda x: tf.reduce_sum(tf.reshape(x[0] * tf.tile(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(x[1],0),[self.output_dim,1])),[1,-1]),[tf.shape(x[0])[0],1]), [-1, self.domain_numb, self.output_dim]),1), (outputs, domain), dtype=tf.float32, parallel_iterations=100)
 
     if mask is not None:
       self.add_loss(tf.divide(tf.reduce_sum(mask * tf.reduce_sum(tf.abs(outputs),axis=-1)), tf.reduce_sum(mask)))
