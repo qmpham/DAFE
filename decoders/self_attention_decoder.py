@@ -5903,8 +5903,37 @@ class Multi_domain_SelfAttentionDecoder_v19(Decoder):
       cache.append(dict(self_kv=self_kv, memory_kv=memory_kv))
     return cache
 
+  def dynamic_decode(self,
+                     embeddings,
+                     start_ids,
+                     end_id=constants.END_OF_SENTENCE_ID,
+                     initial_state=None,
+                     decoding_strategy=None,
+                     sampler=None,
+                     maximum_iterations=None,
+                     minimum_iterations=0):
+    
+    if isinstance(embeddings, text_inputter.WordEmbedder):
+      print("2!")
+      input_fn = lambda ids: embeddings({"ids": ids})
+    elif callable(embeddings):
+      print("1!")
+      input_fn = embeddings
+    else:
+      print("3!")
+      input_fn = lambda ids: tf.nn.embedding_lookup(embeddings, ids)
 
-
+    return decoding.dynamic_decode(
+        lambda ids, step, state: self(input_fn(ids), step, state),
+        start_ids,
+        end_id=end_id,
+        initial_state=initial_state,
+        decoding_strategy=decoding_strategy,
+        sampler=sampler,
+        maximum_iterations=maximum_iterations,
+        minimum_iterations=minimum_iterations,
+        attention_history=self.support_alignment_history,
+        attention_size=tf.shape(self.memory)[1] if self.support_alignment_history else None)
 
 
 
