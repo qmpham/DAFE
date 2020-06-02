@@ -93,7 +93,7 @@ def translate(source_file,
     decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
         memory_sequence_length=source_length)
-    if experiment in ["residual","residualv2","residualv15","residualv25","residualv27","residualv28","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv1","residualv3","residualv5","residualv6","residualv7","residualv13","residualv12","residualv11","residualv8","residualv9","baselinev1"]:
+    if experiment in ["residual","residualv2","residualv15","residualv25","residualv27","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv1","residualv3","residualv5","residualv6","residualv7","residualv13","residualv12","residualv11","residualv8","residualv9","baselinev1"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
     elif experiment in ["DC"]:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain, training=False)
@@ -106,6 +106,8 @@ def translate(source_file,
       h_s = g_s * encoder_outputs
       encoder_mask = model.encoder.build_mask(source_inputs, sequence_length=source_length)
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), h_r, h_s, encoder_mask]
+    elif experiment == "residualv28":
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), ]
     else:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
     decoded = model.decoder.dynamic_decode(
