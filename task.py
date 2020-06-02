@@ -1789,6 +1789,7 @@ def train(config,
             layer_activity_regularization_losses.append(loss_)
         layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
         if len(layer_activity_regularization_losses)>0:
+          print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
       else:
         layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
@@ -5943,7 +5944,7 @@ def train_DRO(config,
   source_file = config["src"]
   target_file = config["tgt"]
   domain = config.get("domain",None)
-  
+  update_z_every = config.get("update_z_every",50)
   print("There are %d in-domain corpora"%len(source_file))
   if experiment=="residualv28":
     prob_file = config["prob"]
@@ -5960,7 +5961,7 @@ def train_DRO(config,
   datasets_size = [count_lines(src) for src in source_file]
   empirical_training_distribution = [data_size/sum(datasets_size) for data_size in datasets_size]
   empirical_training_distribution = tf.constant(empirical_training_distribution)
-  importance_weights = tf.constant([1.0/len(datasets_size)] * len(datasets_size))
+  z = tf.constant([1.0/len(datasets_size)] * len(datasets_size))
 
   #####
   with strategy.scope():
@@ -5983,7 +5984,7 @@ def train_DRO(config,
     domain = source["domain"][0]
     if config.get("apply_importance_weight", False):
       print("apply_importance_weight")
-      training_loss = training_loss * importance_weights[domain] / empirical_training_distribution[domain]
+      training_loss = training_loss * z[domain] / empirical_training_distribution[domain]
     
     variables = model.trainable_variables
     print("var numb: ", len(variables))
@@ -6069,6 +6070,7 @@ def train_DRO(config,
         _loss = []
         _number_examples = []
         start = time.time()
+      if step % update_z_every==0:
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
