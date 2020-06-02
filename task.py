@@ -107,7 +107,7 @@ def translate(source_file,
       encoder_mask = model.encoder.build_mask(source_inputs, sequence_length=source_length)
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), h_r, h_s, encoder_mask]
     elif experiment == "residualv28":
-      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), ]
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), source["domain"]]
     else:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
     decoded = model.decoder.dynamic_decode(
