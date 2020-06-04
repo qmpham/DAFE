@@ -1797,6 +1797,7 @@ def train(config,
         d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
         print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
         print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
+        print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
         if isinstance(layer_activity_regularization_loss_scale, list):
           domain = source["domain"][0]
           layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
