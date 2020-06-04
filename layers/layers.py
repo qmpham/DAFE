@@ -1757,7 +1757,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     labels = tf.fill([tf.shape(logits)[0]], domain)
     smoothed_labels = _smooth_one_hot_labels(logits, labels, label_smoothing)
     outputs = tf.math.softmax(logits)[:,domain]
-    
+    tf.print("prediction loss", tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
     if training:
       self.add_loss(tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
 
