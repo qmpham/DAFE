@@ -9,7 +9,7 @@ from opennmt.utils.misc import shape_list
 import sys
 from opennmt.layers.rnn import _RNNWrapper
 from opennmt.layers import reducer as reducer_lib
-from opennmt.utils.losses import 
+from opennmt.utils.losses import _smooth_one_hot_labels
 
 
 class Classification_layer(tf.keras.layers.Layer):
