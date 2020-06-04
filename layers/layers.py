@@ -1732,7 +1732,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     self.outer_activation = activation
     self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
     self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
-    self.ff_layer_end = common.Dense(domain_numb, use_bias=True, activation=tf.nn.tanh)
+    #self.ff_layer_end = common.Dense(domain_numb, use_bias=True, activation=tf.nn.tanh)
   
   def build(self, input_shape):
     super(Multi_domain_classification_gate, self).build(input_shape)
@@ -1746,20 +1746,20 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     
     inputs = common.dropout(inputs, rate=0.3, training=training)
     logits = self.ff_layer_1(inputs)
-    tf.print("logits 1", logits)
+    #tf.print("logits 1", logits)
     logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_2(logits)
-    tf.print("logits 2", logits)
+    #tf.print("logits 2", logits)
     logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_end(logits)
-    tf.print("logits 3", logits)
-    label_smoothing = 0.1
-    labels = tf.fill([tf.shape(logits)[0]], domain)
-    smoothed_labels = _smooth_one_hot_labels(logits, labels, label_smoothing)
+    #tf.print("logits 3", logits)
     outputs = tf.math.softmax(logits)[:,domain]
-    tf.print("prediction loss", tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
+    #tf.print("prediction loss", tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
     if training:
-      self.add_loss(tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
+      label_smoothing = 0.1
+      labels = tf.fill([tf.shape(logits)[0]], domain)
+      smoothed_labels = _smooth_one_hot_labels(logits, labels, label_smoothing)
+      self.add_loss(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits)))
 
     outputs = tf.tile(tf.expand_dims(outputs,1),[1,self.output_dim])
     if rank > 2:
