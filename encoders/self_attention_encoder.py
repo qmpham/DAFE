@@ -1471,7 +1471,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, 
         fake_domain_prob=fake_domain_prob, noisy_prob=noisy_prob)
         for i in range(num_layers)]
-    self.multi_domain_gates = multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
+    self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
     self.ADAP_layer_stopping_gradient = ADAP_layer_stopping_gradient
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution == None:
@@ -1489,12 +1489,12 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     inputs = common.dropout(inputs, self.dropout, training=training)
     mask = self.build_mask(inputs, sequence_length=sequence_length)
     total_adapt=[]
-    for layer, multi_domain_layer, multi_domain_gate in zip(self.layers, self.multi_domain_layers, self.multi_domain_gates):
+    for layer, multi_domain_layer in zip(self.layers, self.multi_domain_layers):
       inputs = layer(inputs, mask=mask, training=training)
       adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
       total_adapt.append(adapt)
 
-    g = multi_domain_gate(inputs, domain, mask=mask, training=training)
+    g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
     total_adapt = tf.add_n(total_adapt)
     if internal_node_printing:
       tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "adapt_mean_abs_pooling: ", tf.reduce_mean(tf.abs(total_adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
