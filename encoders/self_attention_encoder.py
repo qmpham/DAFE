@@ -1471,7 +1471,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, 
         fake_domain_prob=fake_domain_prob, noisy_prob=noisy_prob)
         for i in range(num_layers)]
-    self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
+    self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
     self.ADAP_layer_stopping_gradient = ADAP_layer_stopping_gradient
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution == None:
