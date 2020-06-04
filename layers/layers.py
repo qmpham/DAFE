@@ -1732,7 +1732,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     self.outer_activation = activation
     self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
     self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
-    self.ff_layer_end = common.Dense(domain_numb, use_bias=True, activation=tf.nn.tanh)
+    self.ff_layer_end = common.Dense(domain_numb, use_bias=True)
   
   def build(self, input_shape):
     super(Multi_domain_classification_gate, self).build(input_shape)
