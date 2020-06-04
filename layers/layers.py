@@ -1732,7 +1732,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     self.outer_activation = activation
     self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
     self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
-    self.ff_layer_end = common.Dense(domain_numb, use_bias=True)
+    self.ff_layer_end = common.Dense(domain_numb, use_bias=True, kernel_initializer='zeros', bias_initializer='zeros')
   
   def build(self, input_shape):
     super(Multi_domain_classification_gate, self).build(input_shape)
@@ -1743,7 +1743,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     rank = len(shape)      
     if rank > 2:
       inputs = tf.reshape(inputs, [-1, shape[-1]])
-    
+    inputs = self.layer_norm(inputs)
     inputs = common.dropout(inputs, rate=0.3, training=training)
     logits = self.ff_layer_1(inputs)
     #tf.print("logits 1", logits)
