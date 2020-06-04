@@ -1821,11 +1821,14 @@ def train(config,
             layer_activity_regularization_losses.append(loss_)
         print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
         print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
-        print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses)
-        if len(layer_activity_regularization_losses)>0:
+        print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
+
+        if (len(layer_activity_regularization_losses)>0):
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
+
         if len(output_activity_regularization_losses)>0:
           training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
+
         if len(d_classification_gate_loss)>0:
           training_loss -= d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses)
     variables = model.trainable_variables
