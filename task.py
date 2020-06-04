@@ -1795,6 +1795,7 @@ def train(config,
         layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
         output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
         d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
+        d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
         print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
         print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
         print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
@@ -1813,17 +1814,20 @@ def train(config,
         layer_activity_regularization_losses = []
         output_activity_regularization_losses = []
         d_classification_gate_losses = []
+        d_classifier_activity_regularization_losses = []
         for loss_ in regularization_losses:
           if "multi_adap__dense" in loss_.name:
             output_activity_regularization_losses.append(loss_)
-          elif "ADAP_gate" in loss_.name:
+          elif "ADAP_gate" in loss_.name and "ActivityRegularizer" not in loss_.name:
             d_classification_gate_losses.append(loss_)
+          elif "ActivityRegularizer" in loss_.name:
+            d_classifier_activity_regularization_losses.append(loss_)
           else:
             layer_activity_regularization_losses.append(loss_)
         print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
         print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
         print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
-
+        print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
         if (len(layer_activity_regularization_losses)>0):
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
 
@@ -1833,6 +1837,8 @@ def train(config,
         if len(d_classification_gate_losses)>0:
           training_loss -= d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
 
+        if len(d_classifier_activity_regularization_losses)>0:
+          training_loss += d_classifier_activity_regularization_loss_scale * tf.add_n(d_classifier_activity_regularization_losses)
     variables = model.trainable_variables
     print("var numb: ", len(variables))
     for var in variables:
