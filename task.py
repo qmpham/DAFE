@@ -1829,7 +1829,7 @@ def train(config,
         if len(output_activity_regularization_losses)>0:
           training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
 
-        if len(d_classification_gate_loss)>0:
+        if len(d_classification_gate_losses)>0:
           training_loss -= d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses)
     variables = model.trainable_variables
     print("var numb: ", len(variables))

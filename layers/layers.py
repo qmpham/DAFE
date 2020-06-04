@@ -1751,8 +1751,8 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     outputs = self.ff_layer_end(outputs)
     outputs = tf.math.softmax(outputs)[:,domain]
     if training:
-      self.add_loss(tf.reduce_mean(tf.squeeze(outputs,-1)))
-    outputs = tf.tile(outputs,[1,self.output_dim])
+      self.add_loss(tf.reduce_mean(outputs))
+    outputs = tf.tile(tf.expand_dims(outputs,1),[1,self.output_dim])
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
 
