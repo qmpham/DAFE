@@ -3079,6 +3079,7 @@ def model_inspect(config,
           strategy,  
           checkpoint_manager,
           checkpoint,
+          checkpoint_path=None,
           maximum_length=6,
           batch_size = 1,
           batch_type = "examples",
@@ -3090,9 +3091,13 @@ def model_inspect(config,
           report_every=100): 
   
   #####
-  if checkpoint_manager.latest_checkpoint is not None:
+  if checkpoint_path is not None:
+    checkpoint.restore(checkpoint_path)
+  elif checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  else:
+    exit()
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -3131,9 +3136,10 @@ def model_inspect(config,
   train_data_flow = iter(_train_forward())
   next(train_data_flow)
   for v in model.trainable_variables:
-    print(v.name)
-    print(v.numpy())
-    print(v.numpy().shape)
+    if "ADAP_gate" in v.name:
+      print(v.name)
+      print(v.numpy())
+      print(v.numpy().shape)
 
 def src_wemb_pretrain(config,
           optimizer,          
