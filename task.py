@@ -1749,12 +1749,12 @@ def train(config,
                                             multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
   from utils.dataprocess import count_lines
   datasets_size = [count_lines(src) for src in source_file]
-  importance_weights = [sum(datasets_size)/data_size for data_size in datasets_size]
+  importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
   temperature=config.get("temperature",1.0)
   importance_weights = [w ** temperature for w in importance_weights]
-  importance_weights = [w/sum(importance_weights) * len(importance_weights) for w in importance_weights]
+  importance_weights = [w/sum(importance_weights) for w in importance_weights]
   importance_weights = tf.constant(importance_weights)
-  #tf.print(importance_weights)
+  tf.print("importance_weights: ", importance_weights)
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -1794,7 +1794,7 @@ def train(config,
       else:
         layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
         output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
-        d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.1)
+        d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
         print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
         print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
         print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
