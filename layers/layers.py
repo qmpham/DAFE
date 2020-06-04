@@ -9,6 +9,7 @@ from opennmt.utils.misc import shape_list
 import sys
 from opennmt.layers.rnn import _RNNWrapper
 from opennmt.layers import reducer as reducer_lib
+from opennmt.utils.losses import 
 
 
 class Classification_layer(tf.keras.layers.Layer):
@@ -1748,10 +1749,14 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     outputs = common.dropout(outputs, rate=0.3, training=training)
     outputs = self.ff_layer_2(outputs)
     outputs = common.dropout(outputs, rate=0.3, training=training)
-    outputs = self.ff_layer_end(outputs)
-    outputs = tf.math.softmax(outputs)[:,domain]
-    if training:
-      self.add_loss(tf.reduce_mean(outputs))
+    logits = self.ff_layer_end(outputs)
+    label_smoothing = 0.1
+    #smoothed_labels = _smooth_one_hot_labels(logits, labels, label_smoothing)
+    outputs = tf.math.softmax(logits)[:,domain]
+    tf.print("outputs", outputs)
+    #if training:
+    #  self.add_loss(tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
+
     outputs = tf.tile(tf.expand_dims(outputs,1),[1,self.output_dim])
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
