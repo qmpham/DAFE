@@ -1745,7 +1745,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
       inputs = tf.reshape(inputs, [-1, shape[-1]])
     
     inputs = common.dropout(inputs, rate=0.3, training=training)
-    logits = self.ff_layer_1(logits)
+    logits = self.ff_layer_1(inputs)
     tf.print("logits 1", logits)
     logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_2(logits)
