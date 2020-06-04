@@ -501,7 +501,6 @@ class Multi_domain_SequenceToSequenceInputter_withprob(ParallelInputter):
             prefetch_buffer_size=prefetch_buffer_size))
         return dataset
 
-
 class ProbInputter(Inputter):
   """An abstract inputter that processes text."""
 
