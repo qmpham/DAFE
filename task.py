@@ -1832,6 +1832,7 @@ def train(config,
 
         if len(d_classification_gate_losses)>0:
           training_loss -= d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses)
+
     variables = model.trainable_variables
     print("var numb: ", len(variables))
     for var in variables:
@@ -3131,6 +3132,7 @@ def model_inspect(config,
   next(train_data_flow)
   for v in model.trainable_variables:
     print(v.name)
+    print(v.numpy())
     print(v.numpy().shape)
 
 def src_wemb_pretrain(config,
