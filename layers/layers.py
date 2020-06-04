@@ -24,8 +24,8 @@ class Classification_layer(tf.keras.layers.Layer):
     self.input_dim = input_dim
     self.layer_norm = common.LayerNorm()
     self.kernel_size = kernel_size
-    #self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
-    #self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
+    self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
+    self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
     self.ff_layer_end = common.Dense(domain_numb, use_bias=True, activation=tf.nn.tanh)
 
   def build(self, input_shape):
@@ -52,10 +52,10 @@ class Classification_layer(tf.keras.layers.Layer):
     e = tf.matmul(attention_weight, inputs)
     e = tf.squeeze(e,1)
     e = common.dropout(e, rate=0.3, training=training)
-    #logits = self.ff_layer_1(tf.nn.relu(e))          
-    #logits = common.dropout(logits, rate=0.3, training=training)
-    #logits = self.ff_layer_2(logits)
-    #logits = common.dropout(logits, rate=0.3, training=training)
+    logits = self.ff_layer_1(tf.nn.relu(e))          
+    logits = common.dropout(logits, rate=0.3, training=training)
+    logits = self.ff_layer_2(logits)
+    logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_end(tf.nn.relu(e))
     return e, logits
   
@@ -1707,6 +1707,66 @@ class Multi_domain_FeedForwardNetwork_v9(tf.keras.layers.Layer):
     #   tf.print("###", self.name_scope(), "Inputs_max_abs_pooling: ", tf.reduce_max(tf.abs(inputs)), "ADAP_max_abs_pooling: ", 
     #             tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, "###", sep="|")    
     return outputs
+
+class Multi_domain_classification_gate(tf.keras.layers.Layer):
+
+  def __init__(self,
+               input_dim, 
+               num_units,
+               domain_numb=6,
+               dropout=0.1,
+               activation=tf.nn.sigmoid,
+               outer_activation=None,
+               **kwargs):
+    
+    super(Multi_domain_classification_gate, self).__init__(**kwargs)
+    self.dropout = dropout
+    self.domain_numb = domain_numb
+    self.layer_norm = common.LayerNorm()
+    self.inner_layer_norm = common.LayerNorm()
+    self.output_dim = num_units
+    self.outer_transpose = False
+    self.outer_use_bias = True
+    self.outer_activation = activation
+    self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
+    self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu)
+    self.ff_layer_end = common.Dense(domain_numb, use_bias=True, activation=tf.nn.tanh)
+  
+  def build(self, input_shape):
+    super(Multi_domain_classification_gate, self).build(input_shape)
+    
+  def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
+    """Runs the layer."""
+    shape = shape_list(inputs)
+    rank = len(shape)      
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    
+    inputs = common.dropout(inputs, rate=0.3, training=training)
+    outputs = self.ff_layer_1(inputs)
+    outputs = common.dropout(outputs, rate=0.3, training=training)
+    outputs = self.ff_layer_2(outputs)
+    outputs = common.dropout(outputs, rate=0.3, training=training)
+    outputs = self.ff_layer_end(outputs)
+    outputs = tf.math.softmax(outputs)[:,domain]
+    outputs = tf.tile(outputs,[1,self.output_dim])
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
+
+    return outputs
+
+  
+
+
+
+
+
+
+
+
+
+
+
 
 class CondGRU(tf.keras.layers.Layer):
   def __init__(self,

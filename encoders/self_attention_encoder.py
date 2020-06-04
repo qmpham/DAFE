@@ -12,7 +12,7 @@ from opennmt.layers.position import SinusoidalPositionEncoder
 from opennmt.layers import common
 from layers.common import LayerNorm, Multi_LayerNorm
 from utils.utils_ import make_domain_mask
-from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v9, Multi_domain_FeedForwardNetwork_v6, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, Multi_domain_FeedForwardNetwork_v3, DAFE, Multi_domain_Gate, Multi_domain_Gate_v2
+from layers.layers import Regulation_Gate, Multi_domain_classification_gate, Multi_domain_FeedForwardNetwork_v9, Multi_domain_FeedForwardNetwork_v6, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, Multi_domain_FeedForwardNetwork_v3, DAFE, Multi_domain_Gate, Multi_domain_Gate_v2
 class Multi_domain_SelfAttentionEncoder(Encoder):
 
   def __init__(self,
@@ -1441,7 +1441,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
                ffn_activation=tf.nn.relu,
                position_encoder_class=SinusoidalPositionEncoder,
                multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
-               multi_domain_adapter_gate_class=Multi_domain_Gate,
+               multi_domain_adapter_gate_class=Multi_domain_classification_gate,
                ADAP_contribution=None,
                fake_domain_prob=0.1,
                noisy_prob=None,
@@ -1471,9 +1471,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, 
         fake_domain_prob=fake_domain_prob, noisy_prob=noisy_prob)
         for i in range(num_layers)]
-    self.multi_domain_gates = [
-        multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_gate_%d"%i)
-        for i in range(num_layers)]
+    self.multi_domain_gates = multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
     self.ADAP_layer_stopping_gradient = ADAP_layer_stopping_gradient
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution == None:
@@ -1504,7 +1502,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     
     return outputs, None, sequence_length
-    
+
   def map_v1_weights(self, weights):
     m = []
     m += self.layer_norm.map_v1_weights(weights["LayerNorm"])

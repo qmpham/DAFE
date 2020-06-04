@@ -6070,7 +6070,7 @@ def train_DRO(config,
         _loss = []
         _number_examples = []
         start = time.time()
-      if step % update_z_every==0:
+      
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)

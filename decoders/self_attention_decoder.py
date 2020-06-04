@@ -7,7 +7,7 @@ from opennmt.decoders.decoder import Decoder
 from opennmt.decoders.self_attention_decoder import SelfAttentionDecoder
 from layers import common, transformer
 from opennmt.layers.position import SinusoidalPositionEncoder
-from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v6, Multi_domain_Gate_v2, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_Gate, Multi_domain_FeedForwardNetwork_v3, Multi_domain_FeedForwardNetwork_v9
+from layers.layers import Regulation_Gate, Multi_domain_classification_gate, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v6, Multi_domain_Gate_v2, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_Gate, Multi_domain_FeedForwardNetwork_v3, Multi_domain_FeedForwardNetwork_v9
 from utils.utils_ import make_domain_mask
 from layers.common import Multi_LayerNorm
 from opennmt.utils import decoding
@@ -5189,7 +5189,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
                ffn_activation=tf.nn.relu,
                position_encoder_class=SinusoidalPositionEncoder,
                multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
-               multi_domain_adapter_gate_class=Multi_domain_Gate,
+               multi_domain_adapter_gate_class=Multi_domain_classification_gate,
                ADAP_contribution=None,
                num_sources=1,
                fake_domain_prob=0.1,
@@ -5220,9 +5220,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         if not(multi_domain_adapter_class in [Multi_domain_FeedForwardNetwork_v6, Multi_domain_FeedForwardNetwork_v8])
         else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, fake_domain_prob= fake_domain_prob, noisy_prob=noisy_prob)
         for i in range(num_layers)]
-    self.multi_domain_gates = [
-        multi_domain_adapter_gate_class(num_units, num_units, num_units, domain_numb=num_domains, name="ADAP_gate_%d"%i)
-        for i in range(num_layers)]
+    self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
+
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution==None:
@@ -5346,7 +5345,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     # Run each layer.
     new_cache = []
     total_adapt = []
-    for i, (layer, multi_domain_layer, multi_domain_gate) in enumerate(zip(self.layers,self.multi_domain_layers,self.multi_domain_gates)):
+    for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
 
       inputs, layer_cache, attention = layer(
           inputs,
@@ -5359,7 +5358,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
       total_adapt.append(adapt)
     total_adapt = tf.add_n(total_adapt)
-    g = multi_domain_gate(inputs, domain, mask=mask, training=training)
+    g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
     outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     return outputs, new_cache, attention
 
