@@ -1730,9 +1730,9 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     self.outer_transpose = False
     self.outer_use_bias = True
     self.outer_activation = activation
-    self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu, activity_regularizer=tf.keras.regularizers.l1(0.00001))
-    self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu, activity_regularizer=tf.keras.regularizers.l1(0.00001))
-    self.ff_layer_end = common.Dense(domain_numb, use_bias=True, kernel_initializer='zeros', bias_initializer='zeros', activity_regularizer=tf.keras.regularizers.l1(0.00001))
+    self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu, kernel_regularizer=tf.keras.regularizers.l2(0.00001), bias_regularizer=tf.keras.regularizers.l2(0.00001))
+    self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu, kernel_regularizer=tf.keras.regularizers.l2(0.00001), bias_regularizer=tf.keras.regularizers.l2(0.00001))
+    self.ff_layer_end = common.Dense(domain_numb, use_bias=True, kernel_initializer='zeros', bias_initializer='zeros', kernel_regularizer=tf.keras.regularizers.l2(0.00001), bias_regularizer=tf.keras.regularizers.l2(0.00001))
   
   def build(self, input_shape):
     super(Multi_domain_classification_gate, self).build(input_shape)
