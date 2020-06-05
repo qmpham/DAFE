@@ -1499,7 +1499,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     if internal_node_printing:
       tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "adapt_mean_abs_pooling: ", tf.reduce_mean(tf.abs(total_adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
 
-    outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
+    outputs = self.layer_norm(inputs + total_adapt * g)
     
     return outputs, None, sequence_length
 
