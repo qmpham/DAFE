@@ -1752,8 +1752,8 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     #tf.print("logits 2", logits)
     logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_end(logits)
-    #tf.print("logits 3: ", logits, summarize=1000)
-    #tf.print("outputs: ", tf.math.softmax(logits),summarize=1000)
+    tf.print("logits 3: ", logits, summarize=1000)
+    tf.print("outputs: ", tf.math.softmax(logits),summarize=1000)
     outputs = tf.math.softmax(logits)[:,domain]
     #tf.print("prediction loss", tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
     if training:
