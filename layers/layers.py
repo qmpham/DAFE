@@ -1746,14 +1746,14 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     inputs = self.layer_norm(inputs)
     inputs = common.dropout(inputs, rate=0.3, training=training)
     logits = self.ff_layer_1(inputs)
-    tf.print("logits 1", logits)
+    #tf.print("logits 1", logits)
     logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_2(logits)
-    tf.print("logits 2", logits)
+    #tf.print("logits 2", logits)
     logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_end(logits)
-    tf.print("logits 3: ", logits, summarize=1000)
-    tf.print("outputs: ", tf.math.softmax(logits),summarize=1000)
+    #tf.print("logits 3: ", logits, summarize=1000)
+    #tf.print("outputs: ", tf.math.softmax(logits),summarize=1000)
     outputs = tf.math.softmax(logits)[:,domain]
     #tf.print("prediction loss", tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
     if training:
