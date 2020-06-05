@@ -1801,7 +1801,7 @@ def train(config,
         print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
         print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
         print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
-        
+
         if isinstance(layer_activity_regularization_loss_scale, list):
           domain = source["domain"][0]
           layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
@@ -4734,7 +4734,7 @@ def visualize(config,
     outputs, _ = model(
         source,
         labels=target,
-        training=True,
+        training=False,
         step=optimizer.iterations,
         internal_node_printing=True)
  
