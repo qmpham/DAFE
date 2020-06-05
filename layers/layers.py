@@ -1730,9 +1730,9 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     self.outer_transpose = False
     self.outer_use_bias = True
     self.outer_activation = activation
-    self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu, kernel_regularizer=tf.keras.regularizers.l2(0.00001), bias_regularizer=tf.keras.regularizers.l2(0.00001))
-    self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu, kernel_regularizer=tf.keras.regularizers.l2(0.00001), bias_regularizer=tf.keras.regularizers.l2(0.00001))
-    self.ff_layer_end = common.Dense(domain_numb, use_bias=True, kernel_initializer='zeros', bias_initializer='zeros', kernel_regularizer=tf.keras.regularizers.l2(0.00001), bias_regularizer=tf.keras.regularizers.l2(0.00001))
+    self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu, kernel_regularizer=tf.keras.regularizers.l2(0.001), bias_regularizer=tf.keras.regularizers.l2(0.001))
+    self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu, kernel_regularizer=tf.keras.regularizers.l2(0.001), bias_regularizer=tf.keras.regularizers.l2(0.001))
+    self.ff_layer_end = common.Dense(domain_numb, use_bias=True, kernel_initializer='zeros', bias_initializer='zeros', kernel_regularizer=tf.keras.regularizers.l2(0.001), bias_regularizer=tf.keras.regularizers.l2(0.001))
   
   def build(self, input_shape):
     super(Multi_domain_classification_gate, self).build(input_shape)
@@ -1746,14 +1746,14 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     inputs = self.layer_norm(inputs)
     inputs = common.dropout(inputs, rate=0.3, training=training)
     logits = self.ff_layer_1(inputs)
-    #tf.print("logits 1", logits)
+    tf.print("logits 1", logits)
     logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_2(logits)
-    #tf.print("logits 2", logits)
+    tf.print("logits 2", logits)
     logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_end(logits)
-    #tf.print("logits 3: ", logits, summarize=1000)
-    #tf.print("outputs: ", tf.math.softmax(logits),summarize=1000)
+    tf.print("logits 3: ", logits, summarize=1000)
+    tf.print("outputs: ", tf.math.softmax(logits),summarize=1000)
     outputs = tf.math.softmax(logits)[:,domain]
     #tf.print("prediction loss", tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
     if training:
