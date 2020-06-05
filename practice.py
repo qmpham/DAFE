@@ -80,8 +80,12 @@ def main():
   print("running experiment: ", experiment)
   ADAP_layer_stopping_gradient = config.get("ADAP_layer_stopping_gradient",False)
   ADAP_gate_stopping_gradient = config.get("ADAP_gate_stopping_gradient",False)
+  d_classification_gate_stopping_gradient_enc = config.get("d_classification_gate_stopping_gradient_enc",False)
+  d_classification_gate_stopping_gradient_enc = config.get("d_classification_gate_stopping_gradient_dec",False)
   print("ADAP_layer_stopping_gradient: ", ADAP_layer_stopping_gradient)
   print("ADAP_gate_stopping_gradient: ", ADAP_gate_stopping_gradient)
+  print("d_classification_gate_stopping_gradient_enc: ", d_classification_gate_stopping_gradient_enc)
+  print("d_classification_gate_stopping_gradient_dec: ", d_classification_gate_stopping_gradient_dec)
   num_domain_units = config.get("num_domain_units",128)
   num_domains = config.get("num_domains", 6)
   if experiment=="residual":
@@ -994,6 +998,7 @@ def main():
         num_domains=num_domains,
         num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient_enc=d_classification_gate_stopping_gradient_enc,
         num_units=512,
         num_heads=8,
         ffn_inner_dim=2048,
@@ -1006,6 +1011,7 @@ def main():
         num_domains=num_domains,
         num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient_dec=d_classification_gate_stopping_gradient_dec,
         num_units=512,
         num_heads=8,
         ffn_inner_dim=2048,
