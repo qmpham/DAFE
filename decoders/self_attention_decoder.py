@@ -5359,7 +5359,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       total_adapt.append(adapt)
     total_adapt = tf.add_n(total_adapt)
     g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
-    outputs = self.layer_norm(inputs + total_adapt * g)
+    outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     return outputs, new_cache, attention
 
   def forward(self,
