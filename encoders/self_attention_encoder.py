@@ -1505,6 +1505,29 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     
     return outputs, None, sequence_length
 
+  def adv_call(self, inputs, sequence_length=None, training=None):
+    domain = inputs[1]
+    domain = domain[0]
+    inputs = inputs[0]
+    inputs *= self.num_units**0.5
+
+    if self.position_encoder is not None:
+      inputs = self.position_encoder(inputs)
+    inputs = common.dropout(inputs, self.dropout, training=training)
+    mask = self.build_mask(inputs, sequence_length=sequence_length)
+    total_adapt=[]
+    for layer, multi_domain_layer in zip(self.layers, self.multi_domain_layers):
+      inputs = layer(inputs, mask=mask, training=training)
+      adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+      total_adapt.append(adapt)
+
+    g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
+    total_adapt = tf.add_n(total_adapt)
+    g = tf.stop_gradient(g)
+    total_adapt = tf.stop_gradient(total_adapt)
+    outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
+    
+    return outputs, None, sequence_length
   def map_v1_weights(self, weights):
     m = []
     m += self.layer_norm.map_v1_weights(weights["LayerNorm"])
