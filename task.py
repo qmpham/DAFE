@@ -1822,7 +1822,7 @@ def train(config,
         for loss_ in regularization_losses:
           if "multi_adap__dense" in loss_.name:
             output_activity_regularization_losses.append(loss_)
-          elif "ADAP_gate" in loss_.name and "ActivityRegularizer" not in loss_.name: #and "Regularizer" not in loss_.name:
+          elif "ADAP_gate" in loss_.name and "ActivityRegularizer" not in loss_.name and "Regularizer" not in loss_.name:
             d_classification_gate_losses.append(loss_)
           elif "ActivityRegularizer" in loss_.name:
             d_classifier_activity_regularization_losses.append(loss_)
