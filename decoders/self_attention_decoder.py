@@ -5371,7 +5371,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         #tf.print("g shape", g[:,:,0])
         #tf.print("total adapt norm shape", tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)[0])
         self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)[0]*g[:,:,0],axis=-1)))
-        tf.print("z_adap_agreement_loss: ", tf.reduce_mean(tf.reduce_sum(tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)[0]*g[:,:,0],axis=-1)))
+        #tf.print("z_adap_agreement_loss: ", tf.reduce_mean(tf.reduce_sum(tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)[0]*g[:,:,0],axis=-1)))
     return outputs, new_cache, attention
   
   def _adv_run(self,
