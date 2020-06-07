@@ -1797,12 +1797,10 @@ def train(config,
         d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
         d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
         d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
-        z_adap_agreement_loss_scale = config.get("z_adap_agreement_loss_scale",0.0)
         print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
         print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
         print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
         print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
-        print("z_adap_agreement_loss_scale: ",z_adap_agreement_loss_scale)
         if isinstance(layer_activity_regularization_loss_scale, list):
           domain = source["domain"][0]
           layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
@@ -1820,7 +1818,6 @@ def train(config,
         d_classification_gate_losses = []
         d_classifier_activity_regularization_losses = []
         d_classifier_weight_regularization_losses = []
-        z_adap_agreement_losses = []
         for loss_ in regularization_losses:
           if "multi_adap__dense" in loss_.name:
             output_activity_regularization_losses.append(loss_)
@@ -1833,14 +1830,12 @@ def train(config,
               d_classification_gate_losses.append(loss_)
           elif "ADAP_" in loss_.name:
             layer_activity_regularization_losses.append(loss_)
-          else:
-            z_adap_agreement_losses.append(loss_)
+
         print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
         print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
         print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
         print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
         print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
-        print("There are %d z_adap_agreement_losses"%len(z_adap_agreement_losses))
         if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
 
@@ -1856,8 +1851,6 @@ def train(config,
         if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
           training_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)
         
-        if len(z_adap_agreement_losses)>0 and z_adap_agreement_loss_scale >0:
-          training_loss -= z_adap_agreement_loss_scale * tf.add_n(z_adap_agreement_losses)
 
     variables = model.trainable_variables
     print("var numb: ", len(variables))

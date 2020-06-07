@@ -1504,15 +1504,6 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       print("stopping gradient at d_classifier in encoder")
       g = tf.stop_gradient(g)
     outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
-    ##### z_k and ADAP_k(h) should align
-    if training:
-      shape = shape_list(g)
-      rank = len(shape)
-      if rank>2:
-        #tf.print("g shape", g[:,:,0])
-        #tf.print("total adapt norm shape", tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)[0])
-        self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)[0]*g[:,:,0],axis=-1)))
-        #tf.print("z_adap_agreement_loss: ", tf.reduce_mean(tf.reduce_sum(tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)[0]*g[:,:,0],axis=-1)))
 
     return outputs, None, sequence_length
 
