@@ -1840,7 +1840,7 @@ def train(config,
         print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
         print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
         print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
-
+        print("There are %d z_adap_agreement_losses"%len(z_adap_agreement_losses))
         if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
 
