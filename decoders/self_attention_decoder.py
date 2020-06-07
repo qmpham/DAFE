@@ -13,6 +13,7 @@ from layers.common import Multi_LayerNorm
 from opennmt.utils import decoding
 from opennmt import constants
 from opennmt.inputters import text_inputter
+from opennmt.utils.misc import shape_list
 
 class Multi_domain_SelfAttentionDecoder(Decoder):
   
@@ -5364,7 +5365,11 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       g = tf.stop_gradient(g)
     outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     if training:
-      self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.norm(total_adapt*g,axis=-1),axis=-1),-1))
+      shape = shape_list(g)
+      rank = len(shape)
+      if rank>2:
+        self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)*g[:,:,0]),axis=-1))
+        tf.print("z_adap_agreement_loss: ", tf.reduce_mean(tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)*g[:,:,0]))
     return outputs, new_cache, attention
   
   def _adv_run(self,
