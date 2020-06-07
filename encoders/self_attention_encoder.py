@@ -1506,7 +1506,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     ##### z_k and ADAP_k(h) should align
     if training:
       self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.norm(total_adapt*g,-1),-1),-1))
-      tf.print("z_adap_agreement_loss: ", tf.reduce_mean(tf.reduce_sum(tf.norm(total_adapt*g,-1),-1),-1))
+      tf.print("z_adap_agreement_loss: ", tf.reduce_mean(tf.reduce_sum(tf.norm(total_adapt*g,axis=-1),axis=-1)))
     return outputs, None, sequence_length
 
   def adv_call(self, inputs, sequence_length=None, training=None):
