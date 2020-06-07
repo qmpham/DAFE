@@ -5368,8 +5368,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       shape = shape_list(g)
       rank = len(shape)
       if rank>2:
-        self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)*g[:,:,0]),axis=-1))
-        tf.print("z_adap_agreement_loss: ", tf.reduce_mean(tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)*g[:,:,0]))
+        self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)*g[:,:,0],axis=-1)))
+        tf.print("z_adap_agreement_loss: ", tf.reduce_mean(tf.reduce_sum(tf.linalg.normalize(tf.norm(total_adapt,axis=-1),ord=1,axis=-1)*g[:,:,0],axis=-1)))
     return outputs, new_cache, attention
   
   def _adv_run(self,
