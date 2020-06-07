@@ -1497,12 +1497,15 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
     total_adapt = tf.add_n(total_adapt)
     if internal_node_printing:
-      tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "adapt_mean_abs_pooling: ", tf.reduce_mean(tf.abs(total_adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
+      tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "adapt_mean_abs_pooling: ", tf.reduce_mean(tf.abs(total_adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)  
+
     if self.ADAP_gate_stopping_gradient:
       print("stopping gradient at d_classifier in encoder")
       g = tf.stop_gradient(g)
     outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
-    
+    ##### z_k and ADAP_k(h) should align
+    if training:
+      self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.norm(total_adapt*g,-1),-1),-1))
     return outputs, None, sequence_length
 
   def adv_call(self, inputs, sequence_length=None, training=None):

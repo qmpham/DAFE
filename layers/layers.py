@@ -1737,7 +1737,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
   def build(self, input_shape):
     super(Multi_domain_classification_gate, self).build(input_shape)
     
-  def call(self, inputs, domain, mask=None, training=None, adv_training=False):  # pylint: disable=arguments-differ
+  def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
     shape = shape_list(inputs)
     rank = len(shape)      
@@ -1760,10 +1760,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
       label_smoothing = 0.3
       labels = tf.fill([tf.shape(logits)[0]], domain)
       smoothed_labels = _smooth_one_hot_labels(logits, labels, label_smoothing)
-      if adv_training:
-        self.add_loss(-tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits)))
-      else:
-        self.add_loss(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits)))
+      self.add_loss(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits)))
 
     outputs = tf.tile(tf.expand_dims(outputs,1),[1,self.output_dim])
     if rank > 2:

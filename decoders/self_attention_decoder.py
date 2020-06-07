@@ -5363,6 +5363,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       print("stopping gradient at d_classifier in decoder")
       g = tf.stop_gradient(g)
     outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
+    if training:
+      self.add_loss(tf.reduce_mean(tf.reduce_sum(tf.norm(total_adapt*g,-1),-1),-1))
     return outputs, new_cache, attention
   
   def _adv_run(self,
