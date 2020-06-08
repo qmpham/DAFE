@@ -1520,7 +1520,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     total_adapt=[]
     for layer, multi_domain_layer in zip(self.layers, self.multi_domain_layers):
       inputs = layer(inputs, mask=mask, training=training)
-      #adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+      adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
       #total_adapt.append(adapt)
 
     g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
