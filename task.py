@@ -5851,9 +5851,7 @@ def train_adv(config,
     return reported_loss, num_examples
 
   def _accumulate_adv_gradients(source, target):
-    
-    adv_domain = tf.reshape(tf.math.floormod(source["domain"][0] + \
-      tf.cast(tf.reshape(tf.random.categorical(tf.expand_dims(tf.math.log([1.0/(domain_num-1)]*domain_num),0),1),[]) + 1,tf.int32), domain_num), [])
+    adv_domain = tf.reshape(tf.math.floormod(source["domain"][0] + tf.cast(tf.reshape(tf.random.categorical(tf.expand_dims(tf.math.log([1.0/(domain_num-1)]*domain_num),0),1),[]) + 1,tf.int32), domain_num), [])
     tf.print("domain:", source["domain"][0],"adv_domain:", adv_domain, sep="|")
     source["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(source["domain"]))
     target["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(target["domain"]))
@@ -5873,8 +5871,7 @@ def train_adv(config,
     if config.get("apply_importance_weight", False):
       print("apply_importance_weight")
       training_loss = training_loss * importance_weights[domain]
-    if config.get("ADAP_activity_regularizing",False):
-    
+    if config.get("ADAP_activity_regularizing",False):    
       layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
       print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
       if isinstance(layer_activity_regularization_loss_scale, list):
