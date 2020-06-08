@@ -1530,6 +1530,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     
     return outputs, None, sequence_length
+    
   def map_v1_weights(self, weights):
     m = []
     m += self.layer_norm.map_v1_weights(weights["LayerNorm"])
