@@ -5417,13 +5417,13 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-      total_adapt.append(adapt)
-    total_adapt = tf.add_n(total_adapt)
+      #adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+      #total_adapt.append(adapt)
+    #total_adapt = tf.add_n(total_adapt)
     g = self.multi_domain_gate(inputs, domain, mask=mask, training=training, adv_training=True)
-    g = tf.stop_gradient(g)
-    total_adapt = tf.stop_gradient(g)
-    outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
+    #g = tf.stop_gradient(g)
+    #total_adapt = tf.stop_gradient(g)
+    outputs = self.layer_norm(inputs * (1-g))
     return outputs, new_cache, attention
 
   def forward(self,
