@@ -1528,7 +1528,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     domain = domain[0]
     inputs = inputs[0]
     inputs *= self.num_units**0.5
-
+    tf.print("adv domain", domain)
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs)
     inputs = common.dropout(inputs, self.dropout, training=training)
@@ -1536,19 +1536,20 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     total_adapt=[]
     for layer, multi_domain_layer in zip(self.layers, self.multi_domain_layers):
       inputs = layer(inputs, mask=mask, training=training)
-      adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-      #total_adapt.append(adapt)
+      if self.version!=3:
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
 
-    g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
-    if self.ADAP_gate_stopping_gradient:
-        print("stopping gradient at d_classifier in encoder: ", self.ADAP_gate_stopping_gradient)
-        g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
-    #total_adapt = tf.add_n(total_adapt)
-    #g = tf.stop_gradient(g)
-    #total_adapt = tf.stop_gradient(total_adapt)
+    if self.version!=3:
+      g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
+      total_adapt = tf.add_n(total_adapt)
+      g = tf.stop_gradient(g)
+
     if self.version==1:
-      outputs = self.layer_norm(inputs * (1-g))
+      outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     elif self.version==2:
+      outputs = self.layer_norm(inputs + total_adapt * g)
+    elif self.version==3:
       outputs = self.layer_norm(inputs)
     
     return outputs, None, sequence_length
