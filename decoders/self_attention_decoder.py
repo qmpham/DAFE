@@ -5228,7 +5228,13 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution==None:
       ADAP_contribution =[1.0] * num_layers
-
+    self.version = version
+    if self.version==1:
+      print("version 1: h' = h(1-z)+adap(h)*z")
+    elif self.version==2:
+      print("version 2: h' = h+adap(h)*z")
+    elif self.version==3:
+      print("version 3: h' = h")
     self.ADAP_contribution = ADAP_contribution
     print("ADAP contribution", self.ADAP_contribution)
   
