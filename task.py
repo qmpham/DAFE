@@ -5900,6 +5900,7 @@ def train_adv(config,
     return reported_loss, num_examples
 
   def _accumulate_adv_gradients(source, target):
+    true_domain = source["domain"][0]
     adv_domain = tf.reshape(tf.math.floormod(source["domain"][0] + tf.cast(tf.reshape(tf.random.categorical(tf.expand_dims(tf.math.log([1.0/(domain_num-1)]*(domain_num-1)),0),1),[]) + 1,tf.int32), domain_num), [])
     #tf.print("domain:", source["domain"][0],"adv_domain:", adv_domain, sep="|")
     source["domain"] = tf.tile(tf.expand_dims(adv_domain,0), tf.shape(source["domain"]))
@@ -5917,17 +5918,15 @@ def train_adv(config,
     else:
       training_loss, reported_loss = loss, loss
     domain = source["domain"][0]
-    if config.get("apply_importance_weight", False):
-      print("apply_importance_weight")
-      training_loss = training_loss * importance_weights[domain]
     if config.get("ADAP_activity_regularizing",False):    
       layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
+      d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
       print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+      print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
       if isinstance(layer_activity_regularization_loss_scale, list):
         domain = source["domain"][0]
         layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
         layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
-        #tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
       
       regularization_losses = model.losses
       print("model_name_scope", model.name_scope())
@@ -5956,7 +5955,9 @@ def train_adv(config,
       print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
       print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
       if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
-        training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)        
+        training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)  
+      if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
+          training_loss -= d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses)       
       adv_loss_scale = config.get("adv_loss_scale", 0.01)
       print("adv_loss_scale: ", adv_loss_scale)
       training_loss *= training_loss * adv_loss_scale
