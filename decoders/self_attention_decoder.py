@@ -5195,6 +5195,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
                num_sources=1,
                fake_domain_prob=0.1,
                noisy_prob=None,
+               version=1,
                **kwargs):
     
     super(Multi_domain_SelfAttentionDecoder_v17, self).__init__(num_sources=num_sources, **kwargs)
@@ -5357,13 +5358,23 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           training=training)
       new_cache.append(layer_cache)
       adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-      total_adapt.append(adapt)
-    total_adapt = tf.add_n(total_adapt)
-    g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
-    if self.ADAP_gate_stopping_gradient:
-      print("stopping gradient at d_classifier in decoder")
-      g = tf.stop_gradient(g)
-    outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
+      if self.version!=3:
+        total_adapt.append(adapt)
+    
+    if self.version!=3:
+      total_adapt = tf.add_n(total_adapt)
+      g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
+      if self.ADAP_gate_stopping_gradient:
+        print("stopping gradient at d_classifier in encoder: ", self.ADAP_gate_stopping_gradient)
+        g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
+
+    if self.version==1:
+      outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
+    elif self.version==2:
+      outputs = self.layer_norm(inputs + total_adapt * g)
+    elif self.version==3:
+      outputs = self.layer_norm(inputs)
+
     return outputs, new_cache, attention
   
   def _adv_run(self,
@@ -5421,9 +5432,13 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       #total_adapt.append(adapt)
     #total_adapt = tf.add_n(total_adapt)
     g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
-    #g = tf.stop_gradient(g)
-    #total_adapt = tf.stop_gradient(g)
-    outputs = self.layer_norm(inputs * (1-g))
+    if self.ADAP_gate_stopping_gradient:
+        print("stopping gradient at d_classifier in encoder")
+        g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
+    if self.version==1:
+      outputs = self.layer_norm(inputs * (1-g))
+    elif self.version==2:
+      outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
 
   def forward(self,
