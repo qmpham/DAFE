@@ -5371,7 +5371,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       total_adapt = tf.add_n(total_adapt)
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       if self.ADAP_gate_stopping_gradient:
-        print("stopping gradient at d_classifier in encoder: ", self.ADAP_gate_stopping_gradient)
+        print("stopping gradient at d_classifier in decoder: ", self.ADAP_gate_stopping_gradient)
         g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
 
     if self.version==1:
