@@ -1153,7 +1153,8 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1,
         ADAP_contribution=[1.0] * 6,
-        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3),
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+        version=config.get("version",1)),
     decoder=Multi_domain_SelfAttentionDecoder_v18(
         num_layers=6,
         num_domains=num_domains,
@@ -1166,7 +1167,8 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1,
         ADAP_contribution=[1.0] * 6,
-        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+        version=config.get("version",1)))
   elif experiment=="pretrain":
     return
   warmup_steps = config.get("warmup_steps",4000)
