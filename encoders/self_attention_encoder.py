@@ -1528,7 +1528,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     domain = domain[0]
     inputs = inputs[0]
     inputs *= self.num_units**0.5
-    #tf.print("adv domain", domain)
+    tf.print("adv domain", domain)
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs)
     inputs = common.dropout(inputs, self.dropout, training=training)
