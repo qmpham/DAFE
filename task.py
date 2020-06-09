@@ -5957,7 +5957,7 @@ def train_adv(config,
       if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
         training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)  
       if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
-          training_loss -= d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses)       
+        training_loss -= d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses)       
       adv_loss_scale = config.get("adv_loss_scale", 0.01)
       print("adv_loss_scale: ", adv_loss_scale)
       training_loss *= training_loss * adv_loss_scale
