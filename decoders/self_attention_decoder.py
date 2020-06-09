@@ -5442,7 +5442,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       total_adapt = tf.add_n(total_adapt)
       g = tf.stop_gradient(g)
-      tf.print("adv g dec: ", g)
+      #tf.print("adv g dec: ", g)
     if self.version==1:
       outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     elif self.version==2:

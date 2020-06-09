@@ -1528,7 +1528,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     domain = domain[0]
     inputs = inputs[0]
     inputs *= self.num_units**0.5
-    tf.print("adv domain", domain)
+    #tf.print("adv domain", domain)
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs)
     inputs = common.dropout(inputs, self.dropout, training=training)
@@ -1544,7 +1544,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       total_adapt = tf.add_n(total_adapt)
       g = tf.stop_gradient(g)
-      tf.print("adv g enc: ", g)
+      #tf.print("adv g enc: ", g)
     if self.version==1:
       outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     elif self.version==2:
