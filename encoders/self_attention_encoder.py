@@ -1579,6 +1579,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
                fake_domain_prob=0.1,
                noisy_prob=None,
                ADAP_contribution=None,
+               version=1,
                **kwargs):
     
     super(Multi_domain_SelfAttentionEncoder_v16, self).__init__(**kwargs)
@@ -1607,6 +1608,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
     if ADAP_contribution == None:
       ADAP_contribution = [1.0] * num_layers
     self.ADAP_contribution = ADAP_contribution
+    self.version = version
   
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     domain = inputs[1]
@@ -1614,20 +1616,29 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
     inputs = inputs[0]    
     inputs *= self.num_units**0.5
 
+    total_adapt=[]
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs)
     inputs = common.dropout(inputs, self.dropout, training=training)
     mask = self.build_mask(inputs, sequence_length=sequence_length)
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers, self.multi_domain_layers)):
       inputs = layer(inputs, mask=mask, training=training)
-      if self.ADAP_contribution[i]>0:
+      if self.version==1:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         inputs = adapt * self.ADAP_contribution[i] + inputs
+      elif self.version==2:
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
       """
       if internal_node_printing:
         tf.print("layers: ", i , "ADAP mean pooling: ", tf.reduce_mean(tf.abs(adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
       """
-    outputs = self.layer_norm(inputs)
+    if self.version==1:
+      outputs = self.layer_norm(inputs)
+    elif self.version==2:
+      outputs = self.layer_norm(inputs+tf.add_n(total_adapt))
+    else:
+      outputs = self.layer_norm(inputs)
     
     return outputs, None, sequence_length
     

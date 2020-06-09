@@ -5549,6 +5549,7 @@ class Multi_domain_SelfAttentionDecoder_v18(Decoder):
                fake_domain_prob=0.1,
                noisy_prob=None,
                ADAP_contribution=None,
+               version=1,
                num_sources=1,
                **kwargs):
     
@@ -5581,7 +5582,9 @@ class Multi_domain_SelfAttentionDecoder_v18(Decoder):
       ADAP_contribution =[1.0] * num_layers
 
     self.ADAP_contribution = ADAP_contribution
+    self.version=version
     print("ADAP contribution", self.ADAP_contribution)
+    print("dec version: ", self.version)
   
   def initialize(self, vocab_size=None, output_layer=None):  
     if output_layer is not None:
@@ -5693,6 +5696,7 @@ class Multi_domain_SelfAttentionDecoder_v18(Decoder):
 
     # Run each layer.
     new_cache = []
+    total_adapt=[]
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
 
       inputs, layer_cache, attention = layer(
@@ -5703,10 +5707,18 @@ class Multi_domain_SelfAttentionDecoder_v18(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      if self.ADAP_contribution[i] > 0:
+      if self.version==1:
         inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
+      elif self.version==2:
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
 
-    outputs = self.layer_norm(inputs)
+    if self.version==1:
+      outputs = self.layer_norm(inputs)
+    elif self.version==2:
+      outputs = self.layer_norm(inputs + tf.add_n(total_adapt))
+    else:
+      outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
 
   def forward(self,
