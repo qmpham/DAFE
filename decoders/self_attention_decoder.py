@@ -5434,17 +5434,22 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-      #total_adapt.append(adapt)
-    #total_adapt = tf.add_n(total_adapt)
-    g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
-    if self.ADAP_gate_stopping_gradient:
-        print("stopping gradient at d_classifier in encoder")
-        g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
+      if self.version!=3:
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
+
+    if self.version!=3:
+      g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
+      total_adapt = tf.add_n(total_adapt)
+      g = tf.stop_gradient(g)
+
     if self.version==1:
-      outputs = self.layer_norm(inputs * (1-g))
+      outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     elif self.version==2:
+      outputs = self.layer_norm(inputs + total_adapt * g)
+    elif self.version==3:
       outputs = self.layer_norm(inputs)
+      
     return outputs, new_cache, attention
 
   def forward(self,
