@@ -905,17 +905,6 @@ def finetuning(config,
         if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
 
-        if len(output_activity_regularization_losses)>0 and output_activity_regularization_loss_scale>0:
-          training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
-
-        if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
-          training_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
-
-        if len(d_classifier_activity_regularization_losses)>0 and d_classifier_activity_regularization_loss_scale>0:
-          training_loss += d_classifier_activity_regularization_loss_scale * tf.add_n(d_classifier_activity_regularization_losses)
-
-        if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
-          training_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)
     variables = []
     for v in model.trainable_variables:
       if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
