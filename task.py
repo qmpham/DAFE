@@ -1892,7 +1892,8 @@ def train(config,
           training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
 
         if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
-          training_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
+          classification_loss = d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
+          training_loss += classification_loss
 
         if len(d_classifier_activity_regularization_losses)>0 and d_classifier_activity_regularization_loss_scale>0:
           training_loss += d_classifier_activity_regularization_loss_scale * tf.add_n(d_classifier_activity_regularization_losses)
@@ -1903,9 +1904,17 @@ def train(config,
 
     variables = model.trainable_variables
     print("var numb: ", len(variables))
+    adv_vars = []
+    d_classifier_vars = []
     for var in variables:
-      print(var.name)
-    gradients = optimizer.get_gradients(training_loss, variables)
+      if "ADAP_gate/dense" in var.name:
+        d_classifier_vars.append(var)
+      else:
+        adv_vars.append(var)
+    variables = adv_vars + d_classifier_vars
+    adv_gradients = optimizer.get_gradients(training_loss, adv_vars)
+    d_classifier_gradients = optimizer.get_gradients(classification_loss, d_classifier_vars)
+    gradients = adv_gradients + d_classifier_gradients
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
@@ -1913,6 +1922,15 @@ def train(config,
 
   def _apply_gradients():
     variables = model.trainable_variables
+    adv_vars = []
+    d_classifier_vars = []
+    for var in variables:
+      if "ADAP_gate/dense" in var.name:
+        d_classifier_vars.append(var)
+        #print(var.name)
+      else:
+        adv_vars.append(var)
+    variables = adv_vars + d_classifier_vars
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
