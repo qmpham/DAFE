@@ -1963,6 +1963,9 @@ def train(config,
   _loss = []  
   _number_examples = []
   step = optimizer.iterations.numpy()
+  if config.get("reset training iterations",False):
+    print("start from %d-th step"%config.get("reset_step",150000))
+    optimizer.iterations.assign(config.get("reset_step",150000))
   if step <= 1:
     initializer = config.get("initializer","default")
     if initializer == "default":

@@ -1511,8 +1511,11 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "adapt_mean_abs_pooling: ", tf.reduce_mean(tf.abs(total_adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)  
 
       if self.ADAP_gate_stopping_gradient:
-        print("stopping gradient at d_classifier in encoder: ", self.ADAP_gate_stopping_gradient)
-        g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
+        if isinstance(self.ADAP_gate_stopping_gradient, float):
+          print("stopping gradient at d_classifier in decoder: ", self.ADAP_gate_stopping_gradient)
+          g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
+        elif isinstance(self.ADAP_gate_stopping_gradient, bool):
+          g = tf.stop_gradient(g)
 
     if self.version==1:
       outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
@@ -1522,6 +1525,9 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       outputs = self.layer_norm(inputs)
     elif self.version==5:
       outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * total_adapt)
+    elif self.version==6:
+      z = tf.exp((g-1)*2/g)
+      outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
 
     return outputs, None, sequence_length
 
