@@ -1486,6 +1486,10 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       print("version 2: h' = h+adap(h)*z")
     elif self.version==3:
       print("version 3: h' = h")
+    elif self.version==5:
+      print("version 5: h' = h+adap(h)*activation(z)")
+    elif self.version==6:
+      print("version 6: h' = h(1-activation(z))+adap(h)*activation(z)")
   
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     domain = inputs[1]
