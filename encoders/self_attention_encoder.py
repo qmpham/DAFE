@@ -1520,6 +1520,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       outputs = self.layer_norm(inputs + total_adapt * g)
     elif self.version==3:
       outputs = self.layer_norm(inputs)
+    elif self.version==5:
+      outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * total_adapt)
 
     return outputs, None, sequence_length
 

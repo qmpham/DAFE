@@ -5235,6 +5235,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       print("version 2: h' = h+adap(h)*z")
     elif self.version==3:
       print("version 3: h' = h")
+    elif self.version==5:
+      print("version 5: h' = h+adap(h)*activation(z)")
     self.ADAP_contribution = ADAP_contribution
     print("ADAP contribution", self.ADAP_contribution)
   
@@ -5380,6 +5382,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       outputs = self.layer_norm(inputs + total_adapt * g)
     elif self.version==3:
       outputs = self.layer_norm(inputs)
+    elif self.version==5:
+      outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * total_adapt)
 
     return outputs, new_cache, attention
   
