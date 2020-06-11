@@ -1493,7 +1493,6 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     elif self.version==7:
       print("version 7: h' = h + z")
     
-  
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     domain = inputs[1]
     domain = domain[0]

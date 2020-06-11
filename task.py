@@ -2181,6 +2181,7 @@ def train(config,
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
   _loss = []  
+  _d_classfication_loss = []
   _number_examples = []
   step = optimizer.iterations.numpy()
   if config.get("reset_step",None):
@@ -2218,9 +2219,11 @@ def train(config,
             _loss.append(loss)
             _number_examples.append(num_examples)
           else:
-
-            loss, num_exaples = next(train_classifier_data_flow)
-            _loss.append(loss)
+            for _ in range(2):
+              d_classfication_loss, _ = next(train_classifier_data_flow)
+              _d_classfication_loss.append(d_classfication_loss)
+            loss, num_examples = next(train_model_data_flow)    
+            _loss.append(loss)             
             _number_examples.append(num_examples)
         else:
           loss, num_examples = next(train_data_flow)    
@@ -2231,12 +2234,29 @@ def train(config,
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
-        tf.get_logger().info(
+        if config.get("adv_step",None):
+          if step > config.get("adv_step",None):
+            tf.get_logger().info(
+              "Step = %d ; Learning rate = %f ; Loss = %f; classification_loss = %f, number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.mean(_d_classfication_loss), np.sum(_number_examples), elapsed)
+            _loss = []
+            _d_classfication_loss = []
+            _number_examples = []
+            start = time.time()
+          else:
+            tf.get_logger().info(
             "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
             step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
-        _loss = []
-        _number_examples = []
-        start = time.time()
+            _loss = []
+            _number_examples = []
+            start = time.time()
+        else:
+          tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+          _loss = []
+          _number_examples = []
+          start = time.time()
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
