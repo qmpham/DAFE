@@ -1787,7 +1787,7 @@ def train(config,
   domain = config.get("domain",None)
   
   print("There are %d in-domain corpora"%len(source_file))
-  classification_loss_sign = tf.Variable(0,trainable=False)
+  classification_loss_sign = tf.Variable(0.0,trainable=False)
   
   if experiment=="residualv28":
     prob_file = config["prob"]
@@ -2216,7 +2216,7 @@ def train(config,
       #for _ in range(int(config.get("accumulation_step",1))):
       if config.get("adv_step",None):          
         if step==config.get("adv_step",None):
-          classification_loss_sign.assign(-1)
+          classification_loss_sign.assign(-1.0)
         for _ in range(2):
           d_classfication_loss, _ = next(train_classifier_data_flow)
           _d_classfication_loss.append(d_classfication_loss)
