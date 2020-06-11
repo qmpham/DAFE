@@ -1490,6 +1490,9 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       print("version 5: h' = h+adap(h)*activation(z)")
     elif self.version==6:
       print("version 6: h' = h(1-activation(z))+adap(h)*activation(z)")
+    elif self.version==7:
+      print("version 7: h' = h + z")
+    
   
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     domain = inputs[1]
@@ -1532,6 +1535,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     elif self.version==6:
       z = tf.exp((g-1)*2/g)
       outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
+    elif self.version==7:
+      outputs = self.layer_norm(inputs + total_adapt)
 
     return outputs, None, sequence_length
 
