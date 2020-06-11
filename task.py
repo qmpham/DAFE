@@ -2234,21 +2234,13 @@ def train(config,
       if step % report_every == 0:
         elapsed = time.time() - start
         if config.get("adv_step",None):
-          if step > config.get("adv_step",None):
-            tf.get_logger().info(
-              "Step = %d ; Learning rate = %f ; Loss = %f; classification_loss = %f, number_examples = %d, after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.mean(_d_classfication_loss), np.sum(_number_examples), elapsed)
-            _loss = []
-            _d_classfication_loss = []
-            _number_examples = []
-            start = time.time()
-          else:
-            tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
-            _loss = []
-            _number_examples = []
-            start = time.time()
+          tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; classification_loss = %f, number_examples = %d, after %f seconds",
+          step, learning_rate(step), np.mean(_loss), np.mean(_d_classfication_loss), np.sum(_number_examples), elapsed)
+          _loss = []
+          _d_classfication_loss = []
+          _number_examples = []
+          start = time.time()
         else:
           tf.get_logger().info(
             "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
