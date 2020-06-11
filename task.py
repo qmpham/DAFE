@@ -1788,6 +1788,7 @@ def train(config,
   
   print("There are %d in-domain corpora"%len(source_file))
   classification_loss_sign = tf.Variable(0,trainable=False)
+  
   if experiment=="residualv28":
     prob_file = config["prob"]
     train_dataset = create_trainining_dataset_with_dprob(strategy, model, source_file, target_file, prob_file, batch_train_size, batch_type, shuffle_buffer_size, 
@@ -2212,25 +2213,23 @@ def train(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      for _ in range(int(config.get("accumulation_step",1))):
-        if config.get("adv_step",None):
-          if step < config.get("adv_step",None):
-            loss, num_examples = next(train_data_flow)    
-            _loss.append(loss)
-            _number_examples.append(num_examples)
-          else:
-            for _ in range(2):
-              d_classfication_loss, _ = next(train_classifier_data_flow)
-              _d_classfication_loss.append(d_classfication_loss)
-            loss, num_examples = next(train_model_data_flow)    
-            _loss.append(loss)             
-            _number_examples.append(num_examples)
-        else:
-          loss, num_examples = next(train_data_flow)    
-          _loss.append(loss)
-          _number_examples.append(num_examples)
-
-      _step()  
+      #for _ in range(int(config.get("accumulation_step",1))):
+      if config.get("adv_step",None):          
+        if step==config.get("adv_step",None):
+          classification_loss_sign.assign(-1)
+        for _ in range(2):
+          d_classfication_loss, _ = next(train_classifier_data_flow)
+          _d_classfication_loss.append(d_classfication_loss)
+          _classifier_step()
+        loss, num_examples = next(train_model_data_flow)    
+        _loss.append(loss)             
+        _number_examples.append(num_examples)
+        _model_step()
+      else:
+        loss, num_examples = next(train_data_flow)    
+        _loss.append(loss)
+        _number_examples.append(num_examples)
+        _step()  
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
