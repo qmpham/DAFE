@@ -1808,7 +1808,7 @@ def train(config,
   tf.print("importance_weights: ", importance_weights)
   #####
   with strategy.scope():
-    classifier_optimizer = tfa.optimizers.LazyAdam(0.01)
+    classifier_optimizer = tfa.optimizers.LazyAdam(0.001)
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     model_gradient_accumulator = optimizer_util.GradientAccumulator()
