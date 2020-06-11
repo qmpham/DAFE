@@ -1993,7 +1993,7 @@ def train(config,
 
         if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
           classification_loss = d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
-          training_loss = classification_loss * classification_loss_sign
+          training_loss += classification_loss * classification_loss_sign
 
         if len(d_classifier_activity_regularization_losses)>0 and d_classifier_activity_regularization_loss_scale>0:
           training_loss += d_classifier_activity_regularization_loss_scale * tf.add_n(d_classifier_activity_regularization_losses)
