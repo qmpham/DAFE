@@ -1787,6 +1787,7 @@ def train(config,
   domain = config.get("domain",None)
   
   print("There are %d in-domain corpora"%len(source_file))
+  classification_loss_sign = tf.Variable(0,trainable=False)
   if experiment=="residualv28":
     prob_file = config["prob"]
     train_dataset = create_trainining_dataset_with_dprob(strategy, model, source_file, target_file, prob_file, batch_train_size, batch_type, shuffle_buffer_size, 
@@ -1806,8 +1807,11 @@ def train(config,
   tf.print("importance_weights: ", importance_weights)
   #####
   with strategy.scope():
+    classifier_optimizer = tfa.optimizers.LazyAdam(0.001)
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
+    model_gradient_accumulator = optimizer_util.GradientAccumulator()
+    classifier_gradient_accumulator = optimizer_util.GradientAccumulator()
 
   def _accumulate_gradients(source, target):
     outputs, _ = model(
@@ -1919,7 +1923,7 @@ def train(config,
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
-  def _accumulate_adv_gradients(source, target):
+  def _accumulate_model_gradients(source, target):
     outputs, _ = model(
         source,
         labels=target,
@@ -1988,13 +1992,13 @@ def train(config,
 
         if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
           classification_loss = d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
-          training_loss -= classification_loss
+          training_loss = classification_loss * classification_loss_sign
 
         if len(d_classifier_activity_regularization_losses)>0 and d_classifier_activity_regularization_loss_scale>0:
           training_loss += d_classifier_activity_regularization_loss_scale * tf.add_n(d_classifier_activity_regularization_losses)
 
         if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
-          training_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)
+          training_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)    
         
 
     variables = model.trainable_variables
@@ -2008,13 +2012,47 @@ def train(config,
         model_vars.append(var)
     variables = model_vars + classifier_vars
     model_gradients = optimizer.get_gradients(training_loss, model_vars)
-    classifier_gradients = optimizer.get_gradients(classification_loss, classifier_vars)
-    gradients = model_gradients + classifier_gradients
-    gradient_accumulator(gradients)
+    model_gradient_accumulator(model_gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
+  def _accumulate_classifier_gradients(source, target):
+    _, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    domain = source["domain"][0]    
+    regularization_losses = model.losses
+    d_classification_gate_losses = []
+    for loss_ in regularization_losses:
+      if "multi_adap__dense" in loss_.name:
+        continue
+      elif "ADAP_gate" in loss_.name: #and "ActivityRegularizer" not in loss_.name and "Regularizer" not in loss_.name
+        if "ActivityRegularizer" in loss_.name:
+          continue
+        elif "Regularizer" in loss_.name:
+          continue
+        else:
+          d_classification_gate_losses.append(loss_)
+    training_loss = tf.add_n(d_classification_gate_losses) / importance_weights[domain]
+    reported_loss = training_loss
+    variables = model.trainable_variables
+    print("var numb: ", len(variables))
+    model_vars = []
+    classifier_vars = []
+    for var in variables:
+      if "ADAP_gate/dense" in var.name:
+        classifier_vars.append(var)
+      else:
+        model_vars.append(var)
+    classifier_gradients = classifier_optimizer.get_gradients(training_loss, classifier_vars)
+    classifier_gradient_accumulator(classifier_gradients)
+    num_examples = tf.reduce_sum(target["length"])
+    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
+    return reported_loss, num_examples
+     
   def _apply_gradients():
     variables = model.trainable_variables
     model_vars = []
@@ -2033,6 +2071,42 @@ def train(config,
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
  
+  def _apply_model_gradients():
+    variables = model.trainable_variables
+    model_vars = []
+    classifier_vars = []
+    for var in variables:
+      if "ADAP_gate/dense" in var.name:
+        classifier_vars.append(var)
+      else:
+        model_vars.append(var)
+    variables = model_vars + classifier_vars
+    grads_and_vars = []
+    for gradient, variable in zip(model_gradient_accumulator.gradients, model_vars):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    model_gradient_accumulator.reset()
+
+  def _apply_classifier_gradients():
+    variables = model.trainable_variables
+    model_vars = []
+    classifier_vars = []
+    for var in variables:
+      if "ADAP_gate/dense" in var.name:
+        classifier_vars.append(var)
+      else:
+        model_vars.append(var)
+    variables = model_vars + classifier_vars
+    grads_and_vars = []
+    for gradient, variable in zip(classifier_gradient_accumulator.gradients, classifier_vars):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    classifier_optimizer.apply_gradients(grads_and_vars)
+    classifier_gradient_accumulator.reset()
+
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
@@ -2045,11 +2119,22 @@ def train(config,
     return loss, num_examples
 
   @dataset_util.function_on_next(train_dataset)
-  def _train_adv_forward(next_fn):    
+  def _train_model_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
       per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-          _accumulate_adv_gradients, args=(per_replica_source, per_replica_target))
+          _accumulate_model_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, num_examples
+
+  @dataset_util.function_on_next(train_dataset)
+  def _train_classifier_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_classifier_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
@@ -2066,6 +2151,16 @@ def train(config,
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
 
+  @tf.function
+  def _model_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_model_gradients)
+
+  @tf.function
+  def _classifier_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_classifier_gradients)
+
   def _set_weight(v, w):
     v.assign(tf.cast(w,v.dtype))
 
@@ -2079,7 +2174,8 @@ def train(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  train_adv_data_flow = iter(_train_adv_forward())
+  train_model_data_flow = iter(_train_model_forward())
+  train_classifier_data_flow = iter(_train_classifier_forward())
   _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
@@ -2122,7 +2218,8 @@ def train(config,
             _loss.append(loss)
             _number_examples.append(num_examples)
           else:
-            loss, num_examples = next(train_adv_data_flow)    
+
+            loss, num_exaples = next(train_classifier_data_flow)
             _loss.append(loss)
             _number_examples.append(num_examples)
         else:
