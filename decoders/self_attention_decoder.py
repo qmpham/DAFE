@@ -5196,6 +5196,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
                fake_domain_prob=0.1,
                noisy_prob=None,
                version=1,
+               stop_gradient_version=1,
                **kwargs):
     
     super(Multi_domain_SelfAttentionDecoder_v17, self).__init__(num_sources=num_sources, **kwargs)
@@ -5229,6 +5230,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     if ADAP_contribution==None:
       ADAP_contribution =[1.0] * num_layers
     self.version = version
+    self.stop_gradient_version=stop_gradient_version
     if self.version==1:
       print("version 1: h' = h(1-z)+adap(h)*z")
     elif self.version==2:
@@ -5375,19 +5377,19 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     
     if self.version!=3:
       total_adapt = tf.add_n(total_adapt)
-      if self.ADAP_gate_stopping_gradient:
+      if self.stop_gradient_version==1:
         g = self.multi_domain_gate(tf.stop_gradient(inputs), domain, mask=mask, training=training)
       else:
         g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
-      """
-      if self.ADAP_gate_stopping_gradient:
-        if isinstance(self.ADAP_gate_stopping_gradient, float):
-          print("stopping gradient at d_classifier in decoder: ", self.ADAP_gate_stopping_gradient)
-          g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
-        elif isinstance(self.ADAP_gate_stopping_gradient, bool):
-          print("stopping gradient at d_classifier in decoder")
-          g = tf.stop_gradient(g)
-      """
+      if self.stop_gradient_version==1:
+        if self.ADAP_gate_stopping_gradient:
+          if isinstance(self.ADAP_gate_stopping_gradient, float):
+            print("stopping gradient at d_classifier in decoder: ", self.ADAP_gate_stopping_gradient)
+            g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
+          elif isinstance(self.ADAP_gate_stopping_gradient, bool):
+            print("stopping gradient at d_classifier in decoder")
+            g = tf.stop_gradient(g)
+      
     if self.version==1:
       outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     elif self.version==2:
