@@ -6119,9 +6119,6 @@ def train_wada(config,
         
 
     variables = model.trainable_variables
-    print("var numb: ", len(variables))
-    for var in variables:
-      print(var.name)
     model_vars = []
     classifier_vars = []
     for var in variables:
@@ -6130,6 +6127,9 @@ def train_wada(config,
       else:
         model_vars.append(var)
     variables = model_vars + classifier_vars
+    print("var numb: ", len(variables))
+    for var in variables:
+      print(var.name)
     model_gradients = optimizer.get_gradients(training_loss, model_vars)
     classifier_gradients = optimizer.get_gradients(training_loss + classification_loss, classifier_vars)
     gradients = model_gradients + classifier_gradients
