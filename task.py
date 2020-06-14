@@ -6125,7 +6125,7 @@ def train_wada(config,
     model_vars = []
     classifier_vars = []
     for var in variables:
-      if "ADAP_gate/dense" in var.name:
+      if "ADAP_gate" in var.name:
         classifier_vars.append(var)
       else:
         model_vars.append(var)
