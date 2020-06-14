@@ -6131,7 +6131,7 @@ def train_wada(config,
         model_vars.append(var)
     variables = model_vars + classifier_vars
     model_gradients = optimizer.get_gradients(training_loss, model_vars)
-    classifier_gradients = optimizer.get_gradients(classification_loss, classifier_vars)
+    classifier_gradients = optimizer.get_gradients(training_loss + classification_loss, classifier_vars)
     gradients = model_gradients + classifier_gradients
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])

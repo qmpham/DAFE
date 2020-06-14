@@ -1523,7 +1523,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       if self.stop_gradient_version==1:
         if self.ADAP_gate_stopping_gradient:
           if isinstance(self.ADAP_gate_stopping_gradient, float):
-            print("stopping gradient at d_classifier in decoder: ", self.ADAP_gate_stopping_gradient)
+            print("stopping gradient at d_classifier in encoder: ", self.ADAP_gate_stopping_gradient)
             g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
           elif isinstance(self.ADAP_gate_stopping_gradient, bool):
             g = tf.stop_gradient(g)
@@ -1539,6 +1539,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     elif self.version==6:
       z = tf.exp((g-1)*2/g)
       outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
+    elif self.version==7:
+      outputs = self.layer_norm(inputs + total_adapt)
     elif self.version==7:
       outputs = self.layer_norm(inputs + total_adapt)
 
