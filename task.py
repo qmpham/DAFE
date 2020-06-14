@@ -6104,17 +6104,17 @@ def train_wada(config,
               d_classification_gate_losses.append(loss_)
           elif "ADAP_" in loss_.name:
             layer_activity_regularization_losses.append(loss_)
-
-        print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
-        print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
-        print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
+        
         if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
+          print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
 
         if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
+          print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
           classification_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
 
         if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
+          print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
           classification_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)
         
 
