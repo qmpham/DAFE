@@ -6128,8 +6128,8 @@ def train_wada(config,
         model_vars.append(var)
     variables = model_vars + classifier_vars
     print("var numb: ", len(variables))
-    for var in variables:
-      print(var.name)
+    #for var in variables:
+    #  print(var.name)
     model_gradients = optimizer.get_gradients(training_loss, model_vars)
     classifier_gradients = optimizer.get_gradients(training_loss + classification_loss, classifier_vars)
     gradients = model_gradients + classifier_gradients
@@ -6273,7 +6273,7 @@ def train_wada(config,
     model_vars = []
     classifier_vars = []
     for var in variables:
-      if "ADAP_gate/dense" in var.name:
+      if "ADAP_gate" in var.name:
         classifier_vars.append(var)
       else:
         model_vars.append(var)
