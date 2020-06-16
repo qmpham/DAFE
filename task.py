@@ -6572,7 +6572,7 @@ def finetune_wada(config,
 
         if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
           print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
-          classification_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) * importance_weights[domain]
+          classification_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
 
         if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
           print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
