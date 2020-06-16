@@ -6558,7 +6558,7 @@ def finetune_wada(config,
         for loss_ in regularization_losses:
           if "multi_adap__dense" in loss_.name:
             output_activity_regularization_losses.append(loss_)
-          elif "ADAP_gate" in loss_.name: #and "ActivityRegularizer" not in loss_.name and "Regularizer" not in loss_.name
+          elif "ADAP_gate" in loss_.name: 
             if "Regularizer" in loss_.name:
               d_classifier_weight_regularization_losses.append(loss_)
             else:
@@ -6589,15 +6589,15 @@ def finetune_wada(config,
         model_vars.append(var)
     variables = model_vars + classifier_vars
     print("var numb: ", len(variables))
-    #for var in variables:
-    #  print(var.name)
+    for var in variables:
+      print(var.name)
     #model_gradients = optimizer.get_gradients(training_loss, model_vars)
     gradients = optimizer.get_gradients(training_loss + classification_loss, variables)
     #gradients = model_gradients + classifier_gradients
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples
+    return reported_loss, classification_loss, num_examples
 
   def _accumulate_model_gradients(source, target):
     outputs, _ = model(
