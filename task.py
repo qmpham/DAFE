@@ -6787,12 +6787,13 @@ def finetune_wada(config,
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_classification_loss, per_replica_num_examples = strategy.experimental_run_v2(
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      classification_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_classification_loss, None)
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, num_examples
+    return loss, classification_loss, num_examples
 
   @dataset_util.function_on_next(train_dataset)
   def _train_model_forward(next_fn):    
@@ -6859,6 +6860,7 @@ def finetune_wada(config,
   _loss = []  
   _d_classfication_loss = []
   _number_examples = []
+
   step = optimizer.iterations.numpy()
   if config.get("reset_step",None):
     print("start from %d-th step"%config.get("reset_step",150000))
@@ -6889,18 +6891,20 @@ def finetune_wada(config,
     while True:
       #####Training batch
       #for _ in range(int(config.get("accumulation_step",1))):
-      loss, num_examples = next(train_data_flow)    
+      loss, classification_loss, num_examples = next(train_data_flow)    
       _loss.append(loss)
+      _d_classfication_loss.append(classification_loss)
       _number_examples.append(num_examples)
       _step()  
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
-          "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
-          step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+          "Step = %d ; Learning rate = %f ; Loss = %f; d_classfication_loss = %f, number_examples = %d, after %f seconds",
+          step, learning_rate(step), np.mean(_loss), np.mean(_d_classfication_loss), np.sum(_number_examples), elapsed)
         _loss = []
         _number_examples = []
+        _d_classfication_loss = []
         start = time.time()
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
