@@ -6591,9 +6591,9 @@ def finetune_wada(config,
     print("var numb: ", len(variables))
     #for var in variables:
     #  print(var.name)
-    model_gradients = optimizer.get_gradients(training_loss, model_vars)
-    classifier_gradients = optimizer.get_gradients(training_loss + classification_loss, classifier_vars)
-    gradients = model_gradients + classifier_gradients
+    #model_gradients = optimizer.get_gradients(training_loss, model_vars)
+    gradients = optimizer.get_gradients(training_loss + classification_loss, variables)
+    #gradients = model_gradients + classifier_gradients
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
