@@ -6736,7 +6736,7 @@ def finetune_wada(config,
     for var in variables:
       if "ADAP_gate" in var.name:
         classifier_vars.append(var)
-      else:
+      elif "ADAP" in var.name:
         model_vars.append(var)
     variables = model_vars + classifier_vars
     grads_and_vars = []
