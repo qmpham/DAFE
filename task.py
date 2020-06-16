@@ -6118,7 +6118,7 @@ def train_wada(config,
     for var in variables:
       if "ADAP_gate" in var.name:
         classifier_vars.append(var)
-      elif "ADAP" in var.name:
+      else:
         model_vars.append(var)
     variables = model_vars + classifier_vars
     print("var numb: ", len(variables))
@@ -6585,7 +6585,7 @@ def finetune_wada(config,
     for var in variables:
       if "ADAP_gate" in var.name:
         classifier_vars.append(var)
-      else:
+      elif "ADAP" in var.name:
         model_vars.append(var)
     variables = model_vars + classifier_vars
     print("var numb: ", len(variables))
