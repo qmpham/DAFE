@@ -6532,7 +6532,6 @@ def finetune_wada(config,
         layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
         output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
         d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
-        d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
         d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
         print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
         print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
@@ -6565,11 +6564,11 @@ def finetune_wada(config,
               d_classification_gate_losses.append(loss_)
           elif "ADAP_" in loss_.name:
             layer_activity_regularization_losses.append(loss_)
-        
+        """
         if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
           print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
-
+        """
         if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
           print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
           classification_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
