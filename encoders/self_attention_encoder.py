@@ -1541,8 +1541,9 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
     elif self.version==7:
       outputs = self.layer_norm(inputs + total_adapt)
-    elif self.version==7:
-      outputs = self.layer_norm(inputs + total_adapt)
+    elif self.version==8:
+      z = tf.exp((g-1)*2/g)
+      outputs = self.layer_norm(inputs * (1-z) + z * tf.linalg.normalize(total_adapt,axis=-1)[0])
 
     return outputs, None, sequence_length
 
