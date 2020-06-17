@@ -1008,6 +1008,7 @@ def main():
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         version=config.get("version"),
+        inner_layer_norm=Multi_LayerNorm,
         stop_gradient_version=config.get("stop_gradient_version",1)),
     decoder=Multi_domain_SelfAttentionDecoder_v17(
         num_layers=6,
@@ -1022,6 +1023,7 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+        inner_layer_norm=Multi_LayerNorm,
         version=config.get("version"),
         stop_gradient_version=config.get("stop_gradient_version",1)))
   elif experiment=="residualv28":
