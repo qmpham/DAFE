@@ -7262,7 +7262,7 @@ def finetune_wada_v1(config,
         classifier_vars.append(var)
       else:
         model_vars.append(var)
-    classifier_gradients = classifier_optimizer.get_gradients(training_loss, classifier_vars)
+    classifier_gradients = optimizer.get_gradients(training_loss, classifier_vars)
     classifier_gradient_accumulator(classifier_gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
