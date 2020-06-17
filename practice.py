@@ -1008,7 +1008,7 @@ def main():
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         version=config.get("version"),
-        inner_layer_norm=Multi_LayerNorm,
+        inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
         stop_gradient_version=config.get("stop_gradient_version",1)),
     decoder=Multi_domain_SelfAttentionDecoder_v17(
         num_layers=6,
@@ -1023,9 +1023,10 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
-        inner_layer_norm=Multi_LayerNorm,
+        inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
         version=config.get("version"),
         stop_gradient_version=config.get("stop_gradient_version",1)))
+  
   elif experiment=="residualv28":
     model = SequenceToSequence_with_dprob(
     source_inputter=My_inputter(embedding_size=512),
@@ -1231,6 +1232,8 @@ def main():
     task.train_wada(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "finetune_wada":
     task.finetune_wada(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+  elif args.run == "finetune_wada_v1":
+    task.finetune_wada_v1(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "metatrainv16":
     task.meta_train_v16(config, meta_test_optimizer, meta_train_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000),report_every=config.get("report_every",100))
   elif args.run == "train_ldr":
