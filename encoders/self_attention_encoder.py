@@ -1468,6 +1468,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
             ffn_dropout=ffn_dropout,
             ffn_activation=ffn_activation)
         for i in range(num_layers)] 
+    print("inner_layer_norm: ", inner_layer_norm)
     print("multi_domain_adapter_class == Multi_domain_FeedForwardNetwork_v6", multi_domain_adapter_class == Multi_domain_FeedForwardNetwork_v6)
     self.multi_domain_layers = [
         multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, inner_layer_norm=inner_layer_norm, name="ADAP_%d"%i)
