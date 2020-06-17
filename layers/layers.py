@@ -242,10 +242,12 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
     self.input_dim = input_dim
     self.inner_dim = inner_dim
     self.output_dim = output_dim
-    self.layer_norm = common.LayerNorm()
+    
     if inner_layer_norm:
+      self.layer_norm = inner_layer_norm(domain_numb)
       self.inner_layer_norm = inner_layer_norm(domain_numb)
     else:
+      self.layer_norm = common.LayerNorm()
       self.inner_layer_norm = common.LayerNorm()
     self.inner_transpose = False
     self.outer_transpose = False
@@ -268,7 +270,11 @@ class Multi_domain_FeedForwardNetwork_v3(tf.keras.layers.Layer):
     if not(mask is None):
       mask=tf.cast(mask,tf.float32)
     mask=None
-    inputs = self.layer_norm(inputs)
+
+    if isinstance(self.layer_norm, common.LayerNorm):
+      inputs = self.layer_norm(inputs)
+    else:
+      inputs = self.layer_norm(inputs, domain)
     ##### inner layer
     shape = shape_list(inputs)
     rank = len(shape)      
