@@ -7153,7 +7153,6 @@ def finetune_wada_v1(config,
   tf.print("importance_weights: ", importance_weights)
   #####
   with strategy.scope():
-    classifier_optimizer = tfa.optimizers.LazyAdam(0.001)
     model.create_variables(optimizer=optimizer)
     model_gradient_accumulator = optimizer_util.GradientAccumulator()
     classifier_gradient_accumulator = optimizer_util.GradientAccumulator()
