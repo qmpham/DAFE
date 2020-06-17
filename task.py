@@ -7242,6 +7242,7 @@ def finetune_wada_v1(config,
     domain = source["domain"][0]    
     regularization_losses = model.losses
     d_classification_gate_losses = []
+    d_classifier_weight_regularization_losses = []
     for loss_ in regularization_losses:
       if "multi_adap__dense" in loss_.name:
         continue
@@ -7249,10 +7250,14 @@ def finetune_wada_v1(config,
         if "ActivityRegularizer" in loss_.name:
           continue
         elif "Regularizer" in loss_.name:
-          continue
+          d_classifier_weight_regularization_losses.append(loss_)
         else:
           d_classification_gate_losses.append(loss_)
+    d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
     training_loss = tf.add_n(d_classification_gate_losses) / importance_weights[domain]
+    if d_classifier_weight_regularization_losses_scale>0 and len(d_classifier_weight_regularization_losses)>0:
+      print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
+      training_loss += tf.add_n(d_classifier_weight_regularization_losses) * d_classifier_weight_regularization_losses_scale
     reported_loss = training_loss
     variables = model.trainable_variables
     model_vars = []
