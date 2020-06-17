@@ -7280,7 +7280,7 @@ def finetune_wada_v1(config,
     grads_and_vars = []
     for gradient, variable in zip(model_gradient_accumulator.gradients, model_vars):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(model_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
     model_gradient_accumulator.reset()
@@ -7298,7 +7298,7 @@ def finetune_wada_v1(config,
     grads_and_vars = []
     for gradient, variable in zip(classifier_gradient_accumulator.gradients, classifier_vars):
       # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(classifier_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     classifier_optimizer.apply_gradients(grads_and_vars)
     classifier_gradient_accumulator.reset()
