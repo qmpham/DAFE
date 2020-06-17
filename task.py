@@ -6564,8 +6564,7 @@ def finetune_wada(config,
               d_classification_gate_losses.append(loss_)
           elif "ADAP_" in loss_.name:
             layer_activity_regularization_losses.append(loss_)
-          
-        if (len(layer_activity_regularization_losses)>0) and la yer_activity_regularization_loss_scale>0:
+        if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
           print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
         
