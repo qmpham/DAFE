@@ -7221,12 +7221,12 @@ def finetune_wada_v1(config,
     model_vars = []
     classifier_vars = []
     for var in variables:
-      if "ADAP_gate/dense" in var.name:
+      if "ADAP_gate" in var.name:
         classifier_vars.append(var)
       elif "ADAP" in var.name:
         model_vars.append(var)
     variables = model_vars + classifier_vars
-    print("var numb: ", len(variables))
+    print("var numb: ", len(model_vars))
     model_gradients = optimizer.get_gradients(training_loss, model_vars)
     model_gradient_accumulator(model_gradients)
     num_examples = tf.reduce_sum(target["length"])
@@ -7263,11 +7263,11 @@ def finetune_wada_v1(config,
     model_vars = []
     classifier_vars = []
     for var in variables:
-      if "ADAP_gate/dense" in var.name:
+      if "ADAP_gate" in var.name:
         classifier_vars.append(var)
       elif "ADAP" in var.name:
         model_vars.append(var)
-    print("var numb: ", len(variables))
+    print("var numb: ", len(classifier_vars))
     classifier_gradients = optimizer.get_gradients(training_loss, classifier_vars)
     classifier_gradient_accumulator(classifier_gradients)
     num_examples = tf.reduce_sum(target["length"])
@@ -7278,9 +7278,9 @@ def finetune_wada_v1(config,
     model_vars = []
     classifier_vars = []
     for var in variables:
-      if "ADAP_gate/dense" in var.name:
+      if "ADAP_gate" in var.name:
         classifier_vars.append(var)
-      else:
+      elif "ADAP" in var.name:
         model_vars.append(var)
     variables = model_vars + classifier_vars
     grads_and_vars = []
