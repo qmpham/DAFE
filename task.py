@@ -6564,8 +6564,8 @@ def finetune_wada(config,
               d_classification_gate_losses.append(loss_)
           elif "ADAP_" in loss_.name:
             layer_activity_regularization_losses.append(loss_)
-        
-        if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
+          
+        if (len(layer_activity_regularization_losses)>0) and la yer_activity_regularization_loss_scale>0:
           print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
         
@@ -6591,7 +6591,8 @@ def finetune_wada(config,
     for var in variables:
       print(var.name)
     #model_gradients = optimizer.get_gradients(training_loss, model_vars)
-    gradients = optimizer.get_gradients(training_loss + classification_loss, variables)
+    #gradients = optimizer.get_gradients(training_loss + classification_loss, variables)
+    gradients = optimizer.get_gradients(training_loss, model_vars)
     #gradients = model_gradients + classifier_gradients
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
@@ -6739,7 +6740,7 @@ def finetune_wada(config,
         model_vars.append(var)
     variables = model_vars + classifier_vars
     grads_and_vars = []
-    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+    for gradient, variable in zip(gradient_accumulator.gradients, model_vars):
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
