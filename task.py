@@ -6587,7 +6587,7 @@ def finetune_wada(config,
         model_vars.append(var)
     variables = model_vars + classifier_vars
     print("var numb: ", len(variables))
-    for var in variables:
+    for var in model_vars:
       print(var.name)
     #model_gradients = optimizer.get_gradients(training_loss, model_vars)
     #gradients = optimizer.get_gradients(training_loss + classification_loss, variables)
