@@ -7376,6 +7376,7 @@ def finetune_wada_v1(config,
   if config.get("reset_step",None):
     print("start from %d-th step"%config.get("reset_step",150000))
     optimizer.iterations.assign(config.get("reset_step",150000))
+    step = optimizer.iterations.numpy()
   
   with _summary_writer.as_default():
     while True:
