@@ -1797,7 +1797,7 @@ def train(config,
   else:
     train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
+                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
   from utils.dataprocess import count_lines
   datasets_size = [count_lines(src) for src in source_file]
   importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
@@ -1827,7 +1827,8 @@ def train(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    domain = source["domain"][0]
+    if config.get("multi_domain", True):
+      domain = source["domain"][0]
     if config.get("apply_importance_weight", False):
       print("apply_importance_weight")
       training_loss = training_loss * importance_weights[domain]

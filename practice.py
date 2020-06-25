@@ -1201,6 +1201,7 @@ def main():
   print("step_duration: ", config.get("step_duration",16))
   print("d_model: ", config.get("d_model",512))
   learning_rate = onmt.schedules.ScheduleWrapper(schedule=onmt.schedules.NoamDecay(scale=config.get("learning_rate",1.0), model_dim=config.get("d_model",512), warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
+  print("learning_rate: ", learning_rate)
   meta_train_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr"))
   adv_optimizer = tfa.optimizers.LazyAdam(0.0001)
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)
