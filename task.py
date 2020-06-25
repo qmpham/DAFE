@@ -3455,7 +3455,10 @@ def model_inspect(config,
     print(v.numpy())
     print(v.numpy().shape)
     
-
+  for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+            output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+            score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+            tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
 
 def src_wemb_pretrain(config,
           optimizer,          
