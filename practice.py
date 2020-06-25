@@ -860,6 +860,28 @@ def main():
         ffn_dropout=0.1),
     num_domains=num_domains,
     num_units=512)
+  elif experiment=="baselinev3":
+    model = SequenceToSequence(
+    source_inputter=WordEmbedder(embedding_size=512),
+    target_inputter=WordEmbedder(embedding_size=512),
+    encoder=onmt.encoders.SelfAttentionEncoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1),
+    decoder=onmt.decoders.SelfAttentionDecoder(
+        num_layers=6,
+        num_units=512,
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        ffn_dropout=0.1),
+    num_domains=num_domains,
+    num_units=512)
   elif experiment=="rnn":
     model = SequenceToSequence(
     source_inputter=WordEmbedder(embedding_size=512),
