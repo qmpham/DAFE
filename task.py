@@ -3406,7 +3406,7 @@ def model_inspect(config,
   
   #####
   if checkpoint_path is not None:
-    checkpoint.restore(checkpoint_path)
+    checkpoint.restore(checkpoint_path).assert_consumed()
     tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
   elif checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
