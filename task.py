@@ -3405,6 +3405,7 @@ def model_inspect(config,
           report_every=100): 
   
   #####
+  """
   if checkpoint_path is not None:
     checkpoint.restore(checkpoint_path).expect_partial()
     tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
@@ -3413,6 +3414,7 @@ def model_inspect(config,
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
   else:
     exit()
+  """
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -3433,13 +3435,13 @@ def model_inspect(config,
     model.create_variables(optimizer=optimizer)
 
   def _build_model(source, target):
-    outputs, _ = model(
+    _, _ = model(
         source,
         labels=target,
         training=False,
         step=optimizer.iterations)
     
- 
+  
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
@@ -3450,15 +3452,22 @@ def model_inspect(config,
   # Runs the training loop.
   train_data_flow = iter(_train_forward())
   next(train_data_flow)
+  load_and_update_if_needed_from_ckpt(config["model_dir"],   
+                        checkpoint_path,                        
+                        trackables={"model":model},
+                        vocab_update=False,
+                        model_key="model")
+  checkpoint_manager.save(checkpoint_number=0)
   for v in model.trainable_variables:
     print(v.name)
     print(v.numpy())
     print(v.numpy().shape)
-    
+  checkpoint_path = checkpoint_manager.latest_checkpoint
   for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-            output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-            score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), checkpoint_path=checkpoint_path, experiment=experiment)
-            tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+    
+    output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+    score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+    tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
 
 def src_wemb_pretrain(config,
           optimizer,          
