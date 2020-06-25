@@ -1204,9 +1204,8 @@ def main():
   meta_train_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr"))
   adv_optimizer = tfa.optimizers.LazyAdam(0.0001)
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)
-  checkpoint = tf.train.Checkpoint(model=model, optimizer=meta_test_optimizer)   
-  
   model.initialize(data_config)
+  checkpoint = tf.train.Checkpoint(model=model, optimizer=meta_test_optimizer)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=config.get("max_to_keep",5))
   ######
   model.params.update({"label_smoothing": 0.1})
