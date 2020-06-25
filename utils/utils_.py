@@ -97,7 +97,7 @@ def load_and_update_if_needed_from_ckpt(model_dir,
     if not path.startswith(model_key) or ".OPTIMIZER_SLOT" in path:
       continue
     variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
-    print(variable_path)
+    #print(variable_path)
     variable = variable_which(trackables, variable_path)
     value = reader.get_tensor(path)
     if variable:
