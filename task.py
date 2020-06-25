@@ -3458,10 +3458,12 @@ def model_inspect(config,
                         vocab_update=False,
                         model_key="model")
   checkpoint_manager.save(checkpoint_number=0)
+  """
   for v in model.trainable_variables:
     print(v.name)
     print(v.numpy())
     print(v.numpy().shape)
+  """
   checkpoint_path = checkpoint_manager.latest_checkpoint
   for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
     

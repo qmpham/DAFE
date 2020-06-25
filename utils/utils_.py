@@ -117,6 +117,7 @@ def load_and_update_if_needed_from_ckpt(model_dir,
         variable.assign(new_value)
       else:
         print(variable.name)
+        print(value)
         variable.assign(value)
 
 def average_checkpoints(model_dir,
