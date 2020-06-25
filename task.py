@@ -3451,10 +3451,11 @@ def model_inspect(config,
   train_data_flow = iter(_train_forward())
   next(train_data_flow)
   for v in model.trainable_variables:
-    if "ADAP_gate" in v.name:
-      print(v.name)
-      print(v.numpy())
-      print(v.numpy().shape)
+    print(v.name)
+    print(v.numpy())
+    print(v.numpy().shape)
+    
+
 
 def src_wemb_pretrain(config,
           optimizer,          
