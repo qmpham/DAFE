@@ -879,9 +879,7 @@ def main():
         ffn_inner_dim=2048,
         dropout=0.1,
         attention_dropout=0.1,
-        ffn_dropout=0.1),
-    num_domains=num_domains,
-    num_units=512)
+        ffn_dropout=0.1))
   elif experiment=="rnn":
     model = SequenceToSequence(
     source_inputter=WordEmbedder(embedding_size=512),
