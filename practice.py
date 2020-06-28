@@ -18,7 +18,7 @@ from opennmt.optimizers import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter, ProbInputter
 from opennmt.models.sequence_to_sequence import SequenceToSequence
-from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1, SequenceToSequence_with_dprob
+from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1, SequenceToSequence_with_dprob, Multi_domain_SequenceToSequence_DRO
 from encoders.self_attention_encoder import *
 from decoders.self_attention_decoder import *
 import numpy as np
@@ -950,10 +950,11 @@ def main():
         ffn_dropout=0.1,
         ADAP_contribution=[0.0] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3))
-  elif experiment="DRO":
-    model = Multi_domain_SequenceToSequence(
+  elif experiment=="DRO":
+    model = Multi_domain_SequenceToSequence_DRO(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
+    probs_inputter=ProbInputter_v1(),
     encoder=Multi_domain_SelfAttentionEncoder_v2(
         num_layers=6,
         num_domains=num_domains,

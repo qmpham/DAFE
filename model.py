@@ -2275,7 +2275,7 @@ class SequenceToSequence_with_dprob(model.SequenceGenerator):
       optimizer._create_hypers()  # pylint: disable=protected-access
       optimizer._create_slots(self.trainable_variables)  # pylint: disable=protected-access
 
-class SequenceToSequence_DRO(model.SequenceGenerator):
+class Multi_domain_SequenceToSequence_DRO(model.SequenceGenerator):
 
   """A sequence to sequence model."""
 
@@ -2306,13 +2306,13 @@ class SequenceToSequence_DRO(model.SequenceGenerator):
         target_inputter,
         probs_inputter,
         share_parameters=EmbeddingsSharingLevel.share_input_embeddings(share_embeddings))
-    super(SequenceToSequence_DRO, self).__init__(examples_inputter)
+    super(Multi_domain_SequenceToSequence_DRO, self).__init__(examples_inputter)
     self.encoder = encoder
     self.decoder = decoder
     self.share_embeddings = share_embeddings
  
   def auto_config(self, num_replicas=1):
-    config = super(SequenceToSequence_DRO, self).auto_config(num_replicas=num_replicas)
+    config = super(Multi_domain_SequenceToSequence_DRO, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
         "params": {
             "beam_width": 5
@@ -2328,7 +2328,7 @@ class SequenceToSequence_DRO(model.SequenceGenerator):
     })
 
   def initialize(self, data_config, params=None):
-    super(SequenceToSequence_DRO, self).initialize(data_config, params=params)
+    super(Multi_domain_SequenceToSequence_DRO, self).initialize(data_config, params=params)
     if self.params.get("contrastive_learning"):
       noiser = noise.WordNoiser(
           noises=[noise.WordOmission(1)],
@@ -2337,7 +2337,7 @@ class SequenceToSequence_DRO(model.SequenceGenerator):
       self.labels_inputter.set_noise(noiser, in_place=False)
 
   def build(self, input_shape):
-    super(SequenceToSequence_DRO, self).build(input_shape)
+    super(Multi_domain_SequenceToSequence_DRO, self).build(input_shape)
     output_layer = None
     if EmbeddingsSharingLevel.share_target_embeddings(self.share_embeddings):
       output_layer = layers.Dense(
@@ -2361,6 +2361,8 @@ class SequenceToSequence_DRO(model.SequenceGenerator):
       encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         [source_inputs, features["domain"]], sequence_length=source_length, training=training)
 
+    #_, domain_classification_logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
+
     outputs = None
     predictions = None
 
@@ -2373,6 +2375,7 @@ class SequenceToSequence_DRO(model.SequenceGenerator):
           encoder_sequence_length,
           step=step,
           training=training)
+      #outputs = dict(logits=outputs["logits"], attention=outputs["attention"], domain_classification_logits=domain_classification_logits)
 
     # When not in training, also compute the model predictions.
     if not training:
@@ -2383,7 +2386,7 @@ class SequenceToSequence_DRO(model.SequenceGenerator):
           encoder_sequence_length)
     
     return outputs, predictions
-
+  
   def _decode_target(self,
                      labels,
                      encoder_outputs,
@@ -2394,8 +2397,6 @@ class SequenceToSequence_DRO(model.SequenceGenerator):
                      internal_node_printing=False):
     params = self.params
     target_inputs = self.labels_inputter(labels, training=training)
-    #print("labels: ", labels)
-    #print("target_inputs",target_inputs)
     input_fn = lambda ids: [self.labels_inputter({"ids": ids}, training=training), labels["domain"]]
 
     sampling_probability = None
@@ -2410,7 +2411,6 @@ class SequenceToSequence_DRO(model.SequenceGenerator):
         memory=encoder_outputs,
         memory_sequence_length=encoder_sequence_length,
         initial_state=encoder_state)
-
     logits, _, attention = self.decoder(
         [target_inputs, labels["domain"]],
         self.labels_inputter.get_length(labels),
@@ -2419,7 +2419,20 @@ class SequenceToSequence_DRO(model.SequenceGenerator):
         sampling_probability=sampling_probability,
         training=training)
     outputs = dict(logits=logits, attention=attention)
-    
+
+    noisy_ids = labels.get("noisy_ids")
+    if noisy_ids is not None and params.get("contrastive_learning"):
+      # In case of contrastive learning, also forward the erroneous
+      # translation to compute its log likelihood later.
+      noisy_inputs = self.labels_inputter({"ids": noisy_ids}, training=training)
+      noisy_logits, _, _ = self.decoder(
+          noisy_inputs,
+          labels["noisy_length"],
+          state=initial_state,
+          input_fn=input_fn,
+          sampling_probability=sampling_probability,
+          training=training)
+      outputs["noisy_logits"] = noisy_logits
     return outputs
  
   def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length):
@@ -2587,35 +2600,6 @@ class SequenceToSequence_DRO(model.SequenceGenerator):
           variables = [vocab.update_variable(var_a, var_b, mapping, vocab_axis=vocab_axis)]
         updated_variables.extend(variables)
       return vars_b
-
-  def create_variables(self, optimizer=None):
-    """Creates the model variables by running it once.
-
-    Args:
-      optimizer: If set, also create the optimizer variables.
-    """
-    if self.built:
-      return
-
-    # Create input features from the input signatures. We remove the leading
-    # batch dimension as sometimes assumed by make_features methods and set
-    # unspecified dimensions to 1.
-    features = tf.nest.map_structure(
-        lambda spec: tf.fill(
-            [dim or 1 for dim in spec.shape.as_list()[1:]],
-            tf.constant("" if spec.dtype is tf.string else 1, dtype=spec.dtype)),
-        self.examples_inputter.input_signature())
-    #print(features)
-    features = self.examples_inputter.make_features(features=features)
-
-    # Add the batch dimension back before calling the model.
-    features, labels = tf.nest.map_structure(lambda x: tf.expand_dims(x, 0), features)
-    _ = self(features, labels=labels, training=True, step=0)
-
-    if optimizer is not None:
-      _ = optimizer.iterations
-      optimizer._create_hypers()  # pylint: disable=protected-access
-      optimizer._create_slots(self.trainable_variables)  # pylint: disable=protected-access
 
 
 
