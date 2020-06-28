@@ -596,8 +596,8 @@ class Multi_domain_SequenceToSequenceInputter_DRO(ParallelInputter):
         
         features["domain"] = tf.constant(domain)
         labels["domain"] = tf.constant(domain)
-
-        return features, labels, logprob
+        features["logprobs"] = logprob["probs"]
+        return features, labels
 
     def make_training_dataset(self,
                                 features_file,
