@@ -598,7 +598,20 @@ class Multi_domain_SequenceToSequenceInputter_DRO(ParallelInputter):
         labels["domain"] = tf.constant(domain)
         features["logprobs"] = logprob["probs"]
         return features, labels
-
+    def make_inference_dataset(self,
+                             features_file,
+                             batch_size,
+                             domain,
+                             length_bucket_width=None,
+                             num_threads=1,
+                             prefetch_buffer_size=None):
+        return self.features_inputter.make_inference_dataset(
+            features_file,
+            batch_size,
+            domain=domain,
+            length_bucket_width=length_bucket_width,
+            num_threads=num_threads,
+            prefetch_buffer_size=prefetch_buffer_size)
     def make_training_dataset(self,
                                 features_file,
                                 labels_file,
