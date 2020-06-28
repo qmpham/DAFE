@@ -16,7 +16,7 @@ from opennmt.utils.misc import print_bytes
 from opennmt.data import dataset as dataset_util
 from opennmt.optimizers import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
-from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter, ProbInputter
+from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter, ProbInputter, ProbInputter_v1
 from opennmt.models.sequence_to_sequence import SequenceToSequence
 from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1, SequenceToSequence_with_dprob, Multi_domain_SequenceToSequence_DRO
 from encoders.self_attention_encoder import *
