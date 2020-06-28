@@ -177,9 +177,10 @@ def debug(config,
   source_file = config["src"]
   target_file = config["tgt"]
   prob_file = config["prob"]
+  domain = config["domain"]
   
   print("There are %d in-domain corpora"%len(source_file))
-  train_dataset = create_trainining_dataset_with_dprob(strategy, model, source_file, target_file, prob_file, batch_train_size, batch_type, shuffle_buffer_size, 
+  train_dataset = create_trainining_dataset_DRO(strategy, model, source_file, target_file, prob_file, domain, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None))
   
