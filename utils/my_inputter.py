@@ -588,20 +588,12 @@ class Multi_domain_SequenceToSequenceInputter_DRO(ParallelInputter):
         return dataset
 
     def make_features(self, element=None, features=None, domain=1, training=None):
-        if training and self.alignment_file is not None:
-            element, alignment = element
-        else:
-            alignment = None
+        
         features, labels, logprob = super(Multi_domain_SequenceToSequenceInputter_DRO, self).make_features(
             element=element, features=features, training=training)
-        if alignment is not None:
-            labels["alignment"] = text.alignment_matrix_from_pharaoh(
-                alignment,
-                self.features_inputter.get_length(features),
-                self.labels_inputter.get_length(labels))
+        
         _shift_target_sequence(labels)
-        if "noisy_ids" in labels:
-            _shift_target_sequence(labels, prefix="noisy_")
+        
         features["domain"] = tf.constant(domain)
         labels["domain"] = tf.constant(domain)
 
