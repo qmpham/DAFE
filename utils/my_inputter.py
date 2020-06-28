@@ -552,8 +552,7 @@ class ProbInputter_v1(Inputter):
       return features
     if "text" in features:
       element = features.pop("text")
-    tokens = self.tokenizer.tokenize(element)
-    features["probs"] = tf.strings.to_number(tokens)
+    features["probs"] = tf.strings.to_number(element)
     return features
 
   def input_signature(self):
