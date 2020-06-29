@@ -531,7 +531,6 @@ class ProbInputter(Inputter):
           "probs": tf.TensorSpec([None, self.domain_numb], tf.float32),
       }
 
-
 class ProbInputter_v1(Inputter):
   """An abstract inputter that processes text."""
 
@@ -559,8 +558,6 @@ class ProbInputter_v1(Inputter):
     return {
           "probs": tf.TensorSpec([None], tf.float32),
       }
-
-
 
 class Multi_domain_SequenceToSequenceInputter_DRO(ParallelInputter):
     
