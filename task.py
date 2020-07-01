@@ -7518,8 +7518,7 @@ def logprob_print(config,
   train_data_flow = iter(_train_forward())
   
 
-  with _summary_writer.as_default():
-    while True:
+  
       
 
 
