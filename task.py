@@ -7061,7 +7061,8 @@ def train_DRO(config,
       for snap, var in zip(snapshots, model.trainable_variables):
         strategy.extended.update(var, _set_weight, args=(snap, ))
 
-  def update_z()
+  def update_z():
+    return 0
   # Runs the training loop.
   import time
   start = time.time()  
