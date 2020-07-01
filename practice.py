@@ -1352,7 +1352,7 @@ def main():
       print("translating %s in domain %d"%(src_file, domain))
       print("output_file: ", output_file)
       task.averaged_checkpoint_translate(config, src_file, None, model, checkpoint_manager,
-              checkpoint, int(domain), output_file, length_penalty=0.0, experiment=experiment, max_count=translate_config.get("max_count",3))
+              checkpoint, int(domain), output_file, length_penalty=0.6, experiment=experiment, max_count=translate_config.get("max_count",3))
   elif args.run == "finetune":
     task.finetuning(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "elastic_finetune":

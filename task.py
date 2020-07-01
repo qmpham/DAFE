@@ -7061,6 +7061,7 @@ def train_DRO(config,
       for snap, var in zip(snapshots, model.trainable_variables):
         strategy.extended.update(var, _set_weight, args=(snap, ))
 
+  def update_z()
   # Runs the training loop.
   import time
   start = time.time()  
@@ -7072,7 +7073,7 @@ def train_DRO(config,
   _loss = []  
   _number_examples = []
   step = optimizer.iterations.numpy()  
-
+  _domain_loss = [None]* len(domain)
   if config.get("continual_learning", False):
     print("Continual Learning needs to load from old model")
     assert config.get("checkpoint_path") != None
@@ -7104,6 +7105,8 @@ def train_DRO(config,
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
+      if step % update_z_every ==0:
+        update_z()
       if step % eval_every == 0:
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
@@ -7442,6 +7445,81 @@ def finetune_wada_v1(config,
       if step > train_steps:
         break
 
+def logprob_print(config,
+          optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          checkpoint_path=None,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
+  
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  else:
+    if checkpoint_path is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+      checkpoint.restore(checkpoint_path)
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_train_size = config["batch_train_size"]  
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config.get("domain",None)
+  
+  print("There are %d in-domain corpora"%len(source_file))
+  classification_loss_sign = tf.Variable(0.0,trainable=False)
+  
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size)
+  
+  with strategy.scope():
+    model.create_variables()
+
+  def _accumulate_gradients(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    
+    return reported_loss, num_examples
+
+  @dataset_util.function_on_next(train_dataset)
+  def _train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, num_examples
+
+  train_data_flow = iter(_train_forward())
+  
+
+  with _summary_writer.as_default():
+    while True:
+      
 
 
 
