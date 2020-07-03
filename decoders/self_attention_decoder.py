@@ -5380,19 +5380,19 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     
     if self.version!=3:
       total_adapt = tf.add_n(total_adapt)
-      if self.version!=7:
-        if self.stop_gradient_version==1:
-          g = self.multi_domain_gate(tf.stop_gradient(inputs), domain, mask=mask, training=training)
-        else:
-          g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
-        if self.stop_gradient_version==1:
-          if self.ADAP_gate_stopping_gradient:
-            if isinstance(self.ADAP_gate_stopping_gradient, float):
-              print("stopping gradient at d_classifier in decoder: ", self.ADAP_gate_stopping_gradient)
-              g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
-            elif isinstance(self.ADAP_gate_stopping_gradient, bool):
-              print("stopping gradient at d_classifier in decoder")
-              g = tf.stop_gradient(g)
+    if self.version!=7:
+      if self.stop_gradient_version==1:
+        g = self.multi_domain_gate(tf.stop_gradient(inputs), domain, mask=mask, training=training)
+      else:
+        g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
+      if self.stop_gradient_version==1:
+        if self.ADAP_gate_stopping_gradient:
+          if isinstance(self.ADAP_gate_stopping_gradient, float):
+            print("stopping gradient at d_classifier in decoder: ", self.ADAP_gate_stopping_gradient)
+            g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
+          elif isinstance(self.ADAP_gate_stopping_gradient, bool):
+            print("stopping gradient at d_classifier in decoder")
+            g = tf.stop_gradient(g)
       
     if self.version==1:
       outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)

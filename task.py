@@ -6111,7 +6111,7 @@ def train_wada(config,
 
         if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
           classification_loss = d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
-          training_loss += classification_loss * classification_loss_rate
+          training_loss -= classification_loss * classification_loss_rate
         
 
     variables = model.trainable_variables
@@ -7267,79 +7267,114 @@ def finetune_wada_v1(config,
       tf.summary.flush()
       if step > train_steps:
         break
+ 
 
-def logprob_print(config,
-          optimizer,          
-          learning_rate,
-          model,  
-          strategy,  
-          checkpoint_manager,
-          checkpoint,
-          checkpoint_path=None,
-          maximum_length=80,
-          batch_size = 2048,
-          batch_type = "tokens",
-          experiment="residual",
-          shuffle_buffer_size=-1,  # Uniform shuffle.
-          train_steps=200000,
-          save_every=5000,
-          eval_every=15000,
-          report_every=100): 
+def logprob_print(source_file,
+              reference,
+              model,
+              checkpoint_manager,
+              checkpoint,              
+              domain,
+              output_file,
+              length_penalty,
+              checkpoint_path=None,
+              probs_file=None,
+              experiment="ldr",
+              score_type="MultiBLEU",
+              batch_size=5,
+              beam_size=5):
   
-  if checkpoint_manager.latest_checkpoint is not None:
-    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-    checkpoint.restore(checkpoint_manager.latest_checkpoint)
-  else:
-    if checkpoint_path is not None:
-      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
-      checkpoint.restore(checkpoint_path)
-  #####
-  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
-  #####
-  batch_train_size = config["batch_train_size"]  
-  batch_type = batch_type
-  source_file = config["src"]
-  target_file = config["tgt"]
-  domain = config.get("domain",None)
-  
-  print("There are %d in-domain corpora"%len(source_file))
-  classification_loss_sign = tf.Variable(0.0,trainable=False)
-  
-  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size)
-  
-  with strategy.scope():
-    model.create_variables()
+  # Create the inference dataset.
+  if checkpoint_path == None:
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
+  print("In domain %d"%domain)
+  checkpoint.restore(checkpoint_path)
+  batch_size = 1
+  source_dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
+  ref_dataset = model.examples_inputter.make_inference_dataset(reference, batch_size, domain)
+  dataset = tf.data.Dataset.zip(source_dataset, ref_dataset)
+  iterator = iter(dataset)
 
-  def _accumulate_gradients(source, target):
-    outputs, _ = model(
-        source,
-        labels=target,
-        training=True,
-        step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
+  # Create the mapping for target ids to tokens.
+  ids_to_tokens = model.labels_inputter.ids_to_tokens
 
-    if isinstance(loss, tuple):
-      training_loss = loss[0] / loss[1]
-      reported_loss = loss[0] / loss[2]
+  @tf.function
+  def predict_next():    
+    source = next(iterator)
+    source_length = source["length"]
+    batch_size = tf.shape(source_length)[0]
+    source_inputs = model.features_inputter(source)
+    if experiment in ["residual","residualv15","DRO","residualv25","residualv27","residualv28","residualv29","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
+      encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length, training=False, internal_node_printing=True)
     else:
-      training_loss, reported_loss = loss, loss
-    
-    return reported_loss, num_examples
+      encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
 
-  @dataset_util.function_on_next(train_dataset)
-  def _train_forward(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
-      # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, num_examples
+    # Prepare the decoding strategy.
+    if beam_size > 1:
+      encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
+      source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
+      decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
+    else:
+      decoding_strategy = onmt.utils.GreedySearch()
 
-  train_data_flow = iter(_train_forward())
-  
+    # Run dynamic decoding.
+    decoder_state = model.decoder.initial_state(
+        memory=encoder_outputs,
+        memory_sequence_length=source_length)
+    if experiment in ["residual","residualv2","DRO","residualv15","residualv25","residualv27","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv1","residualv3","residualv5","residualv6","residualv7","residualv13","residualv12","residualv11","residualv8","residualv9","baselinev1"]:
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
+    elif experiment in ["DC"]:
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain, training=False)
+    elif experiment in ["WDC"]:
+      e_r, _ = model.classification_layer(encoder_outputs, source_length, training=False)
+      e_s, _ = model.adv_classification_layer(encoder_outputs, source_length, training=False)
+      g_s = model.share_gate(tf.concat([tf.tile(tf.expand_dims(e_s,1),[1,tf.shape(encoder_outputs)[1],1]),encoder_outputs],-1))
+      g_r = model.specific_gate(tf.concat([tf.tile(tf.expand_dims(e_r,1),[1,tf.shape(encoder_outputs)[1],1]),encoder_outputs],-1))
+      h_r = g_r * encoder_outputs
+      h_s = g_s * encoder_outputs
+      encoder_mask = model.encoder.build_mask(source_inputs, sequence_length=source_length)
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), h_r, h_s, encoder_mask]
+    elif experiment in ["residualv28","residualv29"]:
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), source["domain"]]
+    else:
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
+    decoded = model.decoder.dynamic_decode(
+        map_input_fn,
+        tf.fill([batch_size], START_OF_SENTENCE_ID),
+        end_id=END_OF_SENTENCE_ID,
+        initial_state=decoder_state,
+        decoding_strategy=decoding_strategy,
+        maximum_iterations=250)
+    target_lengths = decoded.lengths
+    target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64))
+    return target_tokens, target_lengths
 
+  # Iterates on the dataset.
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  print("output file: ", output_file)
+  with open(output_file, "w") as output_:
+    while True:    
+      try:
+        batch_tokens, batch_length = predict_next()
+        for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
+          sentence = b" ".join(tokens[0][:length[0]])
+          print_bytes(sentence, output_)
+          #print_bytes(sentence)
+      except tf.errors.OutOfRangeError:
+        break
+  if reference!=None:
+    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
+    score = scorer(reference, output_file)
+    if score is None:
+      return 0.0
+    else:
+      return score
   
       
 
