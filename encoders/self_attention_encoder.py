@@ -1524,7 +1524,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       
       if internal_node_printing:
-        tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "adapt_mean_abs_pooling: ", tf.reduce_mean(tf.abs(total_adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)  
+        #tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "adapt_mean_abs_pooling: ", tf.reduce_mean(tf.abs(total_adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)  
+        continue
       if self.stop_gradient_version==1:
         if self.ADAP_gate_stopping_gradient:
           if isinstance(self.ADAP_gate_stopping_gradient, float):
