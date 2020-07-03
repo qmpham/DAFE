@@ -5235,16 +5235,20 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     self.version = version
     self.stop_gradient_version=stop_gradient_version
     if self.version==1:
-      print("version 1: h' = h(1-z)+adap(h)*z")
+      print("version 1: h' = h(1-z)+adap(h_[1,..6])*z")
     elif self.version==2:
-      print("version 2: h' = h+adap(h)*z")
+      print("version 2: h' = h+adap(h_[1,..6])*z")
     elif self.version==3:
       print("version 3: h' = h")
     elif self.version==5:
-      print("version 5: h' = h+adap(h)*activation(z)")
+      print("version 5: h' = h+adap(h_[1,..6])*activation(z)")
     elif self.version==6:
-      print("version 6: h' = h(1-activation(z))+adap(h)*activation(z)")
+      print("version 6: h' = h(1-activation(z))+adap(h_[1,..6])*activation(z)")
     elif self.version==7:
+      print("version 7: h' = h + adap(h_[1,..6])")
+    elif self.version==8:
+      print("version 5: h' = h+adap(h)*activation(z)")
+    elif self.version==9:
       print("version 7: h' = h + adap(h)")
     self.ADAP_contribution = ADAP_contribution
     print("ADAP contribution", self.ADAP_contribution)
@@ -5374,25 +5378,16 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      if self.version!=3:
+      if self.version not in [3,8,9]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
     
-    if self.version!=3:
+    if self.version not in [3,8,9]:
       total_adapt = tf.add_n(total_adapt)
+    elif self.version in [8,9]:
+      total_adapt = self.multi_domain_layers[-1](inputs, domain, mask=mask, training=training)
     if self.version!=7:
-      if self.stop_gradient_version==1:
-        g = self.multi_domain_gate(tf.stop_gradient(inputs), domain, mask=mask, training=training)
-      else:
-        g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
-      if self.stop_gradient_version==1:
-        if self.ADAP_gate_stopping_gradient:
-          if isinstance(self.ADAP_gate_stopping_gradient, float):
-            print("stopping gradient at d_classifier in decoder: ", self.ADAP_gate_stopping_gradient)
-            g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
-          elif isinstance(self.ADAP_gate_stopping_gradient, bool):
-            print("stopping gradient at d_classifier in decoder")
-            g = tf.stop_gradient(g)
+      g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       
     if self.version==1:
       outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
@@ -5408,8 +5403,9 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     elif self.version==7:
       outputs = self.layer_norm(inputs + total_adapt)
     elif self.version==8:
-      z = tf.exp((g-1)*2/g)
-      outputs = self.layer_norm(inputs * (1-z) + z * tf.linalg.normalize(total_adapt,axis=-1)[0])
+      outputs = self.layer_norm(inputs + total_adapt)
+    elif self.version==9:
+      outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * total_adapt)
     return outputs, new_cache, attention
   
   def _adv_run(self,

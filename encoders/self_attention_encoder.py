@@ -1485,18 +1485,21 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     self.version = version
     self.stop_gradient_version = stop_gradient_version
     if self.version==1:
-      print("version 1: h' = h(1-z)+adap(h)*z")
+      print("version 1: h' = h(1-z)+adap(h_[1,..6])*z")
     elif self.version==2:
-      print("version 2: h' = h+adap(h)*z")
+      print("version 2: h' = h+adap(h_[1,..6])*z")
     elif self.version==3:
       print("version 3: h' = h")
     elif self.version==5:
-      print("version 5: h' = h+adap(h)*activation(z)")
+      print("version 5: h' = h+adap(h_[1,..6])*activation(z)")
     elif self.version==6:
-      print("version 6: h' = h(1-activation(z))+adap(h)*activation(z)")
+      print("version 6: h' = h(1-activation(z))+adap(h_[1,..6])*activation(z)")
     elif self.version==7:
+      print("version 7: h' = h + adap(h_[1,..6])")
+    elif self.version==8:
+      print("version 5: h' = h+adap(h)*activation(z)")
+    elif self.version==9:
       print("version 7: h' = h + adap(h)")
-
     
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     domain = inputs[1]
@@ -1511,28 +1514,20 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     total_adapt=[]
     for layer, multi_domain_layer in zip(self.layers, self.multi_domain_layers):
       inputs = layer(inputs, mask=mask, training=training)
-      if self.version!=3:
+      if self.version not in [3,8,9]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
 
-    if self.version!=3:
+    if self.version not in [3,8,9]:
       total_adapt = tf.add_n(total_adapt)
+    elif self.version in [8,9]:
+      total_adapt = self.multi_domain_layers[-1](inputs, domain, mask=mask, training=training)
     if self.version!=7:
-      if self.stop_gradient_version==1:
-        g = self.multi_domain_gate(tf.stop_gradient(inputs), domain, mask=mask, training=training)
-      else:
-        g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
+      g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       
       if internal_node_printing:
         #tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "adapt_mean_abs_pooling: ", tf.reduce_mean(tf.abs(total_adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)  
         tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
-      if self.stop_gradient_version==1:
-        if self.ADAP_gate_stopping_gradient:
-          if isinstance(self.ADAP_gate_stopping_gradient, float):
-            print("stopping gradient at d_classifier in encoder: ", self.ADAP_gate_stopping_gradient)
-            g = tf.stop_gradient(g * (1-self.ADAP_gate_stopping_gradient)) + g * self.ADAP_gate_stopping_gradient
-          elif isinstance(self.ADAP_gate_stopping_gradient, bool):
-            g = tf.stop_gradient(g)
       
     if self.version==1:
       outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
@@ -1548,8 +1543,9 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     elif self.version==7:
       outputs = self.layer_norm(inputs + total_adapt)
     elif self.version==8:
-      z = tf.exp((g-1)*2/g)
-      outputs = self.layer_norm(inputs * (1-z) + z * tf.linalg.normalize(total_adapt,axis=-1)[0])
+      outputs = self.layer_norm(inputs + total_adapt)
+    elif self.version==9:
+      outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * total_adapt)
 
     return outputs, None, sequence_length
 
