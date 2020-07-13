@@ -1691,6 +1691,8 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
 
     if self.version in [3,5,6,7]:
       g = self.noisy_gate(inputs, is_noisy, mask=mask, training=training)
+      if internal_node_printing:
+        tf.print("###", self.name_scope(), "noisy_gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "is_noisy: ", is_noisy, "###", sep="|", summarize=1000)
     if self.version in [6,7]:
       domain_g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
 
