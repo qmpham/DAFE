@@ -1692,7 +1692,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
     if self.version in [3,5,6,7]:
       g = self.noisy_gate(inputs, is_noisy, mask=mask, training=training)
     if self.version in [6,7]:
-      domain_g = self.multi_domain_gate(inputs,domain,mask=mask,training=training)
+      domain_g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
 
     if self.version==1:
       outputs = self.layer_norm(inputs)
