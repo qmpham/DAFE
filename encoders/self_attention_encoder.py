@@ -1657,6 +1657,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
       ADAP_contribution = [1.0] * num_layers
     self.ADAP_contribution = ADAP_contribution
     self.version = version
+    print("enc version: ", version)
   
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     is_noisy = inputs[2]
