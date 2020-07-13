@@ -7304,14 +7304,7 @@ def finetune_noisy_v1(config,
   train_dataset = create_trainining_dataset_robustness(strategy, model, domain, is_noisy, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
-  from utils.dataprocess import count_lines
-  datasets_size = [count_lines(src) for src in source_file]
-  importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
-  temperature=1.0
-  importance_weights = [w ** temperature for w in importance_weights]
-  importance_weights = [w/sum(importance_weights) for w in importance_weights]
-  importance_weights = tf.constant(importance_weights)
-  tf.print("importance_weights: ", importance_weights)
+
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -7371,7 +7364,6 @@ def finetune_noisy_v1(config,
         labels=target,
         training=True,
         step=optimizer.iterations)
-    domain = source["domain"][0]    
     regularization_losses = model.losses
     d_classification_gate_losses = []
     d_classifier_weight_regularization_losses = []
@@ -7384,7 +7376,7 @@ def finetune_noisy_v1(config,
         else:
           d_classification_gate_losses.append(loss_)
     d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
-    training_loss = tf.add_n(d_classification_gate_losses) / importance_weights[domain]
+    training_loss = tf.add_n(d_classification_gate_losses)
     if d_classifier_weight_regularization_losses_scale>0 and len(d_classifier_weight_regularization_losses)>0:
       print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
       training_loss += tf.add_n(d_classifier_weight_regularization_losses) * d_classifier_weight_regularization_losses_scale

@@ -683,6 +683,8 @@ def create_trainining_dataset_robustness(strategy, model, domain, is_noisy, sour
   print(batch_type)
   train_datasets=[]
   for i,is_noisy_,src,tgt in zip(domain,is_noisy,source_file,target_file):
+    print("src: ", src)
+    print("is_noisy: ", is_noisy_)
     train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
             batch_size=batch_train_size,
             batch_type=batch_type,
