@@ -319,7 +319,7 @@ class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
             return dataset
         return tf.data.Dataset.zip((dataset, tf.data.TextLineDataset(self.alignment_file)))
 
-    def make_features(self, element=None, features=None, domain=1, training=None):
+    def make_features(self, element=None, features=None, domain=1, is_noisy=1, training=None):
         if training and self.alignment_file is not None:
             element, alignment = element
         else:
@@ -336,12 +336,15 @@ class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
             _shift_target_sequence(labels, prefix="noisy_")
         features["domain"] = tf.constant(domain)
         labels["domain"] = tf.constant(domain)
+        features["noisy"] = tf.constant(is_noisy)
+        labels["noisy"] = tf.constant(is_noisy)
         return features, labels
 
     def make_inference_dataset(self,
                              features_file,
                              batch_size,
                              domain,
+                             is_noisy=1,
                              length_bucket_width=None,
                              num_threads=1,
                              prefetch_buffer_size=None):
@@ -349,6 +352,7 @@ class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
             features_file,
             batch_size,
             domain=domain,
+            is_noisy=is_noisy,
             length_bucket_width=length_bucket_width,
             num_threads=num_threads,
             prefetch_buffer_size=prefetch_buffer_size)
@@ -358,10 +362,11 @@ class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
                                 labels_file,
                                 batch_size,
                                 domain,
+                                is_noisy=1,
                                 num_threads=1,
                                 prefetch_buffer_size=None):
         
-        map_func = lambda *arg: self.make_features(arg, domain=domain, training=False)
+        map_func = lambda *arg: self.make_features(arg, domain=domain, is_noisy=is_noisy, training=False)
         dataset = self.make_dataset([features_file, labels_file], training=False)
         dataset = dataset.apply(dataset_util.inference_pipeline(
             batch_size,
@@ -375,6 +380,7 @@ class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
                                 labels_file,
                                 batch_size,
                                 domain,
+                                is_noisy=1,
                                 batch_type="examples",
                                 batch_multiplier=1,
                                 batch_size_multiple=1,
@@ -388,7 +394,7 @@ class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
                                 num_threads=4,
                                 prefetch_buffer_size=None):
         
-        map_func = lambda *arg: self.make_features(arg, domain=domain, training=True)
+        map_func = lambda *arg: self.make_features(arg, domain=domain, is_noisy=is_noisy, training=True)
         dataset = self.make_dataset([features_file, labels_file], training=True)
         dataset = dataset.apply(dataset_util.training_pipeline(
             batch_size,
