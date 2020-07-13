@@ -1622,6 +1622,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
                ffn_activation=tf.nn.relu,
                position_encoder_class=SinusoidalPositionEncoder,
                multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+               multi_domain_adapter_gate_class=Multi_domain_classification_gate,
                fake_domain_prob=0.1,
                noisy_prob=None,
                ADAP_contribution=None,
@@ -1645,11 +1646,10 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
             ffn_dropout=ffn_dropout,
             ffn_activation=ffn_activation)
         for i in range(num_layers)]    
-    self.multi_domain_layers = [
-        multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i)
-        if not(multi_domain_adapter_class == Multi_domain_FeedForwardNetwork_v6)
-        else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, fake_domain_prob= fake_domain_prob, noisy_prob=noisy_prob)
-        for i in range(num_layers)]
+    self.multi_domain_layers = [ multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains,inner_layer_norm=None, name="ADAP_%d"%i) for i in range(num_layers)]
+    self.noisy_layers = [multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=2, name="noisy_ADAP_%d"%i) for i in range(num_layers)]
+    self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
+    self.noisy_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=2, name="noisy_gate")
     self.ADAP_layer_stopping_gradient = ADAP_layer_stopping_gradient
     if ADAP_contribution == None:
       ADAP_contribution = [1.0] * num_layers
@@ -1657,6 +1657,8 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
     self.version = version
   
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
+    is_noisy = inputs[2]
+    is_noisy = is_noisy[0]
     domain = inputs[1]
     domain = domain[0]
     inputs = inputs[0]    
@@ -1679,6 +1681,8 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
       if internal_node_printing:
         tf.print("layers: ", i , "ADAP mean pooling: ", tf.reduce_mean(tf.abs(adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
       """
+    if self.version==3:
+      g = self.noisy_gate(inputs, is_noisy, mask=mask, training=training)
     if self.version==1:
       outputs = self.layer_norm(inputs)
     elif self.version==2:

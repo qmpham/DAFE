@@ -64,7 +64,7 @@ class My_inputter(TextInputter):
       outputs = common.dropout(outputs, self.dropout, training=training)
       return outputs
 
-    def make_features(self, element=None, features=None, domain=1, training=None):
+    def make_features(self, element=None, features=None, domain=1, is_noisy=1, training=None):
         features = super(My_inputter, self).make_features(
             element=element, features=features, training=training)
 
@@ -73,7 +73,7 @@ class My_inputter(TextInputter):
 
         features["ids"] = self.tokens_to_ids.lookup(features["tokens"])
         features["domain"] = tf.constant(domain)
-
+        features["is_noisy"] = tf.constant(is_noisy)
         return features
     
     def make_inference_dataset(self,
@@ -100,6 +100,7 @@ class My_inputter(TextInputter):
                             labels_file,
                             batch_size,
                             domain=1,
+                            is_noisy=1,
                             batch_type="tokens",
                             batch_multiplier=1,
                             batch_size_multiple=1,
@@ -115,7 +116,7 @@ class My_inputter(TextInputter):
         """See :meth:`opennmt.inputters.ExampleInputter.make_training_dataset`."""
         _ = labels_file
         dataset = self.make_dataset(features_file, training=True)
-        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), domain=domain, training=True)
+        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), domain=domain, is_noisy=is_noisy, training=True)
         print("batch_type", batch_type)
         dataset = dataset.apply(dataset_util.training_pipeline(
             batch_size,
@@ -139,13 +140,14 @@ class My_inputter(TextInputter):
                               features_file,
                               labels_file,
                               batch_size,
-                              domain,
+                              domain=1,
+                              is_noisy=1,
                               num_threads=1,
                               prefetch_buffer_size=None):
         """See :meth:`opennmt.inputters.ExampleInputter.make_evaluation_dataset`."""
         _ = labels_file
         dataset = self.make_dataset(features_file, training=False)
-        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), domain=domain, training=False)
+        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), domain=domain, is_noisy=is_noisy, training=False)
         dataset = dataset.apply(dataset_util.inference_pipeline(
             batch_size,
             process_fn=map_func,
