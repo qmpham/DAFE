@@ -1623,6 +1623,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
                position_encoder_class=SinusoidalPositionEncoder,
                multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
                multi_domain_adapter_gate_class=Multi_domain_classification_gate,
+               inner_layer_norm=None,
                fake_domain_prob=0.1,
                noisy_prob=None,
                ADAP_contribution=None,
@@ -1636,6 +1637,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
     self.layer_norm = LayerNorm()
+    self.layer_norm_2 = LayerNorm()
     self.layers = [
         transformer.SelfAttentionEncoderLayer(
             num_units,
@@ -1646,7 +1648,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
             ffn_dropout=ffn_dropout,
             ffn_activation=ffn_activation)
         for i in range(num_layers)]    
-    self.multi_domain_layers = [ multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains,inner_layer_norm=None, name="ADAP_%d"%i) for i in range(num_layers)]
+    self.multi_domain_layers = [ multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains,inner_layer_norm=inner_layer_norm, name="ADAP_%d"%i) for i in range(num_layers)]
     self.noisy_layers = [multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=2, name="noisy_ADAP_%d"%i) for i in range(num_layers)]
     self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
     self.noisy_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=2, name="noisy_gate")
@@ -1665,11 +1667,12 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
     inputs *= self.num_units**0.5
 
     total_adapt=[]
+    total_noisy_adapt=[]
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs)
     inputs = common.dropout(inputs, self.dropout, training=training)
     mask = self.build_mask(inputs, sequence_length=sequence_length)
-    for i, (layer, multi_domain_layer) in enumerate(zip(self.layers, self.multi_domain_layers)):
+    for i, (layer, multi_domain_layer, noisy_layer) in enumerate(zip(self.layers, self.multi_domain_layers, self.noisy_layers)):
       inputs = layer(inputs, mask=mask, training=training)
       if self.version==1:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
@@ -1677,13 +1680,31 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
       elif self.version==2:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
+      elif self.version==5:
+        noisy_adapt= noisy_layer(inputs,is_noisy,mask=mask,training=training)
+        total_noisy_adapt.append(noisy_adapt)
+      elif self.version==7:
+        noisy_adapt= noisy_layer(inputs,is_noisy,mask=mask,training=training)
+        total_noisy_adapt.append(noisy_adapt)
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
 
-    if self.version==3:
+    if self.version in [3,5,6,7]:
       g = self.noisy_gate(inputs, is_noisy, mask=mask, training=training)
+      if internal_node_printing:
+        tf.print("###", self.name_scope(), "noisy_gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "is_noisy: ", is_noisy, "###", sep="|", summarize=1000)
+    if self.version in [6,7]:
+      domain_g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
+
     if self.version==1:
       outputs = self.layer_norm(inputs)
     elif self.version==2:
-      outputs = self.layer_norm(inputs+tf.add_n(total_adapt))
+      outputs = self.layer_norm(inputs + tf.add_n(total_adapt))
+    elif self.version in [5,6]:
+      outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * tf.add_n(total_noisy_adapt))
+    elif self.version==7:
+      outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * tf.add_n(total_noisy_adapt))
+      outputs = self.layer_norm_2(outputs + tf.exp((domain_g-1)*2/domain_g) * tf.add_n(total_adapt))
     else:
       outputs = self.layer_norm(inputs)
     
