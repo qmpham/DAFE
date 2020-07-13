@@ -7304,7 +7304,7 @@ def finetune_noisy_v1(config,
   train_dataset = create_trainining_dataset_robustness(strategy, model, domain, is_noisy, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
-                                            
+
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -7364,7 +7364,6 @@ def finetune_noisy_v1(config,
         labels=target,
         training=True,
         step=optimizer.iterations)
-    domain = source["domain"][0]    
     regularization_losses = model.losses
     d_classification_gate_losses = []
     d_classifier_weight_regularization_losses = []
