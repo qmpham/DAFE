@@ -149,7 +149,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder.adv_call(
-        [source_inputs, features["domain"]], sequence_length=source_length, training=training)
+        [source_inputs, features["domain"], features["is_noisy"]], sequence_length=source_length, training=training)
     
     outputs = None
     predictions = None
@@ -202,7 +202,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
                      training=None):
     params = self.params
     target_inputs = self.labels_inputter(labels, training=training)
-    input_fn = lambda ids: [self.labels_inputter({"ids": ids}, training=training), labels["domain"], labels["is_noisy"]]
+    input_fn = lambda ids: [self.labels_inputter({"ids": ids}, training=training), labels["domain"]]
 
     sampling_probability = None
     if training:

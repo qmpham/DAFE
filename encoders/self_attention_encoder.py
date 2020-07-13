@@ -1659,7 +1659,6 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     is_noisy = inputs[2]
     is_noisy = is_noisy[0]
-    tf.print("is_noisy: ",is_noisy)
     domain = inputs[1]
     domain = domain[0]
     inputs = inputs[0]    
