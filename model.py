@@ -111,10 +111,10 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     source_inputs = self.features_inputter(features, training=training)
     if isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v1) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v2) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v12) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v15):
       encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
-        [source_inputs, features["domain"]], sequence_length=source_length, training=training, internal_node_printing=internal_node_printing)
+        [source_inputs, features["domain"], features["is_noisy"]], sequence_length=source_length, training=training, internal_node_printing=internal_node_printing)
     else:
       encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
-        [source_inputs, features["domain"]], sequence_length=source_length, training=training)
+        [source_inputs, features["domain"], features["is_noisy"]], sequence_length=source_length, training=training)
 
     #_, domain_classification_logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
 
@@ -175,7 +175,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter.forward_fn(features, args_dict, training=training)
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder.forward_fn(
-        [source_inputs, features["domain"]], args_dict, sequence_length=source_length, training=training)
+        [source_inputs, features["domain"], features["is_noisy"]], args_dict, sequence_length=source_length, training=training)
 
     outputs = None
     predictions = None
@@ -202,7 +202,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
                      training=None):
     params = self.params
     target_inputs = self.labels_inputter(labels, training=training)
-    input_fn = lambda ids: [self.labels_inputter({"ids": ids}, training=training), labels["domain"]]
+    input_fn = lambda ids: [self.labels_inputter({"ids": ids}, training=training), labels["domain"], labels["is_noisy"]]
 
     sampling_probability = None
     if training:
@@ -314,22 +314,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         training=training)
         
     outputs = dict(logits=logits, attention=attention)
-    """
-    noisy_ids = labels.get("noisy_ids")
-    if noisy_ids is not None and params.get("contrastive_learning"):
-      # In case of contrastive learning, also forward the erroneous
-      # translation to compute its log likelihood later.
-      noisy_inputs = self.labels_inputter({"ids": noisy_ids}, training=training)
-      noisy_logits, _, _ = self.decoder.forward_fn(
-          noisy_inputs,
-          args_dict,
-          labels["noisy_length"],
-          state=initial_state,
-          input_fn=input_fn,
-          sampling_probability=sampling_probability,
-          training=training)
-      outputs["noisy_logits"] = noisy_logits
-      """
+    
     return outputs
  
   def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length):
