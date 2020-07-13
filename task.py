@@ -7358,7 +7358,7 @@ def finetune_noisy_v1(config,
       elif "noisy_ADAP" in var.name:
         model_vars.append(var)
     variables = model_vars + classifier_vars
-    print("var numb: ", len(model_vars))
+    print("model_vars numb: ", len(model_vars))
     model_gradients = optimizer.get_gradients(training_loss, model_vars)
     model_gradient_accumulator(model_gradients)
     num_examples = tf.reduce_sum(target["length"])
@@ -7397,7 +7397,7 @@ def finetune_noisy_v1(config,
         classifier_vars.append(var)
       elif "noisy_ADAP" in var.name:
         model_vars.append(var)
-    print("var numb: ", len(classifier_vars))
+    print("classifier_vars numb: ", len(classifier_vars))
     classifier_gradients = optimizer.get_gradients(training_loss, classifier_vars)
     classifier_gradient_accumulator(classifier_gradients)
     num_examples = tf.reduce_sum(target["length"])
@@ -7458,17 +7458,6 @@ def finetune_noisy_v1(config,
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
-
-  @dataset_util.function_on_next(train_dataset)
-  def _train_iteration(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      return per_replica_source, per_replica_target
-  
-  @tf.function
-  def _step():
-    with strategy.scope():
-      strategy.experimental_run_v2(_apply_gradients)
 
   @tf.function
   def _model_step():
