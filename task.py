@@ -6150,7 +6150,7 @@ def train_wada(config,
         else:
           d_classification_gate_losses.append(loss_)
     training_loss = tf.add_n(d_classification_gate_losses) / importance_weights[domain]
-    reported_loss = training_loss
+    reported_loss = tf.add_n(d_classification_gate_losses) #training_loss
     variables = model.trainable_variables
     print("var numb: ", len(variables))
     model_vars = []
