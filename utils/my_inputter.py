@@ -337,8 +337,8 @@ class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
         features["domain"] = tf.constant(domain)
         labels["domain"] = tf.constant(domain)
         print("make features noisy: ", is_noisy)
-        features["noisy"] = tf.constant(is_noisy)
-        labels["noisy"] = tf.constant(is_noisy)
+        features["is_noisy"] = tf.constant(is_noisy)
+        labels["is_noisy"] = tf.constant(is_noisy)
         return features, labels
 
     def make_inference_dataset(self,
