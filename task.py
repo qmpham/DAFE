@@ -46,6 +46,7 @@ def translate(source_file,
               checkpoint_manager,
               checkpoint,              
               domain,
+              is_noisy=1,
               output_file,
               length_penalty,
               checkpoint_path=None,
@@ -64,7 +65,7 @@ def translate(source_file,
   if isinstance(model, SequenceToSequence_with_dprob):
     dataset = model.examples_inputter.make_inference_dataset(source_file, probs_file, batch_size)
   else:
-    dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain)
+    dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain, is_noisy=is_noisy)
   iterator = iter(dataset)
 
   # Create the mapping for target ids to tokens.
@@ -77,7 +78,7 @@ def translate(source_file,
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
     if experiment in ["residual","residualv15","DRO","residualv25","residualv27","residualv28","residualv29","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
-      encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"]], source_length, training=False, internal_node_printing=True)
+      encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"], source["is_noisy"]], source_length, training=False, internal_node_printing=True)
     else:
       encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
 

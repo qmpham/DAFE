@@ -80,11 +80,12 @@ class My_inputter(TextInputter):
                              feature_file,
                              batch_size,
                              domain=1,
+                             is_noisy=1,
                              length_bucket_width=None,
                              num_threads=1,
                              prefetch_buffer_size=None):
     
-        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), domain=domain, training=False)
+        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), domain=domain, is_noisy=is_noisy, training=False)
         dataset = self.make_dataset(feature_file, training=False)
         dataset = dataset.apply(dataset_util.inference_pipeline(
             batch_size,
