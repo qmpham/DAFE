@@ -336,6 +336,7 @@ class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
             _shift_target_sequence(labels, prefix="noisy_")
         features["domain"] = tf.constant(domain)
         labels["domain"] = tf.constant(domain)
+        print("make features noisy: ", is_noisy)
         features["noisy"] = tf.constant(is_noisy)
         labels["noisy"] = tf.constant(is_noisy)
         return features, labels
