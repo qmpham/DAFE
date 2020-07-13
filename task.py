@@ -7359,6 +7359,7 @@ def finetune_noisy_v1(config,
     return reported_loss, num_examples
 
   def _accumulate_classifier_gradients(source, target):
+    tf.print(source)
     _, _ = model(
         source,
         labels=target,
