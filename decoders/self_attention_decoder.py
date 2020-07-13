@@ -5761,11 +5761,19 @@ class Multi_domain_SelfAttentionDecoder_v18(Decoder):
       elif self.version==2:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
+      elif self.version==7:
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        total_adapt.append(adapt)
+
+    if self.version in [6,7]:
+      domain_g = self.multi_domain_gate(inputs,domain,mask=mask,training=training)
 
     if self.version==1:
       outputs = self.layer_norm(inputs)
     elif self.version==2:
       outputs = self.layer_norm(inputs + tf.add_n(total_adapt))
+    elif self.version==7:
+      outputs = self.layer_norm_2(inputs + tf.exp((domain_g-1)*2/domain_g) * tf.add_n(total_adapt))
     else:
       outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
