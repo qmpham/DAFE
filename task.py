@@ -7675,7 +7675,7 @@ def translate_farajan(source_file,
   context_iteration = iter(context_dataset)
   ids_to_tokens = model.labels_inputter.ids_to_tokens
   model.create_variables(optimizer=optimizer)
-  @tf.function
+  @tf.function(experimental_relax_shapes=True)
   def minifinetune(source, target):
     tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
     outputs, _ = model(
