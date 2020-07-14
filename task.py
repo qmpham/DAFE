@@ -7676,8 +7676,7 @@ def translate_farajan(source_file,
   ids_to_tokens = model.labels_inputter.ids_to_tokens
   model.create_variables(optimizer=optimizer)
   @tf.function
-  def minifinetune():
-    source, target = next(context_iteration)
+  def minifinetune(source, target):
     tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
     outputs, _ = model(
         source,
@@ -7762,19 +7761,21 @@ def translate_farajan(source_file,
   # Iterates on the dataset.
 
   print("output file: ", output_file)
+  step = optimizer.iterations.numpy()
   with open(output_file, "w") as output_:
     while True:    
       try:
         # save values
         snapshots = [v.value() for v in model.trainable_variables]
         #finetuning phase
-        minifinetune()
+        src, tgt = next(context_iteration)
+        minifinetune(src,tgt)
         #translating phase
         batch_tokens, batch_length = predict_next()
         #reset parameters
         weight_reset(snapshots)
-        step = optimizer.iterations.numpy()
-        print(step)
+        #reset step
+        optimizer.iterations.assign(step)
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
           sentence = b" ".join(tokens[0][:length[0]])
           print_bytes(sentence, output_)
