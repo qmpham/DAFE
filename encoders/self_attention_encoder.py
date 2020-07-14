@@ -1649,7 +1649,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
             ffn_activation=ffn_activation)
         for i in range(num_layers)]    
     self.multi_domain_layers = [ multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains,inner_layer_norm=inner_layer_norm, name="ADAP_%d"%i) for i in range(num_layers)]
-    self.noisy_layers = [multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=2, inner_layer_norm=inner_layer_norm, name="noisy_ADAP_%d"%i) for i in range(num_layers)]
+    self.noisy_layers = [multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=2, inner_layer_norm=None, name="noisy_ADAP_%d"%i) for i in range(num_layers)]
     self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
     self.noisy_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=2, name="noisy_gate")
     self.ADAP_layer_stopping_gradient = ADAP_layer_stopping_gradient
