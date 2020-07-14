@@ -33,10 +33,11 @@ def main():
   
   #tf.random.set_seed(seed)
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "train_adv", "train_wada", "finetune_noisy_v1", "finetune_wada", "finetune_wada_v1", "proxy", "debug_slurm_train", "metatrainv16", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "translate_farajan", "train_adv", "train_wada", "finetune_noisy_v1", "finetune_wada", "finetune_wada_v1", "proxy", "debug_slurm_train", "metatrainv16", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
   parser.add_argument("--config", help="configuration file")
   parser.add_argument("--config_root")
   parser.add_argument("--src")
+  parser.add_argument("--context", nargs="+")
   parser.add_argument("--emb_files", nargs="+")
   parser.add_argument("--n_clusters", default=30)
   parser.add_argument("--kmeans_save_path")
@@ -1356,6 +1357,15 @@ def main():
       print("output_file: ", output_file)
       task.averaged_checkpoint_translate(config, src_file, None, model, checkpoint_manager,
               checkpoint, int(domain), output_file, length_penalty=0.6, experiment=experiment, max_count=translate_config.get("max_count",3))
+  elif args.run == "translate_farajan":
+    source_file = args.src
+    reference = args.ref
+    context_src_file, context_tgt_file = args.context
+    checkpoint_path = args.ckpt
+    output_file = args.output
+    domain = args.domain
+    task.translate_farajan(source_file, context_src_file, context_tgt_file, reference, model, checkpoint_manager, checkpoint, int(domain), output_file, length_penalty=0.6, 
+                  checkpoint_path=checkpoint_path, experiment=experiment)
   elif args.run == "finetune":
     task.finetuning(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "elastic_finetune":
