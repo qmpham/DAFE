@@ -7665,7 +7665,7 @@ def translate_farajan(source_file,
   tf.get_logger().info("Evaluating model %s", checkpoint_path)
   print("In domain %d"%domain)
   checkpoint.restore(checkpoint_path)
-  dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain, batch_size=1)
+  dataset = model.examples_inputter.make_inference_dataset(source_file, 1, domain)
   iterator = iter(dataset)
   context_dataset = model.examples_inputter.make_training_dataset(context_src_file, context_tgt_file, batch_size=1, batch_type="example")
   context_iteration = iter(context_dataset)
