@@ -7674,8 +7674,7 @@ def translate_farajan(source_file,
   context_dataset = model.examples_inputter.make_training_dataset(context_src_file, context_tgt_file, batch_size=1, batch_type="example")
   context_iteration = iter(context_dataset)
   ids_to_tokens = model.labels_inputter.ids_to_tokens
-  with strategy.scope():
-    model.create_variables(optimizer=optimizer)
+  model.create_variables(optimizer=optimizer)
   @tf.function
   def minifinetune():
     source, target = next(context_iteration)
@@ -7756,9 +7755,8 @@ def translate_farajan(source_file,
 
   @tf.function
   def weight_reset(snapshots):
-    with strategy.scope():
-      for snap, var in zip(snapshots, model.trainable_variables):
-        strategy.extended.update(var, _set_weight, args=(snap, ))
+    for snap, var in zip(snapshots, model.trainable_variables):
+      _set_weight(var, snap)
   # Iterates on the dataset.
 
   print("output file: ", output_file)
