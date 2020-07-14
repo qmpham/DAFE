@@ -7769,7 +7769,8 @@ def translate_farajan(source_file,
         snapshots = [v.value() for v in model.trainable_variables]
         #finetuning phase
         src, tgt = next(context_iteration)
-        minifinetune(src,tgt)
+        if src["length"].numpy()>0:
+          minifinetune(src,tgt)
         #translating phase
         batch_tokens, batch_length = predict_next()
         #reset parameters
