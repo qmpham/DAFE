@@ -7678,6 +7678,7 @@ def translate_farajan(source_file,
   @tf.function
   def minifinetune():
     source, target = next(context_iteration)
+    tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
     outputs, _ = model(
         source,
         labels=target,
@@ -7700,6 +7701,7 @@ def translate_farajan(source_file,
   @tf.function
   def predict_next():    
     source = next(iterator)
+    tf.print("source: ", source["tokens"])
     #context_src, context_tgt = next(context_iteration)
     #tf.print("source: ", source, "src_context: ", context_src, "tgt_context: ", context_tgt)
     source_length = source["length"]
