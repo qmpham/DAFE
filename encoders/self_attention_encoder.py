@@ -1696,7 +1696,8 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
         tf.print("###", self.name_scope(), "noisy_gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "is_noisy: ", is_noisy, "###", sep="|", summarize=1000)
     if self.version in [6,7]:
       domain_g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
-
+      if internal_node_printing:
+        tf.print("###", self.name_scope(), "domain_gate_mean_abs_pooling: ", tf.reduce_mean(domain_g,-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
     if self.version==1:
       outputs = self.layer_norm(inputs)
     elif self.version==2:
@@ -1705,7 +1706,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
       outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * tf.add_n(total_noisy_adapt))
     elif self.version==7:
       outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * tf.add_n(total_noisy_adapt))
-      outputs = self.layer_norm_2(outputs + tf.exp((domain_g-1)*2/domain_g) * tf.add_n(total_adapt))
+      outputs = self.layer_norm(outputs + tf.exp((domain_g-1)*2/domain_g) * tf.add_n(total_adapt))
     else:
       outputs = self.layer_norm(inputs)
     
