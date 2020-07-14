@@ -1705,7 +1705,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
       outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * tf.add_n(total_noisy_adapt))
     elif self.version==7:
       outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * tf.add_n(total_noisy_adapt))
-      outputs = self.layer_norm_2(outputs + tf.exp((domain_g-1)*2/domain_g) * tf.add_n(total_adapt))
+      outputs = self.layer_norm(outputs + tf.exp((domain_g-1)*2/domain_g) * tf.add_n(total_adapt))
     else:
       outputs = self.layer_norm(inputs)
     
