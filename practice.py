@@ -1211,7 +1211,7 @@ def main():
         ffn_dropout=0.1,
         ADAP_contribution=[1.0] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
-        inner_layer_norm=Multi_LayerNorm,
+        inner_layer_norm=None if not config.get("inner_layer_norm",True) else Multi_LayerNorm,
         version=config.get("version",1)),
     decoder=Multi_domain_SelfAttentionDecoder_v18(
         num_layers=6,
@@ -1226,7 +1226,7 @@ def main():
         ffn_dropout=0.1,
         ADAP_contribution=[1.0] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
-        inner_layer_norm=Multi_LayerNorm,
+        inner_layer_norm=None if not config.get("inner_layer_norm",True) else Multi_LayerNorm,
         version=config.get("version",1)))
   elif experiment=="pretrain":
     return
