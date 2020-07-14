@@ -7040,7 +7040,7 @@ def finetune_wada_v1(config,
               d_classifier_weight_regularization_losses.append(loss_)
             else:
               d_classification_gate_losses.append(loss_)
-          elif "ADAP_" in loss_.name:
+          elif "ADAP_" in loss_.name and not("noisy" in loss_.name) :
             layer_activity_regularization_losses.append(loss_)
 
         print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
@@ -7058,7 +7058,7 @@ def finetune_wada_v1(config,
     for var in variables:
       if "ADAP_gate" in var.name:
         classifier_vars.append(var)
-      elif "ADAP" in var.name:
+      elif "ADAP" in var.name and not("noisy" in var.name):
         model_vars.append(var)
     variables = model_vars + classifier_vars
     print("var numb: ", len(model_vars))
@@ -7100,7 +7100,7 @@ def finetune_wada_v1(config,
     for var in variables:
       if "ADAP_gate" in var.name:
         classifier_vars.append(var)
-      elif "ADAP" in var.name:
+      elif "ADAP" in var.name and not("noisy" in var.name):
         model_vars.append(var)
     print("var numb: ", len(classifier_vars))
     classifier_gradients = optimizer.get_gradients(training_loss, classifier_vars)
@@ -7115,7 +7115,7 @@ def finetune_wada_v1(config,
     for var in variables:
       if "ADAP_gate" in var.name:
         classifier_vars.append(var)
-      elif "ADAP" in var.name:
+      elif "ADAP" in var.name and not("noisy" in var.name):
         model_vars.append(var)
     variables = model_vars + classifier_vars
     grads_and_vars = []
@@ -7133,7 +7133,7 @@ def finetune_wada_v1(config,
     for var in variables:
       if "ADAP_gate" in var.name:
         classifier_vars.append(var)
-      elif "ADAP" in var.name:
+      elif "ADAP" in var.name and not("noisy" in var.name):
         model_vars.append(var)
     variables = model_vars + classifier_vars
     grads_and_vars = []
@@ -7165,18 +7165,7 @@ def finetune_wada_v1(config,
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
-
-  @dataset_util.function_on_next(train_dataset)
-  def _train_iteration(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      return per_replica_source, per_replica_target
   
-  @tf.function
-  def _step():
-    with strategy.scope():
-      strategy.experimental_run_v2(_apply_gradients)
-
   @tf.function
   def _model_step():
     with strategy.scope():
