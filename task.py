@@ -7641,11 +7641,15 @@ def logprob_print(source_file,
     else:
       return score
   
+
 def translate_farajan(source_file,
               context_src_file,
               context_tgt_file,
               reference,
               model,
+              config,
+              strategy,
+              optimizer,
               checkpoint_manager,
               checkpoint,              
               domain,
@@ -7670,13 +7674,36 @@ def translate_farajan(source_file,
   context_dataset = model.examples_inputter.make_training_dataset(context_src_file, context_tgt_file, batch_size=1, batch_type="example")
   context_iteration = iter(context_dataset)
   ids_to_tokens = model.labels_inputter.ids_to_tokens
+  with strategy.scope():
+    model.create_variables(optimizer=optimizer)
+
+  def minifinetune():
+    source, target = next(context_iteration)
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+    else:
+      training_loss, _ = loss, loss        
+    variables = model.trainable_variables
+    gradients = optimizer.get_gradients(training_loss, variables)
+    grads_and_vars = []
+    for gradient, variable in zip(gradients, variables):
+      grads_and_vars.append((gradient, variable))
+    for i in range(config.get("farajan_steps",9)):
+      optimizer.apply_gradients(grads_and_vars)
 
   @tf.function
   def predict_next():    
     source = next(iterator)
-    context_src, context_tgt = next(context_iteration)
-    tf.print("source: ", source, "src_context: ", context_src, "tgt_context: ", context_tgt)
-    """ source_length = source["length"]
+    #context_src, context_tgt = next(context_iteration)
+    #tf.print("source: ", source, "src_context: ", context_src, "tgt_context: ", context_tgt)
+    source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
     if experiment in ["residual","residualv15","DRO","residualv25","residualv27","residualv28","residualv29","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
@@ -7721,42 +7748,38 @@ def translate_farajan(source_file,
         decoding_strategy=decoding_strategy,
         maximum_iterations=250)
     target_lengths = decoded.lengths
-    target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64)) """
-    return 0 #target_tokens, target_lengths
-
-  while True:    
-    try:
-      _ = predict_next()
-    except tf.errors.OutOfRangeError:
-      break
-
+    target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64)) 
+    return target_tokens, target_lengths
   
+  def _set_weight(v, w):
+    v.assign(tf.cast(w,v.dtype))
+
+  @tf.function
+  def weight_reset(snapshots):
+    with strategy.scope():
+      for snap, var in zip(snapshots, model.trainable_variables):
+        strategy.extended.update(var, _set_weight, args=(snap, ))
   # Iterates on the dataset.
-  """ 
-  if score_type == "sacreBLEU":
-    print("using sacreBLEU")
-    scorer = BLEUScorer()
-  elif score_type == "MultiBLEU":
-    print("using MultiBLEU")
-    scorer = MultiBLEUScorer()
+
   print("output file: ", output_file)
   with open(output_file, "w") as output_:
     while True:    
       try:
+        # save values
+        snapshots = [v.value() for v in model.trainable_variables]
+        #finetuning phase
+        minifinetune()
+        #translating phase
         batch_tokens, batch_length = predict_next()
+        #reset parameters
+        weight_reset(snapshots)
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
           sentence = b" ".join(tokens[0][:length[0]])
           print_bytes(sentence, output_)
           #print_bytes(sentence)
       except tf.errors.OutOfRangeError:
         break
-  if reference!=None:
-    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
-    score = scorer(reference, output_file)
-    if score is None:
-      return 0.0
-    else:
-      return score """
+  
   return 0
 
 
