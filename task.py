@@ -7764,13 +7764,15 @@ def translate_farajan(source_file,
     while True:    
       try:
         # save values
-        #snapshots = [v.value() for v in model.trainable_variables]
+        snapshots = [v.value() for v in model.trainable_variables]
         #finetuning phase
-        #minifinetune()
+        minifinetune()
         #translating phase
         batch_tokens, batch_length = predict_next()
         #reset parameters
-        #weight_reset(snapshots)
+        weight_reset(snapshots)
+        step = optimizer.iterations.numpy()
+        print(step)
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
           sentence = b" ".join(tokens[0][:length[0]])
           print_bytes(sentence, output_)
