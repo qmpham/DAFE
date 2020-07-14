@@ -7676,7 +7676,7 @@ def translate_farajan(source_file,
   ids_to_tokens = model.labels_inputter.ids_to_tokens
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
-
+  @tf.function
   def minifinetune():
     source, target = next(context_iteration)
     outputs, _ = model(
