@@ -7768,7 +7768,7 @@ def translate_farajan(source_file,
         #finetuning phase
         #minifinetune()
         #translating phase
-        #batch_tokens, batch_length = predict_next()
+        batch_tokens, batch_length = predict_next()
         #reset parameters
         #weight_reset(snapshots)
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
