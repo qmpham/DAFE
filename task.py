@@ -6981,7 +6981,10 @@ def finetune_wada_v1(config,
                                             multi_domain=config.get("multi_domain", True),picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
   from utils.dataprocess import count_lines
   datasets_size = [count_lines(src) for src in source_file]
-  importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
+  if config.get("importance_weights",None):
+    importance_weights = config.get("importance_weights",None)
+  else:
+    importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
   temperature=config.get("temperature",1.0)
   importance_weights = [w ** temperature for w in importance_weights]
   importance_weights = [w/sum(importance_weights) for w in importance_weights]
