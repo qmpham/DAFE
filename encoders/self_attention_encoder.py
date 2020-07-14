@@ -1681,7 +1681,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
       elif self.version==2:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
-      elif self.version==5:
+      elif self.version in [5,6]:
         noisy_adapt= noisy_layer(inputs,is_noisy,mask=mask,training=training)
         total_noisy_adapt.append(noisy_adapt)
       elif self.version==7:
