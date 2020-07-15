@@ -1209,7 +1209,7 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1,
-        ADAP_contribution=[1.0] * 6,
+        ADAP_contribution=[config.get("ADAP_contribution",1.0)] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         inner_layer_norm=None if not config.get("inner_layer_norm",True) else Multi_LayerNorm,
         version=config.get("version",1)),
@@ -1224,7 +1224,7 @@ def main():
         dropout=0.1,
         attention_dropout=0.1,
         ffn_dropout=0.1,
-        ADAP_contribution=[1.0] * 6,
+        ADAP_contribution=[config.get("ADAP_contribution",1.0)] * 6,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         inner_layer_norm=None if not config.get("inner_layer_norm",True) else Multi_LayerNorm,
         version=config.get("version",1)))
