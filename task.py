@@ -7778,6 +7778,7 @@ def translate_farajan(source_file,
         weight_reset(snapshots)
         #reset step
         optimizer.iterations.assign(step)
+        print(optimizer.iterations.numpy())
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
           sentence = b" ".join(tokens[0][:length[0]])
           print_bytes(sentence, output_)
