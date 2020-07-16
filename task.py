@@ -7674,6 +7674,7 @@ def translate_farajan(source_file,
   context_dataset = model.examples_inputter.make_training_dataset(context_src_file, context_tgt_file, batch_size=1, batch_type="example")
   context_iteration = iter(context_dataset)
   ids_to_tokens = model.labels_inputter.ids_to_tokens
+  optimizer = tfa.optimizers.LazyAdam(config.get("farajan_lr",0.001))
   model.create_variables(optimizer=optimizer)
   @tf.function(experimental_relax_shapes=True)
   def minifinetune(source, target):
@@ -7777,6 +7778,7 @@ def translate_farajan(source_file,
         weight_reset(snapshots)
         #reset step
         optimizer.iterations.assign(step)
+        print(optimizer.iterations.numpy())
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
           sentence = b" ".join(tokens[0][:length[0]])
           print_bytes(sentence, output_)
