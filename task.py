@@ -7703,7 +7703,7 @@ def translate_farajan(source_file,
     source = next(iterator)
     context_src, context_target = next(context_iteration)
     tf.print("source: ", source["tokens"], "context_src: ", context_src["tokens"], "context_target: ", context_target["tokens"])
-    source_length = source["length"]
+    """ source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
     outputs, _ = model(
@@ -7768,8 +7768,8 @@ def translate_farajan(source_file,
         maximum_iterations=250)
     target_lengths = decoded.lengths
     target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64)) 
-    return target_tokens, target_lengths
-  
+    return target_tokens, target_lengths """
+    return 0, 0
   def _set_weight(v, w):
     v.assign(tf.cast(w,v.dtype))
 
@@ -7785,7 +7785,7 @@ def translate_farajan(source_file,
     while True:    
       try:
         # save values
-        snapshots = [v.value() for v in model.trainable_variables]
+        #snapshots = [v.value() for v in model.trainable_variables]
         #finetuning phase
         """ src, tgt = next(context_iteration)
         if src["length"].numpy()>0:
@@ -7793,14 +7793,16 @@ def translate_farajan(source_file,
         #translating phase
         batch_tokens, batch_length = predict_next()
         #reset parameters
-        weight_reset(snapshots)
+        #weight_reset(snapshots)
         #reset step
+        """
         optimizer.iterations.assign(step)
         print(optimizer.iterations.numpy())
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
           sentence = b" ".join(tokens[0][:length[0]])
           print_bytes(sentence, output_)
           #print_bytes(sentence)
+        """
       except tf.errors.OutOfRangeError:
         break
   
