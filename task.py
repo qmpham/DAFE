@@ -7711,7 +7711,7 @@ def translate_farajan(source_file,
         labels=context_target,
         training=True,
         step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
+    loss = model.compute_loss(outputs, context_target, training=True)
 
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
