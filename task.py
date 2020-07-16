@@ -7701,30 +7701,12 @@ def translate_farajan(source_file,
   @tf.function
   def predict_next():    
     source = next(iterator)
-    context_src, context_target = next(context_iteration)
-    tf.print("source: ", source["tokens"], "context_src: ", context_src["tokens"], "context_target: ", context_target["tokens"])
-    """ source_length = source["length"]
+    tf.print("source: ", source["tokens"])
+    #context_src, context_tgt = next(context_iteration)
+    #tf.print("source: ", source, "src_context: ", context_src, "tgt_context: ", context_tgt)
+    source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
-    outputs, _ = model(
-        context_src,
-        labels=context_target,
-        training=True,
-        step=optimizer.iterations)
-    loss = model.compute_loss(outputs, context_target, training=True)
-
-    if isinstance(loss, tuple):
-      training_loss = loss[0] / loss[1]
-    else:
-      training_loss, _ = loss, loss        
-    variables = model.trainable_variables
-    gradients = optimizer.get_gradients(training_loss, variables)
-    grads_and_vars = []
-    for gradient, variable in zip(gradients, variables):
-      grads_and_vars.append((gradient, variable))
-    for i in range(config.get("farajan_steps",9)):
-      optimizer.apply_gradients(grads_and_vars)
-
     if experiment in ["residual","residualv15","DRO","residualv25","residualv27","residualv28","residualv29","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
       encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"], source["is_noisy"]], source_length, training=False, internal_node_printing=True)
     else:
@@ -7768,8 +7750,8 @@ def translate_farajan(source_file,
         maximum_iterations=250)
     target_lengths = decoded.lengths
     target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64)) 
-    return target_tokens, target_lengths """
-    return 0, 0
+    return target_tokens, target_lengths
+  
   def _set_weight(v, w):
     v.assign(tf.cast(w,v.dtype))
 
@@ -7785,24 +7767,22 @@ def translate_farajan(source_file,
     while True:    
       try:
         # save values
-        #snapshots = [v.value() for v in model.trainable_variables]
+        snapshots = [v.value() for v in model.trainable_variables]
         #finetuning phase
-        """ src, tgt = next(context_iteration)
-        if src["length"].numpy()>0:
-          minifinetune(src,tgt) """
+        src, tgt = next(context_iteration)
+        if src["length"].numpy()>1:
+          minifinetune(src,tgt)
         #translating phase
         batch_tokens, batch_length = predict_next()
         #reset parameters
-        #weight_reset(snapshots)
+        weight_reset(snapshots)
         #reset step
-        """
         optimizer.iterations.assign(step)
-        print(optimizer.iterations.numpy())
+        print(optimizer.iterations.numpy)
         for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
           sentence = b" ".join(tokens[0][:length[0]])
           print_bytes(sentence, output_)
           #print_bytes(sentence)
-        """
       except tf.errors.OutOfRangeError:
         break
   
