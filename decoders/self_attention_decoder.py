@@ -5386,7 +5386,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:
       total_adapt = self.multi_domain_layers[-1](inputs, domain, mask=mask, training=training)
-    if self.versionnot in [7,8]:
+    if self.version not in [7,8]:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       
     if self.version==1:
