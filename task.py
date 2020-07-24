@@ -7669,7 +7669,7 @@ def translate_farajan(source_file,
   if "baseline" in experiment:
     context_dataset = model.examples_inputter.make_training_dataset(context_src_file, context_tgt_file, batch_size=1, batch_type="example")
   else:
-    context_dataset = model.examples_inputter.make_training_dataset(context_src_file, context_tgt_file, domain, batch_size=1, batch_type="example")
+    context_dataset = model.examples_inputter.make_training_dataset(context_src_file, context_tgt_file, 1, domain, batch_type="example")
   context_iteration = iter(context_dataset)
   ids_to_tokens = model.labels_inputter.ids_to_tokens
   optimizer = tfa.optimizers.LazyAdam(config.get("farajan_lr",0.001))
