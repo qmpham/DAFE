@@ -7053,7 +7053,8 @@ def finetune_wada_v1(config,
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
      
     variables = model.trainable_variables
-    
+    for v in variables:
+      print(v.name)
     model_vars = []
     classifier_vars = []
     for var in variables:
@@ -7063,8 +7064,10 @@ def finetune_wada_v1(config,
         model_vars.append(var)
     variables = model_vars + classifier_vars
     print("model_vars numb: ", len(model_vars))
+    """
     for v in model_vars:
       print(v.name)
+    """
     model_gradients = optimizer.get_gradients(training_loss, model_vars)
     model_gradient_accumulator(model_gradients)
     num_examples = tf.reduce_sum(target["length"])
@@ -7106,8 +7109,8 @@ def finetune_wada_v1(config,
       elif "ADAP" in var.name and not("noisy" in var.name):
         model_vars.append(var)
     print("classifier_vars numb: ", len(classifier_vars))
-    for v in classifier_vars:
-      print(v.name)
+    """ for v in classifier_vars:
+      print(v.name) """
     classifier_gradients = optimizer.get_gradients(training_loss, classifier_vars)
     classifier_gradient_accumulator(classifier_gradients)
     num_examples = tf.reduce_sum(target["length"])
