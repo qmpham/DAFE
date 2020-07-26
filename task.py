@@ -7062,6 +7062,8 @@ def finetune_wada_v1(config,
         classifier_vars.append(var)
       elif "ADAP" in var.name and not("noisy" in var.name):
         model_vars.append(var)
+      elif "enc_layernorm_2" in var.name:
+        model_vars.append(var)
     variables = model_vars + classifier_vars
     print("model_vars numb: ", len(model_vars))
     """
@@ -7127,6 +7129,8 @@ def finetune_wada_v1(config,
         classifier_vars.append(var)
       elif "ADAP" in var.name and not("noisy" in var.name):
         model_vars.append(var)
+      elif "enc_layernorm_2" in var.name:
+        model_vars.append(var)
     variables = model_vars + classifier_vars
     grads_and_vars = []
     for gradient, variable in zip(model_gradient_accumulator.gradients, model_vars):
@@ -7144,6 +7148,8 @@ def finetune_wada_v1(config,
       if "ADAP_gate" in var.name:
         classifier_vars.append(var)
       elif "ADAP" in var.name and not("noisy" in var.name):
+        model_vars.append(var)
+      elif "enc_layernorm_2" in var.name:
         model_vars.append(var)
     variables = model_vars + classifier_vars
     grads_and_vars = []
