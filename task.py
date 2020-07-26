@@ -7108,6 +7108,8 @@ def finetune_wada_v1(config,
         classifier_vars.append(var)
       elif "ADAP" in var.name and not("noisy" in var.name):
         model_vars.append(var)
+      elif "enc_layernorm_2" in var.name:
+        model_vars.append(var)
     print("classifier_vars numb: ", len(classifier_vars))
     """ for v in classifier_vars:
       print(v.name) """
