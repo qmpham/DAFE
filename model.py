@@ -29,7 +29,7 @@ from opennmt.layers import common
 from layers.layers import Classification_layer
 from opennmt.utils.losses import _softmax_cross_entropy
 from utils.my_inputter import My_inputter
-from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder_v1, Multi_domain_SelfAttentionEncoder_v2, Multi_domain_SelfAttentionEncoder_v12, Multi_domain_SelfAttentionEncoder_v15
+from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder_v1, Multi_domain_SelfAttentionEncoder_v16, Multi_domain_SelfAttentionEncoder_v2, Multi_domain_SelfAttentionEncoder_v12, Multi_domain_SelfAttentionEncoder_v15
 
 class Multi_domain_SequenceToSequence(model.SequenceGenerator):
 
