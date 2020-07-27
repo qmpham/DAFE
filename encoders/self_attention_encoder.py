@@ -1666,7 +1666,7 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
     domain = domain[0]
     inputs = inputs[0]    
     inputs *= self.num_units**0.5
-
+    print("internal_node_printing: ", internal_node_printing)
     total_adapt=[]
     total_noisy_adapt=[]
     if self.position_encoder is not None:
