@@ -7828,7 +7828,7 @@ def score(source_file,
   model.create_variables()
   def translation_scoring():
     source,target=next(iteration)
-    tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
+    tf.print("src: ", source["tokens"], "trans: ", target["tokens"])
     scores = model.score(source,target)
     return tf.nest.map_structure(lambda t: t.numpy(), scores)
   
