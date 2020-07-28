@@ -7796,7 +7796,53 @@ def translate_farajan(source_file,
   
   return 0
 
+def score(source_file,
+              translation_file,
+              model,
+              config,
+              strategy,
+              optimizer,
+              checkpoint_manager,
+              checkpoint,              
+              domain,
+              output_file,
+              length_penalty,
+              is_noisy=1,
+              checkpoint_path=None,
+              probs_file=None,
+              experiment="ldr",
+              score_type="MultiBLEU",
+              batch_size=5,
+              beam_size=5):
+  
+  # Create the inference dataset.
+  if checkpoint_path == None:
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
+  print("In domain %d"%domain)
+  checkpoint.restore(checkpoint_path)
 
+  if "baseline" in experiment:
+    dataset = model.examples_inputter.make_training_dataset(source_file, translation_file, batch_size=1, batch_type="example")
+  else:
+    dataset = model.examples_inputter.make_training_dataset(source_file, translation_file, 1, domain, batch_type="example", single_pass=True)
+  iteration = iter(dataset)
+  ids_to_tokens = model.labels_inputter.ids_to_tokens
+  model.create_variables()
+  def translation_scoring():
+    source,target=next(iteration)
+    tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
+    scores = model.score(source,target)
+    return scores
+  
+  while True:    
+    try:
+      score_ = translation_scoring()
+      model.print_score(score_)
+    except tf.errors.OutOfRangeError:
+      break
+  
+  return 0
 
 
 
