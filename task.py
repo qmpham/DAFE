@@ -7823,7 +7823,7 @@ def score(source_file,
   checkpoint.restore(checkpoint_path)
 
   if "baseline" in experiment:
-    dataset = model.examples_inputter.make_training_dataset(source_file, translation_file, batch_size=1, batch_type="example")
+    dataset = model.examples_inputter.make_training_dataset(source_file, translation_file, domain, batch_size=1, batch_type="example")
   else:
     dataset = model.examples_inputter.make_training_dataset(source_file, translation_file, 1, domain, batch_type="example", single_pass=True)
   iteration = iter(dataset)
