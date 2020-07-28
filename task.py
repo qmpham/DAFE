@@ -7830,12 +7830,21 @@ def score(source_file,
     source,target=next(iteration)
     tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
     scores = model.score(source,target)
-    return scores
+    return tf.nest.map_structure(lambda t: t.numpy(), scores)
   
   while True:    
     try:
-      score_ = translation_scoring()
-      model.print_score(score_)
+      results = translation_scoring()
+      #results = tf.nest.map_structure(lambda t: t.numpy(), results)
+      for batch in misc.extract_batches(results):
+        model.print_score(batch)
+      """
+      for tokens, probs, length in zip(score_["tokens"].numpy(), score_["cross_entropy"].numpy(), score_["length"].numpy()):
+        probs_ = b" ".join(probs[:length])
+        sentence = b" ".join(tokens[:length])
+        print(sentence)
+        print(probs_)
+      """
     except tf.errors.OutOfRangeError:
       break
   
