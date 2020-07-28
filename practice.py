@@ -1388,6 +1388,8 @@ def main():
     task.experimental_translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.encoder_domain), int(args.decoder_domain), args.output, length_penalty=0.6, checkpoint_path=args.ckpt, experiment=experiment)
   elif args.run == "score":
+    source_file = args.src
+    translation_file = args.translation_file
     task.score(source_file, translation_file, model, config, strategy, meta_test_optimizer, checkpoint_manager, checkpoint, int(domain), output_file, length_penalty=0.6, 
                   checkpoint_path=checkpoint_path, experiment=experiment)
 if __name__ == "__main__":
