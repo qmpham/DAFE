@@ -29,7 +29,7 @@ from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
 from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckpt
 from utils.dataprocess import count_lines
-
+from opennmt.utils import misc
 def _assert_loss_is_finite(loss):
   if tf.math.is_nan(loss):
     raise RuntimeError("Model diverged with loss = NaN.")
