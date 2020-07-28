@@ -7833,11 +7833,12 @@ def score(source_file,
     return tf.nest.map_structure(lambda t: t.numpy(), scores)
   
   while True:    
+    params = {"with_token_level": True, "with_alignments":"soft"}
     try:
       results = translation_scoring()
       #results = tf.nest.map_structure(lambda t: t.numpy(), results)
       for batch in misc.extract_batches(results):
-        model.print_score(batch)
+        model.print_score(batch, print_params=params)
       """
       for tokens, probs, length in zip(score_["tokens"].numpy(), score_["cross_entropy"].numpy(), score_["length"].numpy()):
         probs_ = b" ".join(probs[:length])
