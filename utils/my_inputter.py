@@ -381,7 +381,7 @@ class Multi_domain_SequenceToSequenceInputter(inputters.ExampleInputter):
                                 features_file,
                                 labels_file,
                                 batch_size,
-                                domain,
+                                domain=0,
                                 is_noisy=1,
                                 batch_type="examples",
                                 batch_multiplier=1,
