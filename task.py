@@ -7833,7 +7833,7 @@ def score(source_file,
     return tf.nest.map_structure(lambda t: t.numpy(), scores)
   
   while True:    
-    params = {"with_token_level": True, "with_alignments":"soft"}
+    params = {"with_token_level": True, "with_alignments":None}
     try:
       results = translation_scoring()
       #results = tf.nest.map_structure(lambda t: t.numpy(), results)
