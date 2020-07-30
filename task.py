@@ -7848,6 +7848,8 @@ def score(source_file,
       """
     except tf.errors.OutOfRangeError:
       break
+    except StopIteration:
+      break
   
   return 0
 
