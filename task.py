@@ -7822,7 +7822,7 @@ def score(source_file,
   print("In domain %d"%domain)
   checkpoint.restore(checkpoint_path)
 
-  dataset = model.examples_inputter.make_training_dataset(source_file, translation_file, batch_size=1, batch_type="example", single_pass=True)
+  dataset = model.examples_inputter.make_training_dataset(source_file, translation_file, batch_size=64, batch_type="example", single_pass=True)
   iteration = iter(dataset)
   ids_to_tokens = model.labels_inputter.ids_to_tokens
   model.create_variables()
