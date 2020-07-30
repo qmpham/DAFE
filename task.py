@@ -29,7 +29,7 @@ from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
 from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckpt
 from utils.dataprocess import count_lines
-
+from opennmt.utils import misc
 def _assert_loss_is_finite(loss):
   if tf.math.is_nan(loss):
     raise RuntimeError("Model diverged with loss = NaN.")
@@ -5532,7 +5532,7 @@ def averaged_checkpoint_translate(config, source_file,
               experiment="ldr",
               score_type="MultiBLEU",
               batch_size=10,
-              beam_size=5,
+              beam_size=10,
               max_count=3):
   
   # Create the inference dataset.
@@ -7796,7 +7796,60 @@ def translate_farajan(source_file,
   
   return 0
 
+def score(source_file,
+              translation_file,
+              model,
+              config,
+              strategy,
+              optimizer,
+              checkpoint_manager,
+              checkpoint,              
+              domain,
+              output_file,
+              length_penalty,
+              is_noisy=1,
+              checkpoint_path=None,
+              probs_file=None,
+              experiment="ldr",
+              score_type="MultiBLEU",
+              batch_size=5,
+              beam_size=5):
+  
+  # Create the inference dataset.
+  if checkpoint_path == None:
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
+  print("In domain %d"%domain)
+  checkpoint.restore(checkpoint_path)
 
+  dataset = model.examples_inputter.make_training_dataset(source_file, translation_file, batch_size=1, batch_type="example", single_pass=True)
+  iteration = iter(dataset)
+  ids_to_tokens = model.labels_inputter.ids_to_tokens
+  model.create_variables()
+  def translation_scoring():
+    source,target=next(iteration)
+    tf.print("src: ", source["tokens"], "trans: ", target["tokens"])
+    scores = model.score(source,target)
+    return tf.nest.map_structure(lambda t: t.numpy(), scores)
+  
+  while True:    
+    params = {"with_token_level": True, "with_alignments":None}
+    try:
+      results = translation_scoring()
+      #results = tf.nest.map_structure(lambda t: t.numpy(), results)
+      for batch in misc.extract_batches(results):
+        model.print_score(batch, params=params)
+      """
+      for tokens, probs, length in zip(score_["tokens"].numpy(), score_["cross_entropy"].numpy(), score_["length"].numpy()):
+        probs_ = b" ".join(probs[:length])
+        sentence = b" ".join(tokens[:length])
+        print(sentence)
+        print(probs_)
+      """
+    except tf.errors.OutOfRangeError:
+      break
+  
+  return 0
 
 
 

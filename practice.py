@@ -33,7 +33,7 @@ def main():
   
   #tf.random.set_seed(seed)
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train", "translate_farajan", "train_adv", "train_wada", "finetune_noisy_v1", "finetune_wada", "finetune_wada_v1", "proxy", "debug_slurm_train", "metatrainv16", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train", "score", "translate_farajan", "train_adv", "train_wada", "finetune_noisy_v1", "finetune_wada", "finetune_wada_v1", "proxy", "debug_slurm_train", "metatrainv16", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
   parser.add_argument("--config", help="configuration file")
   parser.add_argument("--config_root")
   parser.add_argument("--src")
@@ -48,6 +48,7 @@ def main():
   parser.add_argument("--decoder_domain", default=0)
   parser.add_argument("--ref", default=None)
   parser.add_argument("--maxcount",default=3)
+  parser.add_argument("--translation_file",default=None)
   args = parser.parse_args()
   print("Running mode: ", args.run)
   config_file = args.config
@@ -1386,6 +1387,13 @@ def main():
     print("translate with encoder_domain %d and decoder_domain %d"%(int(args.encoder_domain), int(args.decoder_domain)))
     task.experimental_translate(args.src, args.ref, model, checkpoint_manager,
               checkpoint, int(args.encoder_domain), int(args.decoder_domain), args.output, length_penalty=0.6, checkpoint_path=args.ckpt, experiment=experiment)
-
+  elif args.run == "score":
+    source_file = args.src
+    translation_file = args.translation_file
+    domain = args.domain
+    output_file = args.output
+    checkpoint_path = args.ckpt
+    task.score(source_file, translation_file, model, config, strategy, meta_test_optimizer, checkpoint_manager, checkpoint, int(domain), output_file, length_penalty=0.6, 
+                  checkpoint_path=checkpoint_path, experiment=experiment)
 if __name__ == "__main__":
   main()
