@@ -5532,7 +5532,7 @@ def averaged_checkpoint_translate(config, source_file,
               experiment="ldr",
               score_type="MultiBLEU",
               batch_size=10,
-              beam_size=5,
+              beam_size=10,
               max_count=3):
   
   # Create the inference dataset.
