@@ -5247,9 +5247,13 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     elif self.version==7:
       print("version 7: h' = h + adap(h_[1,..6])")
     elif self.version==8:
-      print("version 5: h' = h+adap(h)*activation(z)")
+      print("version 8: h' = h+adap(h)*activation(z)")
     elif self.version==9:
-      print("version 7: h' = h + adap(h)")
+      print("version 9: h' = h + adap(h)")
+    elif self.version==10:
+      print("version 10: h_3 = h_3 + adap(h_3)")
+    elif self.version==11:
+      print("version 11: h_3(5) = h_3(5) + adap(h_3(5))")
     self.ADAP_contribution = ADAP_contribution
     print("ADAP contribution", self.ADAP_contribution)
   
@@ -5381,12 +5385,20 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       if self.version not in [3,8,9]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
+      if self.version == 10:
+        if i==3:
+          adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+          inputs = inputs + adapt
+      if self.version == 11:
+        if i in [3,5]:
+          adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+          inputs = inputs + adapt
     
-    if self.version not in [3,8,9]:
+    if self.version not in [3,8,9,10,11]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:
       total_adapt = self.multi_domain_layers[-1](inputs, domain, mask=mask, training=training)
-    if self.version not in [3,7,8]:
+    if self.version not in [3,7,9,10,11]:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       
     if self.version==1:
@@ -5402,9 +5414,9 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
     elif self.version==7:
       outputs = self.layer_norm(inputs + total_adapt)
-    elif self.version==8:
-      outputs = self.layer_norm(inputs + total_adapt)
     elif self.version==9:
+      outputs = self.layer_norm(inputs + total_adapt)
+    elif self.version==8:
       outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * total_adapt)
     return outputs, new_cache, attention
   

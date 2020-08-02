@@ -1497,9 +1497,13 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     elif self.version==7:
       print("version 7: h' = h + adap(h_[1,..6])")
     elif self.version==8:
-      print("version 5: h' = h+adap(h)*activation(z)")
+      print("version 8: h' = h+adap(h)*activation(z)")
     elif self.version==9:
-      print("version 7: h' = h + adap(h)")
+      print("version 9: h' = h + adap(h)")
+    elif self.version==10:
+      print("version 10: h_3 = h_3 + adap(h_3)")
+    elif self.version==11:
+      print("version 11: h_3(5) = h_3(5) + adap(h_3(5))")
     
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     domain = inputs[1]
@@ -1512,21 +1516,27 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     inputs = common.dropout(inputs, self.dropout, training=training)
     mask = self.build_mask(inputs, sequence_length=sequence_length)
     total_adapt=[]
-    for layer, multi_domain_layer in zip(self.layers, self.multi_domain_layers):
+    for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
       inputs = layer(inputs, mask=mask, training=training)
-      if self.version not in [3,8,9]:
+      if self.version not in [3,8,10,11,9]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
-
-    if self.version not in [3,8,9]:
+      if self.version == 10:
+        if i==3:
+          adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+          inputs = inputs + adapt
+      if self.version == 11:
+        if i in [3,5]:
+          adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+          inputs = inputs + adapt
+    if self.version not in [3,8,9,10,11]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:
       total_adapt = self.multi_domain_layers[-1](inputs, domain, mask=mask, training=training)
-    if self.version not in [3,7,8]:
+    if self.version not in [3,7,9,10,11]:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       
       if internal_node_printing:
-        #tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "adapt_mean_abs_pooling: ", tf.reduce_mean(tf.abs(total_adapt),-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)  
         tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
       
     if self.version==1:
@@ -1542,10 +1552,12 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
     elif self.version==7:
       outputs = self.layer_norm(inputs + total_adapt)
-    elif self.version==8:
-      outputs = self.layer_norm(inputs + total_adapt)
     elif self.version==9:
+      outputs = self.layer_norm(inputs + total_adapt)
+    elif self.version==8:
       outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * total_adapt)
+    elif self.version in [10,11]:
+      outputs = self.layer_norm(inputs)
 
     return outputs, None, sequence_length
 
