@@ -5384,7 +5384,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      if self.version not in [3,8,9,10,11]:
+      if self.version not in [3,8,9,10,11,12]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
       if self.version == 10:
