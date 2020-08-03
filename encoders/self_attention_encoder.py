@@ -1519,7 +1519,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     total_adapt=[]
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
       inputs = layer(inputs, mask=mask, training=training)
-      if self.version not in [3,8,10,11,9]:
+      if self.version not in [3,8,10,11,9,12]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
       if self.version == 10:
