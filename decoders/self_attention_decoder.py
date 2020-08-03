@@ -5253,7 +5253,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     elif self.version==10:
       print("version 10: h_3 = h_3 + adap(h_3)")
     elif self.version==11:
-      print("version 11: h_3(5) = h_3(5) + adap(h_3(5))")
+      print("version 11: h_3(1,5) = h_3(1,5) + adap(h_3(1,5))")
     elif self.version==12:
       print("version 12: h_1 = h_1 + adap(h_1)")
     self.ADAP_contribution = ADAP_contribution
@@ -5392,7 +5392,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
           inputs = inputs + adapt
       if self.version == 11:
-        if i in [3,5]:
+        if i in [1,3,5]:
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
           inputs = inputs + adapt
       if self.version == 12:
