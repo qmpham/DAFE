@@ -1503,7 +1503,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     elif self.version==10:
       print("version 10: h_3 = h_3 + adap(h_3)")
     elif self.version==11:
-      print("version 11: h_3(5) = h_3(5) + adap(h_3(5))")
+      print("version 11: h_3(1,5) = h_3(1,5) + adap(h_3(1,5))")
     elif self.version==12:
       print("version 12: h_1 = h_1 + adap(h_1)")
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
