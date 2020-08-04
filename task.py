@@ -956,7 +956,7 @@ def finetuning(config,
       load_and_update_if_needed_from_ckpt(config["model_dir"],   
                       checkpoint_path,                        
                       trackables={"model":model},
-                      vocab_update=True,
+                      vocab_update=False,
                       model_key="model") 
       #checkpoint.restore(checkpoint_manager.latest_checkpoint)
   else:
@@ -965,7 +965,7 @@ def finetuning(config,
     load_and_update_if_needed_from_ckpt(config["model_dir"],   
                       checkpoint_path,                        
                       trackables={"model":model},
-                      vocab_update=True,
+                      vocab_update=False,
                       model_key="model") 
   #####
   
