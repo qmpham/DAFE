@@ -824,10 +824,21 @@ def finetuning(config,
   if checkpoint_path is None:
     if checkpoint_manager.latest_checkpoint is not None:
       tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-      checkpoint.restore(checkpoint_manager.latest_checkpoint)
+      checkpoint_path = checkpoint_manager.latest_checkpoint
+      load_and_update_if_needed_from_ckpt(config["model_dir"],   
+                      checkpoint_path,                        
+                      trackables={"model":model},
+                      vocab_update=True,
+                      model_key="model") 
+      #checkpoint.restore(checkpoint_manager.latest_checkpoint)
   else:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
-    checkpoint.restore(checkpoint_path)
+    #checkpoint.restore(checkpoint_path)
+    load_and_update_if_needed_from_ckpt(config["model_dir"],   
+                      checkpoint_path,                        
+                      trackables={"model":model},
+                      vocab_update=True,
+                      model_key="model") 
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -955,7 +966,9 @@ def finetuning(config,
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   finetuning_data_flow = iter(_finetuning_forward())
   
-  _loss = []  
+  _loss = [] 
+  
+  
   with _summary_writer.as_default():
     while True:
       #####Training batch
