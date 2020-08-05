@@ -599,6 +599,7 @@ def elastic_finetuning(config,
           strategy,  
           checkpoint_manager,
           checkpoint,
+          checkpoint_path=None,
           maximum_length=80,
           batch_size = 2048,
           batch_type = "tokens",
@@ -616,6 +617,10 @@ def elastic_finetuning(config,
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  else:
+    if checkpoint_path is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+      checkpoint.restore(checkpoint_path)
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -786,14 +791,9 @@ def elastic_finetuning(config,
       if step % eval_every == 0:
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
-        if config.get("unsupervised_clustering",False):
-          tag_files = config.get("tag_files")
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-          if config.get("unsupervised_clustering",False):
-            score = translate_with_tag_file(src, tag_files[i], ref, model, checkpoint_manager, checkpoint, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-          else:
-            score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
       tf.summary.flush()
       if step > train_steps:
