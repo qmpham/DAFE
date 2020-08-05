@@ -822,52 +822,33 @@ def finetuning(config,
 
     if config.get("ADAP_activity_regularizing",False):
         layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
-        output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
-        d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
-        d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
-        d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
         print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
-        print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
-        print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
-        print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
+        
         if isinstance(layer_activity_regularization_loss_scale, list):
           domain = source["domain"][0]
           layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
           layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
-          #tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
-        if isinstance(output_activity_regularization_loss_scale, list):
-          domain = source["domain"][0]
-          output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
-          output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
         regularization_losses = model.losses
         print("model_name_scope", model.name_scope())
         print(regularization_losses)
         layer_activity_regularization_losses = []
-        output_activity_regularization_losses = []
-        d_classification_gate_losses = []
-        d_classifier_activity_regularization_losses = []
-        d_classifier_weight_regularization_losses = []
         for loss_ in regularization_losses:
           if "multi_adap__dense" in loss_.name:
-            output_activity_regularization_losses.append(loss_)
+            continue
           elif "ADAP_gate" in loss_.name: #and "ActivityRegularizer" not in loss_.name and "Regularizer" not in loss_.name
-            if "ActivityRegularizer" in loss_.name:
-              d_classifier_activity_regularization_losses.append(loss_)
-            elif "Regularizer" in loss_.name:
-              d_classifier_weight_regularization_losses.append(loss_)
-            else:
-              d_classification_gate_losses.append(loss_)
+            continue
           elif "ADAP_" in loss_.name:
             layer_activity_regularization_losses.append(loss_)
 
         print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
-        print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
-        print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
-        print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
-        print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
         if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
 
+    if config.get("ADAP_weight_decay",False):
+      lambda_ = config.get("lambda",0.00001)
+      for v in range(len(model.trainable_variables)):
+        if "ADAP_" in v.name and "layer_norm" in v.name:
+          training_loss += tf.reduce_sum(tf.square(v)) * lambda_
     variables = []
     for v in model.trainable_variables:
       if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
