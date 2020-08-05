@@ -675,37 +675,6 @@ def elastic_finetuning(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    
-    if config.get("ADAP_activity_regularizing",False):
-      layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
-      output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
-      print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
-      print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
-      if isinstance(layer_activity_regularization_loss_scale, list):
-        domain = source["domain"][0]
-        layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
-        layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
-        #tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
-      if isinstance(output_activity_regularization_loss_scale, list):
-        domain = source["domain"][0]
-        output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
-        output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
-      regularization_losses = model.losses
-      print("model_name_scope", model.name_scope())
-      print(regularization_losses)
-      layer_activity_regularization_losses = []
-      output_activity_regularization_losses = []
-      for loss_ in regularization_losses:
-        if "multi_adap__dense" in loss_.name:
-          output_activity_regularization_losses.append(loss_)
-        else:
-          layer_activity_regularization_losses.append(loss_)
-      print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
-      print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
-      if len(layer_activity_regularization_losses)>0:
-        training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
-      if len(output_activity_regularization_losses)>0:
-        training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
     variables = model.trainable_variables
     lambda_ = config.get("lambda", 0.001)
     print("elastic weights: ", lambda_)
