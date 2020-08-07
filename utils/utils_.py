@@ -119,8 +119,8 @@ def load_and_update_if_needed_from_ckpt(model_dir,
         new_value = np.concatenate((value, np.zeros((512,1))),axis=1)
         variable.assign(new_value)
       else:
-        print(variable.name)
-        print(value)
+        #print(variable.name)
+        #print(value)
         variable.assign(value)
 
 def average_checkpoints(model_dir,
