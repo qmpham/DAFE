@@ -847,7 +847,7 @@ def finetuning(config,
     if config.get("ADAP_weight_decay",False):
       lambda_ = config.get("lambda",0.00001)
       print("ADAP_weight_decay: ", lambda_)
-      for v in range(len(model.trainable_variables)):
+      for v in model.trainable_variables:
         if "ADAP_" in v.name and "layer_norm" in v.name:
           training_loss += tf.reduce_sum(tf.square(v)) * lambda_
     variables = []
