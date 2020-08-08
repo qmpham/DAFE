@@ -900,24 +900,33 @@ def finetuning(config,
   
   _loss = [] 
   #####
-  if checkpoint_path is None:
+  if config.get("using_tf_restore",True):
     if checkpoint_manager.latest_checkpoint is not None:
       tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-      checkpoint_path = checkpoint_manager.latest_checkpoint
-      load_and_update_if_needed_from_ckpt(config["model_dir"],   
-                      checkpoint_path,                        
-                      trackables={"model":model},
-                      vocab_update=False,
-                      model_key="model") 
-      #checkpoint.restore(checkpoint_manager.latest_checkpoint)
+      checkpoint.restore(checkpoint_manager.latest_checkpoint)
+    else:
+      if checkpoint_path is not None:
+        tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+        checkpoint.restore(checkpoint_path)
   else:
-    tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
-    #checkpoint.restore(checkpoint_path)
-    load_and_update_if_needed_from_ckpt(config["model_dir"],   
-                      checkpoint_path,                        
-                      trackables={"model":model},
-                      vocab_update=False,
-                      model_key="model") 
+    if checkpoint_path is None:
+      if checkpoint_manager.latest_checkpoint is not None:
+        tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        load_and_update_if_needed_from_ckpt(config["model_dir"],   
+                        checkpoint_path,                        
+                        trackables={"model":model},
+                        vocab_update=False,
+                        model_key="model") 
+        #checkpoint.restore(checkpoint_manager.latest_checkpoint)
+    else:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+      #checkpoint.restore(checkpoint_path)
+      load_and_update_if_needed_from_ckpt(config["model_dir"],   
+                        checkpoint_path,                        
+                        trackables={"model":model},
+                        vocab_update=False,
+                        model_key="model") 
   #####
   
   with _summary_writer.as_default():
