@@ -1721,7 +1721,10 @@ class Multi_domain_SelfAttentionEncoder_v16(Encoder):
         if i==1:
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
           inputs = inputs + adapt
-        
+      if self.version == 9:
+        if i==5:
+          adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+          inputs = inputs + adapt
 
 
 

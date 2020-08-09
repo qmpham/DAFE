@@ -5797,6 +5797,10 @@ class Multi_domain_SelfAttentionDecoder_v18(Decoder):
         if i==1:
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
           inputs = inputs + adapt
+      if self.version == 9:
+        if i==5:
+          adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+          inputs = inputs + adapt
 
     if self.version in [6,7]:
       domain_g = self.multi_domain_gate(inputs,domain,mask=mask,training=training)
