@@ -285,6 +285,7 @@ class DC_inputter(WordEmbedder):
                              feature_file,
                              batch_size,
                              domain=1,
+                             is_noisy=False,
                              length_bucket_width=None,
                              num_threads=1,
                              prefetch_buffer_size=None):
