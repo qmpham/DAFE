@@ -7768,12 +7768,12 @@ def EWC_stat(source_file,
     for gradient, variable in zip(gradients, variables):
       
 
-  with open(output_file, "w") as output_:
+  """ with open(output_file, "w") as output_:
     while True:    
       try:
         
       except tf.errors.OutOfRangeError:
-        break
+        break """
   
   return 0
 
