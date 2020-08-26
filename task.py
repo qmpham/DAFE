@@ -7766,7 +7766,7 @@ def EWC_stat(source_file,
     gradients = optimizer.get_gradients(training_loss, variables)
     grads_and_vars = []
     for gradient, variable in zip(gradients, variables):
-      
+      continue
 
   """ with open(output_file, "w") as output_:
     while True:    
