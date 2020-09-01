@@ -30,6 +30,20 @@ from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForw
 from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckpt
 from utils.dataprocess import count_lines
 from opennmt.utils import misc
+
+def file_concatenate(files,name):
+  lines = []
+  for f in files:
+    with open(f,"r") as f_:
+      for l in f_.readlines():
+        lines.append(l.strip())
+  
+  parent_dir = os.path.dirname(files[0])
+  with open(os.path.join(parent_dir,name),"w") as f_w:
+    for l in lines:
+      print(l,file=f_w)
+  return os.path.join(parent_dir,name)
+
 def _assert_loss_is_finite(loss):
   if tf.math.is_nan(loss):
     raise RuntimeError("Model diverged with loss = NaN.")
@@ -2186,6 +2200,14 @@ def train(config,
                         vocab_update=True,
                         model_key="model")
 
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat")
+
   with _summary_writer.as_default():
     while True:
       #####Training batch
@@ -2230,6 +2252,7 @@ def train(config,
       if step % eval_every == 0:
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
+        output_files = []
         if experiment=="residualv28":
           for src, ref, prob, i in zip(config["eval_src"],config["eval_ref"],config["eval_prob"], config["eval_domain"]):
             output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
@@ -2240,6 +2263,13 @@ def train(config,
             output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
             score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
             tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+            output_files.append(output_file)
+        ##### BLEU on concat dev set.
+        output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
+        score = scorer(ref_eval_concat, output_file_concat)
+        print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
+        tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
+        #############################
       tf.summary.flush()
       if step > train_steps:
         break
