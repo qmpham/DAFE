@@ -162,7 +162,7 @@ def main():
         num_domains=num_domains,
         num_domain_units=num_domain_units,
         ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
-        res_using_rate=config("res_using_rate",1.0),
+        res_using_rate=config.get("res_using_rate",1.0),
         num_units=512,
         num_heads=8,
         ffn_inner_dim=2048,
