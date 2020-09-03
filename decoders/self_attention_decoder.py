@@ -611,6 +611,7 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
                attention_dropout=0.1,
                ffn_dropout=0.1,
                ffn_activation=tf.nn.relu,
+               res_using_rate = 1.0,
                position_encoder_class=SinusoidalPositionEncoder,
                multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v2,
                fake_domain_prob=0.1,
@@ -649,6 +650,7 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
 
     self.ADAP_contribution = ADAP_contribution
     print("ADAP contribution", self.ADAP_contribution)
+    self.res_using_rate = res_using_rate
   
   def initialize(self, vocab_size=None, output_layer=None):  
     if output_layer is not None:
@@ -760,6 +762,7 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
 
     # Run each layer.
     new_cache = []
+    keeping = tf.keras.backend.random_binomial([1], res_using_rate=self.res_using_rate)
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
 
       inputs, layer_cache, attention = layer(
@@ -771,9 +774,9 @@ class Multi_domain_SelfAttentionDecoder_v2(Decoder):
           training=training)
       new_cache.append(layer_cache)
       if self.ADAP_layer_stopping_gradient:
-        inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
+        inputs = multi_domain_layer(tf.stop_gradient(inputs), domain, mask=mask, training=training) * self.ADAP_contribution[i] * keeping + inputs
       else:
-        inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * self.ADAP_contribution[i] + inputs
+        inputs = multi_domain_layer(inputs, domain, mask=mask, training=training) * self.ADAP_contribution[i] * keeping + inputs
 
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
