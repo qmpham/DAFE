@@ -159,7 +159,10 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
       inputs = self.position_encoder(inputs)
     inputs = common.dropout(inputs, self.dropout, training=training)
     mask = self.build_mask(inputs, sequence_length=sequence_length)
-    keeping = tf.keras.backend.random_binomial([1], self.res_using_rate)
+    if training:
+      keeping = tf.keras.backend.random_binomial([1], self.res_using_rate)
+    else:
+      keeping = 1.0
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers, self.multi_domain_layers)):
       inputs = layer(inputs, mask=mask, training=training)
       
