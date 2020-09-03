@@ -2200,6 +2200,7 @@ def train(config,
                         vocab_update=True,
                         model_key="model")
 
+  score_type = config.get("score_type","MultiBLEU")
   if score_type == "sacreBLEU":
     print("using sacreBLEU")
     scorer = BLEUScorer()
