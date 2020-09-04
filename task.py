@@ -7768,7 +7768,7 @@ def EWC_stat(source_file,
     checkpoint_path = checkpoint_manager.latest_checkpoint
   tf.get_logger().info("Evaluating model %s", checkpoint_path)
   checkpoint.restore(checkpoint_path)
-  dataset = model.examples_inputter.make_inference_dataset(source_file, 1, 0)
+  dataset = model.examples_inputter.make_training_dataset(source_file, reference, 1, 0, batch_type="example", single_pass=True)
   iterator = iter(dataset)
   model.create_variables(optimizer=optimizer)
   EWC_weights = []
