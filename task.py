@@ -7797,7 +7797,7 @@ def EWC_stat(source_file,
     variables = model.trainable_variables
     gradients = optimizer.get_gradients(training_loss, variables)
     for EWC_w, gradient in zip(EWC_weights, gradients):
-      tf.compat.v1.assign(EWC_w, EWC_accum(EWC_w, gradient))
+      EWC_w = EWC_accum(EWC_w, gradient)
 
   star_vars_init()
 
