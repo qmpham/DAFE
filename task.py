@@ -7797,21 +7797,22 @@ def EWC_stat(source_file,
     variables = model.trainable_variables
     gradients = optimizer.get_gradients(training_loss, variables)
     for EWC_w, gradient in zip(EWC_weights, gradients):
-      tf.compat.v1.assign(EWC_w, EWC_accum(EWC_w, gradient))
+      EWC_w = EWC_accum(EWC_w, gradient)
 
   star_vars_init()
-
+  count = 0
   while True:    
     try:
       src, tgt = next(iterator)
       EWC_accumulate(src,tgt)
+      count +=1
     except tf.errors.OutOfRangeError:
       break
     except StopIteration:
       break
   
   for w in EWC_weights:
-    print(w)
+    print(w/count)
   
   
   return 0
