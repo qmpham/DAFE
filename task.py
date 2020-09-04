@@ -7777,12 +7777,12 @@ def EWC_stat(source_file,
     variables = model.trainable_variables
     with tf.init_scope():
       for var in variables:
-        value=var.numpy()
-        EWC_weights.append(tf.constant(value))
+        value=tf.zeros_like(var)
+        EWC_weights.append(value)
         
   @tf.function(experimental_relax_shapes=True)
   def EWC_accumulate(source, target):
-    tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
+    #tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
     outputs, _ = model(
         source,
         labels=target,
