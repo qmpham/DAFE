@@ -625,6 +625,7 @@ def elastic_finetuning(config,
           batch_type = "tokens",
           experiment="residual",
           elastic_type="Uniform", # "Uniform", "EWC"
+          EWC_path=None,
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=200000,
           save_every=5000,
@@ -704,9 +705,9 @@ def elastic_finetuning(config,
         training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i])) * lambda_
     elif elastic_type=="EWC":
       assert EWC_path !=None
-      data = np.load(EWC_path)
+      EWC_weights = np.load(EWC_path)
       for i in range(len(variables)):
-        training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i]) * lambda_) 
+        training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i]) * EWC_weights[variables[i].name]) 
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
