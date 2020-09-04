@@ -1404,5 +1404,8 @@ def main():
     checkpoint_path = args.ckpt
     task.score(source_file, translation_file, model, config, strategy, meta_test_optimizer, checkpoint_manager, checkpoint, int(domain), output_file, length_penalty=0.6, 
                   checkpoint_path=checkpoint_path, experiment=experiment)
+  elif args.run == "EWC_stat":
+    task.EWC_stat(source_file, reference, model, config, strategy, optimizer, checkpoint_manager, checkpoint)
+
 if __name__ == "__main__":
   main()

@@ -54,6 +54,12 @@ def update(v,g,lr=1.0):
   else:
     return v-lr*g
 
+def EWC_accum(v,g):
+  if isinstance(g, tf.IndexedSlices):
+    return tf.tensor_scatter_nd_add(v,tf.expand_dims(g.indices,1),tf.math.square(g.values))
+  else:
+    return v+tf.math.square(g)
+
 def translate(source_file,
               reference,
               model,
@@ -7754,17 +7760,7 @@ def EWC_stat(source_file,
               strategy,
               optimizer,
               checkpoint_manager,
-              checkpoint,              
-              domain,
-              output_file,
-              length_penalty,
-              is_noisy=1,
-              checkpoint_path=None,
-              probs_file=None,
-              experiment="ldr",
-              score_type="MultiBLEU",
-              batch_size=5,
-              beam_size=5):
+              checkpoint):
   
   # Create the inference dataset.
   if checkpoint_path == None:
@@ -7775,17 +7771,17 @@ def EWC_stat(source_file,
   dataset = model.examples_inputter.make_inference_dataset(source_file, 1, domain)
   iterator = iter(dataset)
   model.create_variables(optimizer=optimizer)
-
+  EWC_weights = []
   @tf.function
   def star_vars_init():
     variables = model.trainable_variables
     with tf.init_scope():
       for var in variables:
         value=var.numpy()
-        star_vars.append(tf.constant(value))
+        EWC_weights.append(tf.constant(value))
         
   @tf.function(experimental_relax_shapes=True)
-  def minifinetune(source, target):
+  def EWC_accumulate(source, target):
     tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
     outputs, _ = model(
         source,
@@ -7800,16 +7796,23 @@ def EWC_stat(source_file,
       training_loss, _ = loss, loss        
     variables = model.trainable_variables
     gradients = optimizer.get_gradients(training_loss, variables)
-    grads_and_vars = []
-    for gradient, variable in zip(gradients, variables):
-      continue
+    for EWC_w, gradient in zip(EWC_weights, gradients):
+      tf.compat.v1.assign(EWC_w, EWC_accum(EWC_w, gradient))
 
-  """ with open(output_file, "w") as output_:
-    while True:    
-      try:
-        
-      except tf.errors.OutOfRangeError:
-        break """
+  star_vars_init()
+
+  while True:    
+    try:
+      src, tgt = next(iterator)
+      EWC_accumulate(src,tgt)
+    except tf.errors.OutOfRangeError:
+      break
+    except StopIteration:
+      break
+  
+  for w in EWC_weights:
+    print(w)
+  
   
   return 0
 
