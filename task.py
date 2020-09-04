@@ -7760,15 +7760,15 @@ def EWC_stat(source_file,
               strategy,
               optimizer,
               checkpoint_manager,
-              checkpoint):
+              checkpoint,
+              checkpoint_path=None):
   
   # Create the inference dataset.
   if checkpoint_path == None:
     checkpoint_path = checkpoint_manager.latest_checkpoint
   tf.get_logger().info("Evaluating model %s", checkpoint_path)
-  print("In domain %d"%domain)
   checkpoint.restore(checkpoint_path)
-  dataset = model.examples_inputter.make_inference_dataset(source_file, 1, domain)
+  dataset = model.examples_inputter.make_inference_dataset(source_file, 1, 0)
   iterator = iter(dataset)
   model.create_variables(optimizer=optimizer)
   EWC_weights = []
