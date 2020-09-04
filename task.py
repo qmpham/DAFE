@@ -7800,18 +7800,19 @@ def EWC_stat(source_file,
       EWC_w = EWC_accum(EWC_w, gradient)
 
   star_vars_init()
-
+  count = 0
   while True:    
     try:
       src, tgt = next(iterator)
       EWC_accumulate(src,tgt)
+      count +=1
     except tf.errors.OutOfRangeError:
       break
     except StopIteration:
       break
   
   for w in EWC_weights:
-    print(w)
+    print(w/count)
   
   
   return 0
