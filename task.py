@@ -7777,8 +7777,7 @@ def EWC_stat(source_file,
     variables = model.trainable_variables
     with tf.init_scope():
       for var in variables:
-        value=tf.zeros_like(var)
-        EWC_weights.append(value)
+        EWC_weights.append(tf.Variable(tf.zeros_like(var), trainable=False))
         
   @tf.function(experimental_relax_shapes=True)
   def EWC_accumulate(source, target):
@@ -7797,7 +7796,7 @@ def EWC_stat(source_file,
     variables = model.trainable_variables
     gradients = optimizer.get_gradients(training_loss, variables)
     for EWC_w, gradient in zip(EWC_weights, gradients):
-      EWC_w = EWC_accum(EWC_w, gradient)
+      tf.compat.v1.assign(EWC,EWC_accum(EWC_w, gradient))
 
   star_vars_init()
   count = 0
