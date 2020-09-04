@@ -7816,7 +7816,9 @@ def EWC_stat(source_file,
   EWC_dict = dict()
   for v, EWC_weight in zip(model.trainable_variables, EWC_weights):
     EWC_dict[v.name] = EWC_weight
-  np.savez("EWC_model_%s"%checkpoint_path,**EWC_dict)
+  
+  dir_name = os.path.dirname(checkpoint_path)
+  np.savez(os.path.join(dir_name,"EWC_%s"%checkpoint_path.split("/")[-1]),**EWC_dict)
   
   return 0
 
