@@ -624,6 +624,7 @@ def elastic_finetuning(config,
           batch_size = 2048,
           batch_type = "tokens",
           experiment="residual",
+          elastic_type="Uniform", # "Uniform", "EWC"
           shuffle_buffer_size=-1,  # Uniform shuffle.
           train_steps=200000,
           save_every=5000,
@@ -698,8 +699,14 @@ def elastic_finetuning(config,
     variables = model.trainable_variables
     lambda_ = config.get("lambda", 0.001)
     print("elastic weights: ", lambda_)
-    for i in range(len(variables)):
-      training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i])) * lambda_
+    if elastic_type =="Uniform":
+      for i in range(len(variables)):
+        training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i])) * lambda_
+    elif elastic_type=="EWC":
+      assert EWC_path !=None
+       = np.load(EWC_path)
+      for i in range(len(variables)):
+        training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i]) * ) 
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
@@ -7815,10 +7822,10 @@ def EWC_stat(source_file,
   
   EWC_dict = dict()
   for v, EWC_weight in zip(model.trainable_variables, EWC_weights):
-    EWC_dict[v.name] = EWC_weight
-  
+    EWC_dict[v.name] = EWC_weight/count
+  print(EWC_dict)
   dir_name = os.path.dirname(checkpoint_path)
-  np.savez(os.path.join(dir_name,"EWC_%s"%checkpoint_path.split("/")[-1]),EWC_dict)
+  np.savez(os.path.join(dir_name,"EWC_%s"%checkpoint_path.split("/")[-1]),**EWC_dict)
   
   return 0
 
