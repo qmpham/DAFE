@@ -7818,7 +7818,7 @@ def EWC_stat(source_file,
     EWC_dict[v.name] = EWC_weight
   
   dir_name = os.path.dirname(checkpoint_path)
-  np.savez(os.path.join(dir_name,"EWC_%s"%checkpoint_path.split("/")[-1]),**EWC_dict)
+  np.savez(os.path.join(dir_name,"EWC_%s"%checkpoint_path.split("/")[-1]),EWC_dict)
   
   return 0
 
