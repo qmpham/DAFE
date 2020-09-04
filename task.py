@@ -704,7 +704,7 @@ def elastic_finetuning(config,
         training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i])) * lambda_
     elif elastic_type=="EWC":
       assert EWC_path !=None
-       = np.load(EWC_path)
+      data = np.load(EWC_path)
       for i in range(len(variables)):
         training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i]) * ) 
     print("var numb: ", len(variables))
