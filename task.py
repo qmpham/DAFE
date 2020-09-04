@@ -7772,7 +7772,7 @@ def EWC_stat(source_file,
   iterator = iter(dataset)
   model.create_variables(optimizer=optimizer)
   EWC_weights = []
-  @tf.function
+
   def star_vars_init():
     variables = model.trainable_variables
     with tf.init_scope():
