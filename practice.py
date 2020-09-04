@@ -1379,7 +1379,7 @@ def main():
   elif args.run == "finetune":
     task.finetuning(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "elastic_finetune":
-    task.elastic_finetuning(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+    task.elastic_finetuning(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, elastic_type=config.get("elastic_type","Uniform"), EWC_path=config.get("EWC_path",None), checkpoint_path=config.get("checkpoint_path",None), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "debug":
     task.debug(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, picking_prob=config.get("picking_prob",None))
   elif args.run == "train_wdc":
