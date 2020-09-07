@@ -7808,11 +7808,17 @@ def EWC_stat(source_file,
 
   star_vars_init()
   count = 0
+  import time
+  begin = time.time()
   while True:    
     try:
       src, tgt = next(iterator)
       EWC_accumulate(src,tgt)
       count +=1
+      if count%1000000==0:
+        end = time.time()
+        print(end-begin)
+        begin = end
     except tf.errors.OutOfRangeError:
       break
     except StopIteration:
