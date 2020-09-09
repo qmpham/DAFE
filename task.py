@@ -7830,11 +7830,11 @@ def EWC_stat(source_file,
     except StopIteration:
       break
   
-  for w in EWC_numpy:
+  for w in EWC_weights:
     print(w/count)
   
   EWC_dict = dict()
-  for v, EWC_weight in zip(model.trainable_variables, EWC_numpy):
+  for v, EWC_weight in zip(model.trainable_variables, EWC_weights):
     EWC_dict[v.name] = EWC_weight/count
   print(EWC_dict)
   dir_name = os.path.dirname(checkpoint_path)
