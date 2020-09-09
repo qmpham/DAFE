@@ -1909,6 +1909,12 @@ def train(config,
         if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
           training_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)
         
+    if config.get("ADAP_weight_decay",False):
+      lambda_ = config.get("lambda",0.00001)
+      print("ADAP_weight_decay: ", lambda_)
+      for v in model.trainable_variables:
+        if "ADAP_" in v.name and "layer_norm" in v.name:
+          training_loss += tf.reduce_sum(tf.square(v)) * lambda_
 
     variables = model.trainable_variables
     print("var numb: ", len(variables))
