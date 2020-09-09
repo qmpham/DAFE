@@ -7828,7 +7828,7 @@ def EWC_stat(source_file,
     try:
       EWC_weights_ = next(train_data_flow)
       for ewc_tf, ewc_np in zip(EWC_weights_, EWC_numpy):
-        ewc_np += ewc_tf.numpy()
+        ewc_np += ewc_tf
       count +=1
       if count%1000000==0:
         end = time.time()
