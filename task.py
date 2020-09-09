@@ -7794,20 +7794,19 @@ def EWC_stat(source_file,
         EWC_weights.append(tf.Variable(tf.zeros_like(var), trainable=False))
         
   def EWC_accumulate(source, target):
-    with tf.GradientTape(persistent=True) as g:
-      variables = model.trainable_variables
-      g.watch(variables)
+    @tf.function
+    def get_grads(source, target):
       outputs, _ = model(
         source,
         labels=target,
         training=True,
         step=optimizer.iterations)
       loss = model.compute_loss(outputs, target, training=True)
-
       if isinstance(loss, tuple):
         training_loss = loss[0] / loss[1]
       else:
-        training_loss, _ = loss, loss        
+        training_loss, _ = loss, loss 
+      variables = model.trainable_variables       
       gradients = optimizer.get_gradients(training_loss, variables)
       
     for EWC_w, gradient in zip(EWC_weights, gradients):
