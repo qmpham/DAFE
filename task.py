@@ -56,9 +56,9 @@ def update(v,g,lr=1.0):
 
 def EWC_accum(v,g):
   if isinstance(g, tf.IndexedSlices):
-    return tf.tensor_scatter_nd_add(v,tf.expand_dims(g.indices,1),tf.math.square(g.values))
+    v.scatter_nd_add(tf.expand_dims(g.indices,1),tf.math.square(g.values)) #tf.tensor_scatter_nd_add(v,tf.expand_dims(g.indices,1),tf.math.square(g.values))
   else:
-    return v.assign_add(tf.math.square(g))
+    v.assign_add(tf.math.square(g))
 
 def translate(source_file,
               reference,
@@ -7789,9 +7789,8 @@ def EWC_stat(source_file,
   tf.executing_eagerly()
   def star_vars_init():
     variables = model.trainable_variables
-    with tf.init_scope():
-      for var in variables:
-        EWC_weights.append(tf.Variable(tf.zeros_like(var), trainable=False))
+    for var in variables:
+      EWC_weights.append(tf.Variable(tf.zeros_like(var), trainable=False))
         
   def EWC_accumulate(source, target):
     outputs, _ = model(
@@ -7816,9 +7815,7 @@ def EWC_stat(source_file,
 
   def _apply_gradients():
     for gradient, EWC_weight in zip(gradient_accumulator.gradients, EWC_weights):
-      #tf.compat.v1.assign(EWC_weight,EWC_accum(EWC_weight,gradient))
-      #tf.print("gradient: ", gradient.numpy())
-      EWC_weight = EWC_accum(EWC_weight, gradient)
+      EWC_accum(EWC_weight, gradient) #EWC_weight.assign(EWC_accum(EWC_weight, gradient))
     gradient_accumulator.reset()
 
   star_vars_init()
