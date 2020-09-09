@@ -7786,7 +7786,7 @@ def EWC_stat(source_file,
   model.create_variables(optimizer=optimizer)
   gradient_accumulator = optimizer_util.GradientAccumulator()  
   EWC_weights = []
-
+  tf.executing_eagerly()
   def star_vars_init():
     variables = model.trainable_variables
     with tf.init_scope():
