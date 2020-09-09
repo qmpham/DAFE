@@ -58,7 +58,7 @@ def EWC_accum(v,g):
   if isinstance(g, tf.IndexedSlices):
     return tf.tensor_scatter_nd_add(v,tf.expand_dims(g.indices,1),tf.math.square(g.values))
   else:
-    return v+tf.math.square(g)
+    return v.assign_add(tf.math.square(g))
 
 def translate(source_file,
               reference,
@@ -7818,6 +7818,7 @@ def EWC_stat(source_file,
     for gradient, EWC_weight in zip(gradient_accumulator.gradients, EWC_weights):
       #tf.compat.v1.assign(EWC_weight,EWC_accum(EWC_weight,gradient))
       EWC_weight = EWC_accum(EWC_weight, gradient)
+    gradient_accumulator.reset()
 
   star_vars_init()
   count = 0
