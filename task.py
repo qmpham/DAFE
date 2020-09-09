@@ -56,9 +56,9 @@ def update(v,g,lr=1.0):
 
 def EWC_accum(v,g):
   if isinstance(g, tf.IndexedSlices):
-    tf.tensor_scatter_nd_add(v,tf.expand_dims(g.indices,1),tf.math.square(g.values)) #v.scatter_nd_add(tf.expand_dims(g.indices,1),tf.math.square(g.values)) 
+    return tf.tensor_scatter_nd_add(v,tf.expand_dims(g.indices,1),tf.math.square(g.values)) #v.scatter_nd_add(tf.expand_dims(g.indices,1),tf.math.square(g.values)) 
   else:
-    v + tf.math.square(g)
+    return v + tf.math.square(g)
 
 def translate(source_file,
               reference,
