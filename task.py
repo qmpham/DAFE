@@ -7816,7 +7816,8 @@ def EWC_stat(source_file,
 
   def _apply_gradients():
     for gradient, EWC_weight in zip(gradient_accumulator.gradients, EWC_weights):
-      tf.compat.v1.assign(EWC_weight,EWC_accum(EWC_weight,gradient))
+      #tf.compat.v1.assign(EWC_weight,EWC_accum(EWC_weight,gradient))
+      EWC_weight = EWC_accum(EWC_weight, gradient)
 
   star_vars_init()
   count = 0
