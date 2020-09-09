@@ -7825,7 +7825,7 @@ def EWC_stat(source_file,
       source, target = next(iterator)
       EWC_weights_ = EWC_accumulate(source, target)
       for ewc_tf, ewc_np in zip(EWC_weights_, EWC_numpy):
-        ewc_np += ewc_tf.numpy
+        ewc_np += ewc_tf.numpy()
       count +=1
       if count%1000000==0:
         end = time.time()
