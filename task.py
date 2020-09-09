@@ -7824,11 +7824,10 @@ def EWC_stat(source_file,
     try:
       source, target = next(iterator)
       EWC_weights_ = EWC_accumulate(source, target)
-      #print(EWC_weights_)
       for ewc_tf, ewc_np in zip(EWC_weights_, EWC_numpy):
-        #print(ewc_tf)
         ewc_np += ewc_tf.numpy()
       count +=1
+      print(count)
       if count%1000000==0:
         end = time.time()
         print(end-begin)
