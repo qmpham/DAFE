@@ -7812,7 +7812,7 @@ def EWC_stat(source_file,
         training_loss = loss[0] / loss[1]
       else:
         training_loss, _ = loss, loss   
-      gradients = tape.get_gradients(training_loss, variables)
+      gradients = tape.gradient(training_loss, variables)
     for gradient, EWC_weight in zip(gradients, EWC_weights):
       EWC_accum(EWC_weight, gradient)
 
