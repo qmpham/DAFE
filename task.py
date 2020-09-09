@@ -7825,7 +7825,7 @@ def EWC_stat(source_file,
       source, target = next(iterator)
       EWC_accumulate(source, target)
       count +=1
-      if count%1000:
+      if count%1000==0:
         print(count)
       if count%1000000==0:
         end = time.time()
