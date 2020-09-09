@@ -7829,6 +7829,7 @@ def EWC_stat(source_file,
   while True:    
     try:
       next(train_data_flow)
+      _apply_gradients()
       count +=1
       if count%1000000==0:
         end = time.time()
