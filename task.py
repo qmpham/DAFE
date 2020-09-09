@@ -7783,8 +7783,8 @@ def EWC_stat(source_file,
   tf.get_logger().info("Evaluating model %s", checkpoint_path)
   checkpoint.restore(checkpoint_path)
   dataset = model.examples_inputter.make_training_dataset(source_file, reference, 1, 0, batch_type="example", single_pass=True)
-  iterator = iter(dataset)
   model.create_variables(optimizer=optimizer)
+  gradient_accumulator = optimizer_util.GradientAccumulator()  
   EWC_weights = []
 
   def star_vars_init():
@@ -7794,34 +7794,38 @@ def EWC_stat(source_file,
         EWC_weights.append(tf.Variable(tf.zeros_like(var), trainable=False))
         
   def EWC_accumulate(source, target):
-    @tf.function
-    def get_grads(src, tgt):
-      outputs, _ = model(
-        src,
-        labels=tgt,
-        training=True,
-        step=optimizer.iterations)
-      loss = model.compute_loss(outputs, tgt, training=True)
-      if isinstance(loss, tuple):
-        training_loss = loss[0] / loss[1]
-      else:
-        training_loss, _ = loss, loss 
-      variables = model.trainable_variables       
-      gradients = optimizer.get_gradients(training_loss, variables)
-      return gradients
+    outputs, _ = model(
+      source,
+      labels=target,
+      training=True,
+      step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
 
-    gradients = get_grads(source, target)
-    for EWC_w, gradient in zip(EWC_weights, gradients):
-      tf.compat.v1.assign(EWC_w,EWC_accum(EWC_w, gradient))
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+    else:
+      training_loss, _ = loss, loss        
+    variables = model.trainable_variables
+    gradients = optimizer.get_gradients(training_loss, variables)
+    gradient_accumulator(gradients)  
+
+  @dataset_util.function_on_next(dataset)
+  def _train_forward(next_fn):    
+      per_replica_source, per_replica_target = next_fn()
+      _, _ = EWC_accumulate(per_replica_source, per_replica_target)
+
+  def _apply_gradients():
+    for gradient, EWC_weight in zip(gradient_accumulator.gradients, EWC_weights):
+      tf.compat.v1.assign(EWC_weight,EWC_accum(EWC_weight,gradient))
 
   star_vars_init()
   count = 0
   import time
+  train_data_flow = iter(_train_forward())
   begin = time.time()
   while True:    
     try:
-      src, tgt = next(iterator)
-      EWC_accumulate(src,tgt)
+      next(train_data_flow)
       count +=1
       if count%1000000==0:
         end = time.time()
