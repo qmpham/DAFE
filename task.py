@@ -7783,6 +7783,7 @@ def EWC_stat(source_file,
   tf.get_logger().info("Evaluating model %s", checkpoint_path)
   checkpoint.restore(checkpoint_path)
   dataset = model.examples_inputter.make_training_dataset(source_file, reference, 1, 0, batch_type="example", single_pass=True)
+  iterator = iter(dataset)
   model.create_variables(optimizer=optimizer)
   gradient_accumulator = optimizer_util.GradientAccumulator()  
   EWC_weights = []
@@ -7814,21 +7815,16 @@ def EWC_stat(source_file,
       EWC_weights_p.append(EWC_accum(EWC_weight, gradient))
     return EWC_weights_p
 
-  @dataset_util.function_on_next(dataset)
-  def _train_forward(next_fn):    
-      per_replica_source, per_replica_target = next_fn()
-      return EWC_accumulate(per_replica_source, per_replica_target)
-
   star_vars_init()
   count = 0
   import time
-  train_data_flow = iter(_train_forward())
   begin = time.time()
   while True:    
     try:
-      EWC_weights_ = next(train_data_flow)
+      source, target = next(iterator)
+      EWC_weights_ = EWC_accumulate(source, target)
       for ewc_tf, ewc_np in zip(EWC_weights_, EWC_numpy):
-        ewc_np += ewc_tf
+        ewc_np += ewc_tf.numpy
       count +=1
       if count%1000000==0:
         end = time.time()
