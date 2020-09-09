@@ -7787,15 +7787,11 @@ def EWC_stat(source_file,
   dataset = model.examples_inputter.make_training_dataset(source_file, reference, 1, 0, batch_type="example", single_pass=True)
   iterator = iter(dataset)
   model.create_variables(optimizer=optimizer)
-  gradient_accumulator = optimizer_util.GradientAccumulator()  
   EWC_weights = []
-  EWC_numpy = []
-  tf.executing_eagerly()
   def star_vars_init():
     variables = model.trainable_variables
     for var in variables:
       EWC_weights.append(tf.Variable(tf.zeros_like(var), trainable=False))
-      EWC_numpy.append(tf.zeros_like(var).numpy())
 
   def EWC_accumulate(source, target):
     with tf.GradientTape() as tape:
@@ -7826,8 +7822,6 @@ def EWC_stat(source_file,
       EWC_accumulate(source, target)
       count +=1
       if count%1000==0:
-        print(count)
-      if count%1000000==0:
         end = time.time()
         print(end-begin)
         begin = end
