@@ -56,9 +56,9 @@ def update(v,g,lr=1.0):
 
 def EWC_accum(v,g):
   if isinstance(g, tf.IndexedSlices):
-    v.scatter_nd_add(tf.expand_dims(g.indices,1),tf.math.square(g.values)) #tf.tensor_scatter_nd_add(v,tf.expand_dims(g.indices,1),tf.math.square(g.values))
+    tf.tensor_scatter_nd_add(v,tf.expand_dims(g.indices,1),tf.math.square(g.values)) #v.scatter_nd_add(tf.expand_dims(g.indices,1),tf.math.square(g.values)) 
   else:
-    v.assign_add(tf.math.square(g))
+    v + tf.math.square(g)
 
 def translate(source_file,
               reference,
@@ -7786,12 +7786,14 @@ def EWC_stat(source_file,
   model.create_variables(optimizer=optimizer)
   gradient_accumulator = optimizer_util.GradientAccumulator()  
   EWC_weights = []
+  EWC_numpy = []
   tf.executing_eagerly()
   def star_vars_init():
     variables = model.trainable_variables
     for var in variables:
       EWC_weights.append(tf.Variable(tf.zeros_like(var), trainable=False))
-        
+      EWC_numpy.append(tf.zeros_like(var).numpy())
+
   def EWC_accumulate(source, target):
     outputs, _ = model(
       source,
@@ -7807,16 +7809,15 @@ def EWC_stat(source_file,
     variables = model.trainable_variables
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)  
+    EWC_weights_p = []
+    for gradient, EWC_weight in zip(gradient_accumulator.gradients, EWC_weights):
+      EWC_weights_p.append(EWC_accum(EWC_weight, gradient))
+    return EWC_weights_p
 
   @dataset_util.function_on_next(dataset)
   def _train_forward(next_fn):    
       per_replica_source, per_replica_target = next_fn()
-      EWC_accumulate(per_replica_source, per_replica_target)
-
-  def _apply_gradients():
-    for gradient, EWC_weight in zip(gradient_accumulator.gradients, EWC_weights):
-      EWC_accum(EWC_weight, gradient) #EWC_weight.assign(EWC_accum(EWC_weight, gradient))
-    gradient_accumulator.reset()
+      return EWC_accumulate(per_replica_source, per_replica_target)
 
   star_vars_init()
   count = 0
@@ -7825,8 +7826,9 @@ def EWC_stat(source_file,
   begin = time.time()
   while True:    
     try:
-      next(train_data_flow)
-      _apply_gradients()
+      EWC_weights_ = next(train_data_flow)
+      for ewc_tf, ewc_np in zip(EWC_weights_, EWC_numpy):
+        ewc_np += ewc_tf.numpy()
       count +=1
       if count%1000000==0:
         end = time.time()
@@ -7837,11 +7839,11 @@ def EWC_stat(source_file,
     except StopIteration:
       break
   
-  for w in EWC_weights:
+  for w in EWC_numpy:
     print(w/count)
   
   EWC_dict = dict()
-  for v, EWC_weight in zip(model.trainable_variables, EWC_weights):
+  for v, EWC_weight in zip(model.trainable_variables, EWC_numpy):
     EWC_dict[v.name] = EWC_weight/count
   print(EWC_dict)
   dir_name = os.path.dirname(checkpoint_path)
