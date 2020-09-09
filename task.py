@@ -7795,20 +7795,22 @@ def EWC_stat(source_file,
         
   def EWC_accumulate(source, target):
     @tf.function
-    def get_grads(source, target):
+    def get_grads(src, tgt):
       outputs, _ = model(
-        source,
-        labels=target,
+        src,
+        labels=tgt,
         training=True,
         step=optimizer.iterations)
-      loss = model.compute_loss(outputs, target, training=True)
+      loss = model.compute_loss(outputs, tgt, training=True)
       if isinstance(loss, tuple):
         training_loss = loss[0] / loss[1]
       else:
         training_loss, _ = loss, loss 
       variables = model.trainable_variables       
       gradients = optimizer.get_gradients(training_loss, variables)
-      
+      return gradients
+
+    gradients = get_grads(source, target)
     for EWC_w, gradient in zip(EWC_weights, gradients):
       tf.compat.v1.assign(EWC_w,EWC_accum(EWC_w, gradient))
 
