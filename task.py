@@ -56,9 +56,11 @@ def update(v,g,lr=1.0):
 
 def EWC_accum(v,g):
   if isinstance(g, tf.IndexedSlices):
-    return tf.tensor_scatter_nd_add(v,tf.expand_dims(g.indices,1),tf.math.square(g.values)) #v.scatter_nd_add(tf.expand_dims(g.indices,1),tf.math.square(g.values)) 
+    v.scatter_nd_add(tf.expand_dims(g.indices,1),tf.math.square(g.values))
+    #return tf.tensor_scatter_nd_add(v,tf.expand_dims(g.indices,1),tf.math.square(g.values))  
   else:
-    return v + tf.math.square(g)
+    v.assign_add(tf.math.square(g))
+    #return v + tf.math.square(g)
 
 def translate(source_file,
               reference,
@@ -7795,26 +7797,24 @@ def EWC_stat(source_file,
       EWC_weights.append(tf.Variable(tf.zeros_like(var), trainable=False))
       EWC_numpy.append(tf.zeros_like(var).numpy())
 
-  @tf.function
   def EWC_accumulate(source, target):
-    outputs, _ = model(
-      source,
-      labels=target,
-      training=True,
-      step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
+    with tf.GradientTape() as tape:
+      variables = model.trainable_variables
+      tape.watch(variables)
+      outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+      loss = model.compute_loss(outputs, target, training=True)
 
-    if isinstance(loss, tuple):
-      training_loss = loss[0] / loss[1]
-    else:
-      training_loss, _ = loss, loss        
-    variables = model.trainable_variables
-    gradients = optimizer.get_gradients(training_loss, variables)
-    gradient_accumulator(gradients)  
-    EWC_weights_p = []
-    for gradient, EWC_weight in zip(gradient_accumulator.gradients, EWC_weights):
-      EWC_weights_p.append(EWC_accum(EWC_weight, gradient))
-    return EWC_weights_p
+      if isinstance(loss, tuple):
+        training_loss = loss[0] / loss[1]
+      else:
+        training_loss, _ = loss, loss   
+      gradients = tape.get_gradients(training_loss, variables)
+    for gradient, EWC_weight in zip(gradients, EWC_weights):
+      EWC_accum(EWC_weight, gradient)
 
   star_vars_init()
   count = 0
@@ -7823,9 +7823,7 @@ def EWC_stat(source_file,
   while True:    
     try:
       source, target = next(iterator)
-      EWC_weights_ = EWC_accumulate(source, target)
-      for ewc_tf, ewc_np in zip(EWC_weights_, EWC_numpy):
-        ewc_np += ewc_tf.numpy()
+      EWC_accumulate(source, target)
       count +=1
       if count%1000:
         print(count)
