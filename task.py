@@ -7795,6 +7795,7 @@ def EWC_stat(source_file,
       EWC_weights.append(tf.Variable(tf.zeros_like(var), trainable=False))
       EWC_numpy.append(tf.zeros_like(var).numpy())
 
+  @tf.function
   def EWC_accumulate(source, target):
     outputs, _ = model(
       source,
