@@ -7812,7 +7812,7 @@ def EWC_stat(source_file,
   @dataset_util.function_on_next(dataset)
   def _train_forward(next_fn):    
       per_replica_source, per_replica_target = next_fn()
-      _, _ = EWC_accumulate(per_replica_source, per_replica_target)
+      EWC_accumulate(per_replica_source, per_replica_target)
 
   def _apply_gradients():
     for gradient, EWC_weight in zip(gradient_accumulator.gradients, EWC_weights):
