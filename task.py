@@ -709,6 +709,7 @@ def elastic_finetuning(config,
       assert EWC_path !=None
       EWC_weights = np.load(EWC_path)
       EWC_scale = config.get("EWC_scale",None)
+      print("EWC_scale: ", EWC_scale)
       if not EWC_scale:
         EWC_scale = 0.0
         for i in range(len(variables)):
