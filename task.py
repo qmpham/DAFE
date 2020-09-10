@@ -764,7 +764,11 @@ def elastic_finetuning(config,
 
   ### assign value to star_vars
   star_vars_init()
-
+  step = optimizer.iterations.numpy()
+  if config.get("reset_step",None):
+    print("start from %d-th step"%config.get("reset_step",150000))
+    optimizer.iterations.assign(config.get("reset_step",150000))
+    step = optimizer.iterations.numpy()
   ###
   train_data_flow = iter(_train_forward())
   with _summary_writer.as_default():
