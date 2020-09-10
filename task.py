@@ -709,7 +709,7 @@ def elastic_finetuning(config,
       assert EWC_path !=None
       EWC_weights = np.load(EWC_path)
       for i in range(len(variables)):
-        training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i]) * EWC_weights[variables[i].name]) / np.sum(EWC_weights[variables[i].name])) * lambda_
+        training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i]) * EWC_weights[variables[i].name]) / np.sum(EWC_weights[variables[i].name]) * lambda_
     print("var numb: ", len(variables))
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
