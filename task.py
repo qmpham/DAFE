@@ -702,6 +702,7 @@ def elastic_finetuning(config,
     variables = model.trainable_variables
     lambda_ = config.get("lambda", 0.001)
     print("elastic weights: ", lambda_)
+    print("elastic_type: ", elastic_type)
     if elastic_type =="Uniform":
       for i in range(len(variables)):
         training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i])) * lambda_
