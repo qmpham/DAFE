@@ -1540,11 +1540,14 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         if i==1:
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
           inputs = inputs + adapt
-    if self.version not in [3,8,9,10,11,12]:
+      if self.version == 15:
+        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+        inputs = inputs + adapt
+    if self.version not in [3,8,9,10,11,12,15]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:
       total_adapt = self.multi_domain_layers[-1](inputs, domain, mask=mask, training=training)
-    if self.version not in [3,7,9,10,11,12]:
+    if self.version not in [3,7,9,10,11,12,15]:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       
       if internal_node_printing:
@@ -1568,6 +1571,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     elif self.version==8:
       outputs = self.layer_norm(inputs + tf.exp((g-1)*2/g) * total_adapt)
     elif self.version in [10,11,12]:
+      outputs = self.layer_norm(inputs)
+    elif self.version ==15:
       outputs = self.layer_norm(inputs)
 
     return outputs, None, sequence_length

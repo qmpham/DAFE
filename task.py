@@ -7849,6 +7849,89 @@ def EWC_stat(source_file,
   
   return 0
 
+
+def EWC_res_stat(source_file,
+              reference,
+              model,
+              config,
+              strategy,
+              optimizer,
+              checkpoint_manager,
+              checkpoint,
+              maximum_length=80,
+              checkpoint_path=None):
+  
+  # Create the inference dataset.
+  if checkpoint_path == None:
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
+  checkpoint.restore(checkpoint_path)
+  dataset = model.examples_inputter.make_training_dataset(source_file, reference, 1, 0, batch_type="example", single_pass=True, maximum_features_length=maximum_length,
+                                maximum_labels_length=maximum_length)
+  iterator = iter(dataset)
+  model.create_variables(optimizer=optimizer)
+  EWC_weights = []
+  def star_vars_init():
+    variables = []
+    for var in model.trainable_variables:
+      if "ADAP_" in var.name and "layer_norm" in var.name:
+        variables.append(var)
+    for var in variables:
+        EWC_weights.append(tf.Variable(tf.zeros_like(var), trainable=False))
+        var.assign(tf.zeros_like(var))
+
+  def EWC_accumulate(source, target):
+    with tf.GradientTape() as tape:
+      variables = []
+      for var in model.trainable_variables:
+        if "ADAP_" in var.name and "layer_norm" in var.name:
+          variables.append(var)
+      tape.watch(variables)
+      outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+      loss = model.compute_loss(outputs, target, training=True)
+
+      if isinstance(loss, tuple):
+        training_loss = loss[0] / loss[1]
+      else:
+        training_loss, _ = loss, loss   
+      gradients = tape.gradient(training_loss, variables)
+    for gradient, EWC_weight in zip(gradients, EWC_weights):
+      EWC_accum(EWC_weight, gradient)
+
+  star_vars_init()
+  count = 0
+  import time
+  begin = time.time()
+  while True:    
+    try:
+      source, target = next(iterator)
+      EWC_accumulate(source, target)
+      count +=1
+      if count%1000==0:
+        end = time.time()
+        print(end-begin)
+        begin = end
+    except tf.errors.OutOfRangeError:
+      break
+    except StopIteration:
+      break
+  
+  for w in EWC_weights:
+    print(w/count)
+  
+  EWC_dict = dict()
+  for v, EWC_weight in zip(model.trainable_variables, EWC_weights):
+    EWC_dict[v.name] = EWC_weight/count
+  print(EWC_dict)
+  dir_name = os.path.dirname(checkpoint_path)
+  np.savez(os.path.join(dir_name,"EWC_%s"%checkpoint_path.split("/")[-1]),**EWC_dict)
+  
+  return 0
+
 def translate_farajan_residual(source_file,
               context_src_file,
               context_tgt_file,
