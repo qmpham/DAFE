@@ -5191,6 +5191,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
                num_heads=8,
                ffn_inner_dim=2048,
                dropout=0.1,
+               res_using_rate=0.0,
                attention_dropout=0.1,
                ffn_dropout=0.1,
                ffn_activation=tf.nn.relu,
@@ -5266,6 +5267,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       print("version 15: h_{1..5} = h_{1..5} + adap(h_{1..5})")
       
     self.ADAP_contribution = ADAP_contribution
+    self.res_using_rate = res_using_rate
     print("ADAP contribution", self.ADAP_contribution)
   
   def initialize(self, vocab_size=None, output_layer=None):  
@@ -5383,6 +5385,10 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     # Run each layer.
     new_cache = []
     total_adapt = []
+    if training:
+      keeping = tf.keras.backend.random_binomial([1], self.res_using_rate)
+    else:
+      keeping = 1.0
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
 
       inputs, layer_cache, attention = layer(
@@ -5431,7 +5437,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       z = tf.exp((g-1)*2/g)
       outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
     elif self.version==7:
-      outputs = self.layer_norm(inputs + total_adapt)
+      outputs = self.layer_norm(inputs + total_adapt * keeping)
     elif self.version==9:
       outputs = self.layer_norm(inputs + total_adapt)
     elif self.version==8:
