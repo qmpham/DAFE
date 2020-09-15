@@ -718,6 +718,7 @@ def elastic_finetuning(config,
         for w in EWC_weights:
           sum += np.sum(EWC_weights[w])
           count += sum/np.average(EWC_weights[w])
+          print(count)
         
         EWC_global_avg = sum / count
         print("EWC_global_avg: ", EWC_global_avg)
