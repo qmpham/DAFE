@@ -7879,8 +7879,17 @@ def EWC_res_stat(source_file,
     checkpoint_path = checkpoint_manager.latest_checkpoint
   tf.get_logger().info("Evaluating model %s", checkpoint_path)
   checkpoint.restore(checkpoint_path)
-  dataset = model.examples_inputter.make_training_dataset(source_file, reference, 1, 0, batch_type="example", single_pass=True, maximum_features_length=maximum_length,
-                                maximum_labels_length=maximum_length)
+  """ dataset = model.examples_inputter.make_training_dataset(source_file, reference, 1, 0, batch_type="example", single_pass=True, maximum_features_length=maximum_length,
+                                maximum_labels_length=maximum_length) """
+  batch_train_size = 1  
+  batch_type = "example"
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config.get("domain",None)
+  shuffle_buffer_size = 5000000
+  dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
   iterator = iter(dataset)
   model.create_variables(optimizer=optimizer)
   EWC_weights = []
@@ -7928,6 +7937,8 @@ def EWC_res_stat(source_file,
         end = time.time()
         print(end-begin)
         begin = end
+      if count>6000:
+        break
     except tf.errors.OutOfRangeError:
       break
     except StopIteration:
