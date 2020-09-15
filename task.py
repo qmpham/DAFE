@@ -709,7 +709,7 @@ def elastic_finetuning(config,
     elif elastic_type=="EWC":
       assert EWC_path !=None
       EWC_weights = np.load(EWC_path)
-      if config.get("EWC_global"):
+      if not config.get("EWC_global"):
         for i in range(len(variables)):
           training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i]) * EWC_weights[variables[i].name]) / np.average(EWC_weights[variables[i].name]) * lambda_
       else:
@@ -7862,7 +7862,6 @@ def EWC_stat(source_file,
   np.savez(os.path.join(dir_name,"EWC_%s"%checkpoint_path.split("/")[-1]),**EWC_dict)
   
   return 0
-
 
 def EWC_res_stat(source_file,
               reference,
