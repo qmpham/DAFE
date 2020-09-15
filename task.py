@@ -716,8 +716,8 @@ def elastic_finetuning(config,
         sum = 0
         count = 0
         for w in EWC_weights:
-          sum += np.sum(w)
-          count += sum/np.average(w)
+          sum += np.sum(EWC_weights[w])
+          count += sum/np.average(EWC_weights[w])
         EWC_global_avg = sum / count
         for i in range(len(variables)):
           training_loss += tf.reduce_sum(tf.square(variables[i] - star_vars[i]) * EWC_weights[variables[i].name]) / EWC_global_avg * lambda_
