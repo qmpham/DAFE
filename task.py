@@ -7807,7 +7807,7 @@ def EWC_stat(source_file,
   """ dataset = model.examples_inputter.make_training_dataset(source_file, reference, 1, 0, batch_type="example", single_pass=True, maximum_features_length=maximum_length,
                                 maximum_labels_length=maximum_length) """
   batch_train_size = 1  
-  batch_type = "example"
+  batch_type = "examples"
   source_file = config["src"]
   target_file = config["tgt"]
   domain = config.get("domain",None)
@@ -7893,7 +7893,7 @@ def EWC_res_stat(source_file,
   """ dataset = model.examples_inputter.make_training_dataset(source_file, reference, 1, 0, batch_type="example", single_pass=True, maximum_features_length=maximum_length,
                                 maximum_labels_length=maximum_length) """
   batch_train_size = 1  
-  batch_type = "example"
+  batch_type = "examples"
   source_file = config["src"]
   target_file = config["tgt"]
   domain = config.get("domain",None)
