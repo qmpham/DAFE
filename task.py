@@ -7855,6 +7855,8 @@ def EWC_stat(source_file,
         end = time.time()
         print(end-begin)
         begin = end
+      if count>12000:
+        break
     except tf.errors.OutOfRangeError:
       break
     except StopIteration:
