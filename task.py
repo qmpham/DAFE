@@ -31,7 +31,7 @@ from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckp
 from utils.dataprocess import count_lines
 from opennmt.utils import misc
 
-def file_concatenate(files,name):
+def file_concatenate(files,name,dir_name=None):
   lines = []
   for f in files:
     with open(f,"r") as f_:
@@ -39,10 +39,12 @@ def file_concatenate(files,name):
         lines.append(l.strip())
   
   parent_dir = os.path.dirname(files[0])
-  with open(os.path.join(parent_dir,name),"w") as f_w:
+  if not dir:
+    dir_name = parent_dir
+  with open(os.path.join(dir_name,name),"w") as f_w:
     for l in lines:
       print(l,file=f_w)
-  return os.path.join(parent_dir,name)
+  return os.path.join(dir_name,name)
 
 def _assert_loss_is_finite(loss):
   if tf.math.is_nan(loss):
@@ -2248,7 +2250,7 @@ def train(config,
   elif score_type == "MultiBLEU":
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
-  ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat")
+  ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
 
   with _summary_writer.as_default():
     while True:
@@ -7808,8 +7810,8 @@ def EWC_stat(source_file,
                                 maximum_labels_length=maximum_length) """
   batch_train_size = 1  
   batch_type = "examples"
-  source_file = config["src"]
-  target_file = config["tgt"]
+  source_file = config["eval_src"]
+  target_file = config["eval_tgt"]
   domain = config.get("domain",None)
   shuffle_buffer_size = 5000000
   dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
