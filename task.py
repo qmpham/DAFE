@@ -39,7 +39,7 @@ def file_concatenate(files,name,dir_name=None):
         lines.append(l.strip())
   
   parent_dir = os.path.dirname(files[0])
-  if not dir:
+  if not dir_name:
     dir_name = parent_dir
   with open(os.path.join(dir_name,name),"w") as f_w:
     for l in lines:
