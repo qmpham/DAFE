@@ -7815,7 +7815,7 @@ def EWC_stat(source_file,
   domain = config.get("domain",None)
   shuffle_buffer_size = 5000000
   dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
-                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), single_pass=True,
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
   iterator = iter(dataset)
   model.create_variables(optimizer=optimizer)
