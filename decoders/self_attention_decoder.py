@@ -5416,7 +5416,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           inputs = inputs + adapt
       if self.version == 15:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-        inputs = inputs + adapt
+        inputs = inputs + adapt * keeping
 
     if self.version not in [3,8,9,10,11,12,15]:
       total_adapt = tf.add_n(total_adapt)
