@@ -248,3 +248,103 @@ def create_slurm_strategy():
   strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy()
   return strategy
   
+
+def get_checkpoint_variables(checkpoint_path):
+  """Returns variables included in a checkpoint.
+  Args:
+    checkpoint_path: Path to the checkpoint.
+  Returns:
+    A dictionary mapping variables name to value.
+  """
+  reader = tf.train.load_checkpoint(checkpoint_path)
+  return {
+      name:reader.get_tensor(name)
+      for name in reader.get_variable_to_shape_map().keys()}
+
+def average_checkpoints_tf2_3(model_dir,
+                        output_dir,
+                        trackables,
+                        max_count=8,
+                        model_key="model"):
+  """Averages object-based checkpoints.
+  Args:
+    model_dir: The directory containing checkpoints.
+    output_dir: The directory that will contain the averaged checkpoint.
+    trackables: A dictionary containing the trackable objects included in the
+      checkpoint.
+    max_count: The maximum number of checkpoints to average.
+    model_key: The key in :obj:`trackables` that references the model.
+  Returns:
+    The path to the directory containing the averaged checkpoint.
+  Raises:
+    ValueError: if :obj:`output_dir` is the same as :obj:`model_dir`.
+    ValueError: if a model is not found in :obj:`trackables` or is not already
+      built.
+    ValueError: if no checkpoints are found in :obj:`model_dir`.
+  See Also:
+    :func:`opennmt.utils.average_checkpoints_into_layer`
+  """
+  if model_dir == output_dir:
+    raise ValueError("Model and output directory must be different")
+  model = trackables.get(model_key)
+  if model is None:
+    raise ValueError("%s not found in trackables %s" % (model_key, trackables))
+
+  checkpoint_state = tf.train.get_checkpoint_state(model_dir)
+  if checkpoint_state is None:
+    raise ValueError("No checkpoints found in %s" % model_dir)
+  checkpoints_path = checkpoint_state.all_model_checkpoint_paths
+  if len(checkpoints_path) > max_count:
+    checkpoints_path = checkpoints_path[-max_count:]
+
+  average_checkpoints_into_layer(checkpoints_path, model, model_key)
+
+  last_step = get_step_from_checkpoint_prefix(checkpoints_path[-1])
+  checkpoint = tf.train.Checkpoint(**trackables)
+  new_checkpoint_manager = tf.train.CheckpointManager(checkpoint, output_dir, max_to_keep=None)
+  new_checkpoint_manager.save(checkpoint_number=last_step)
+  return output_dir
+
+def average_checkpoints_into_layer(checkpoints, layer, layer_prefix):
+  """Updates the layer weights with their average value in the checkpoints.
+  Args:
+    checkpoints: A non empty list of checkpoint paths.
+    layer: A ``tf.keras.layers.Layer`` instance.
+    layer_prefix: The name/scope that prefixes the layer variables names in the
+      checkpoints.
+  Raises:
+    ValueError: if :obj:`checkpoints` is empty.
+    ValueError: if :obj:`layer` is not already built.
+  See Also:
+    :func:`opennmt.utils.average_checkpoints`
+  """
+  if not checkpoints:
+    raise ValueError("There should be at least one checkpoint")
+  if not layer.built:
+    raise ValueError("The layer should be built before calling this function")
+
+  # Reset the layer variables to 0.
+  for variable in layer.variables:
+    variable.assign(tf.zeros_like(variable))
+
+  # Get a map from variable names in the checkpoint to variables in the layer.
+  _, names_to_variables = misc.get_variables_name_mapping(layer, root_key=layer_prefix)
+
+  num_checkpoints = len(checkpoints)
+  tf.get_logger().info("Averaging %d checkpoints...", num_checkpoints)
+  for checkpoint_path in checkpoints:
+    tf.get_logger().info("Reading checkpoint %s...", checkpoint_path)
+    reader = tf.train.load_checkpoint(checkpoint_path)
+    for path in reader.get_variable_to_shape_map().keys():
+      if not path.startswith(layer_prefix) or ".OPTIMIZER_SLOT" in path:
+        continue
+      variable = names_to_variables[path]
+      value = reader.get_tensor(path)
+      variable.assign_add(value / num_checkpoints)
+
+
+_V1_OPTIM_SCOPE = "optim"
+_V1_SLOTS_MAPPING = {
+    "Adam": "m",
+    "Adam_1": "v"
+}

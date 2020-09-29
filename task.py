@@ -27,7 +27,7 @@ from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
-from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckpt
+from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckpt, average_checkpoints_tf2_3
 from utils.dataprocess import count_lines
 from opennmt.utils import misc
 
@@ -5594,7 +5594,7 @@ def averaged_checkpoint_translate(config, source_file,
     checkpoint_path = path.join("%s/averaged_checkpoint"%config["model_dir"],"ckpt-200000")
     checkpoint.restore(checkpoint_path)
     tf.get_logger().info("Evaluating model %s", checkpoint_path) """
-  new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+  new_checkpoint_manager = average_checkpoints_tf2_3(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
                         max_count=max_count,
                         model_key="model")
   checkpoint.restore(new_checkpoint_manager.latest_checkpoint)
