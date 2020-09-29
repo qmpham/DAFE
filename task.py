@@ -14,7 +14,7 @@ from opennmt import START_OF_SENTENCE_ID
 from opennmt import END_OF_SENTENCE_ID
 from opennmt.utils.misc import print_bytes
 from opennmt.data import dataset as dataset_util
-from opennmt.optimizers import utils as optimizer_util
+from optimizer import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter
 from opennmt.models.sequence_to_sequence import SequenceToSequence
