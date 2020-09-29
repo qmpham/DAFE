@@ -14,7 +14,10 @@ from opennmt import START_OF_SENTENCE_ID
 from opennmt import END_OF_SENTENCE_ID
 from opennmt.utils.misc import print_bytes
 from opennmt.data import dataset as dataset_util
-from optimizer import utils as optimizer_util
+if tf.__version__=='2.3.0':
+  from optimizer import utils_23 as optimizer_util
+else:
+  from optimizer import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter
 from opennmt.models.sequence_to_sequence import SequenceToSequence
@@ -30,6 +33,7 @@ from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForw
 from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckpt, average_checkpoints_tf2_3
 from utils.dataprocess import count_lines
 from opennmt.utils import misc
+
 
 def file_concatenate(files,name,dir_name=None):
   lines = []
@@ -5594,7 +5598,12 @@ def averaged_checkpoint_translate(config, source_file,
     checkpoint_path = path.join("%s/averaged_checkpoint"%config["model_dir"],"ckpt-200000")
     checkpoint.restore(checkpoint_path)
     tf.get_logger().info("Evaluating model %s", checkpoint_path) """
-  new_checkpoint_manager = average_checkpoints_tf2_3(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+  if tf.__version__ == '2.3.0':
+    new_checkpoint_manager = average_checkpoints_tf2_3(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+                        max_count=max_count,
+                        model_key="model")
+  else:
+    new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
                         max_count=max_count,
                         model_key="model")
   checkpoint.restore(new_checkpoint_manager.latest_checkpoint)
