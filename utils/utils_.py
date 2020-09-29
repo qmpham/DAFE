@@ -303,7 +303,7 @@ def average_checkpoints_tf2_3(model_dir,
   checkpoint = tf.train.Checkpoint(**trackables)
   new_checkpoint_manager = tf.train.CheckpointManager(checkpoint, output_dir, max_to_keep=None)
   new_checkpoint_manager.save(checkpoint_number=last_step)
-  return output_dir
+  return new_checkpoint_manager
 
 def average_checkpoints_into_layer(checkpoints, layer, layer_prefix):
   """Updates the layer weights with their average value in the checkpoints.
@@ -342,6 +342,9 @@ def average_checkpoints_into_layer(checkpoints, layer, layer_prefix):
       value = reader.get_tensor(path)
       variable.assign_add(value / num_checkpoints)
 
+def get_step_from_checkpoint_prefix(prefix):
+  """Extracts the training step from the checkpoint file prefix."""
+  return int(prefix.split("-")[-1])
 
 _V1_OPTIM_SCOPE = "optim"
 _V1_SLOTS_MAPPING = {
