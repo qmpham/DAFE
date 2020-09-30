@@ -8217,7 +8217,7 @@ def train_NGD(config,
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     for grad, var in zip(gradients, variables):
-      hessian.append(tf.jacobian(grad, var))
+      hessians.append(tf.jacobian(grad, var))
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
