@@ -8189,35 +8189,36 @@ def train_NGD(config,
   hessians = []
 
   def _accumulate_gradients(source, target):
-    outputs, _ = model(
-        source,
-        labels=target,
-        training=True,
-        step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
+    with tf.GradientTape() as tape: 
+      outputs, _ = model(
+          source,
+          labels=target,
+          training=True,
+          step=optimizer.iterations)
+      loss = model.compute_loss(outputs, target, training=True)
 
-    if isinstance(loss, tuple):
-      training_loss = loss[0] / loss[1]
-      reported_loss = loss[0] / loss[2]
-    else:
-      training_loss, reported_loss = loss, loss
-    
-    variables = model.trainable_variables
-    print("var numb: ", len(variables))
-    for var in variables:
-      print(var.name)
-    model_vars = []
-    classifier_vars = []
-    for var in variables:
-      if "ADAP_gate/dense" in var.name:
-        classifier_vars.append(var)
+      if isinstance(loss, tuple):
+        training_loss = loss[0] / loss[1]
+        reported_loss = loss[0] / loss[2]
       else:
-        model_vars.append(var)
-    variables = model_vars + classifier_vars
-    gradients = optimizer.get_gradients(training_loss, variables)
-    gradient_accumulator(gradients)
-    for grad, var in zip(gradients, variables):
-      hessians.append(tf.jacobian(grad, var))
+        training_loss, reported_loss = loss, loss
+      
+      variables = model.trainable_variables
+      print("var numb: ", len(variables))
+      for var in variables:
+        print(var.name)
+      model_vars = []
+      classifier_vars = []
+      for var in variables:
+        if "ADAP_gate/dense" in var.name:
+          classifier_vars.append(var)
+        else:
+          model_vars.append(var)
+      variables = model_vars + classifier_vars
+      gradients = optimizer.get_gradients(training_loss, variables)
+      gradient_accumulator(gradients)
+      for grad, var in zip(gradients, variables):
+        hessians.append(tape.jacobian(grad, var))
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
