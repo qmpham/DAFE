@@ -8169,7 +8169,6 @@ def train_NGD(config,
   domain = config.get("domain",None)
   
   print("There are %d in-domain corpora"%len(source_file))
-  classification_loss_sign = tf.Variable(0.0,trainable=False)
   
   train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
@@ -8184,12 +8183,9 @@ def train_NGD(config,
   tf.print("importance_weights: ", importance_weights)
   #####
   with strategy.scope():
-    classifier_optimizer = tfa.optimizers.LazyAdam(0.001)
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
-    model_gradient_accumulator = optimizer_util.GradientAccumulator()
-    classifier_gradient_accumulator = optimizer_util.GradientAccumulator()
-
+    
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
