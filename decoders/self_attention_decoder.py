@@ -5388,7 +5388,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     if training:
       keeping = tf.keras.backend.random_binomial([1], self.res_using_rate)
     else:
-      keeping = 1.0
+      keeping = 0.0
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
 
       inputs, layer_cache, attention = layer(
