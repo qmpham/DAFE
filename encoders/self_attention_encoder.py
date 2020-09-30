@@ -1443,7 +1443,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
                num_heads=8,
                ffn_inner_dim=2048,
                dropout=0.1,
-               res_using_rate=0.0,
+               training_res_using_rate=0.0,
+               testing_res_using_rate=0.0,
                attention_dropout=0.1,
                ffn_dropout=0.1,
                ffn_activation=tf.nn.relu,
@@ -1515,7 +1516,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       print("version 12: h_1 = h_1 + adap(h_1)")
     elif self.version==15:
       print("version 15: h_{1..5} = h_{1..5} + adap(h_{1..5})")
-    self.res_using_rate = res_using_rate
+    self.training_res_using_rate = training_res_using_rate
+    self.testing_res_using_rate = testing_res_using_rate
 
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     domain = inputs[1]
@@ -1529,9 +1531,9 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     mask = self.build_mask(inputs, sequence_length=sequence_length)
     total_adapt=[]
     if training:
-      keeping = tf.keras.backend.random_binomial([1], self.res_using_rate)
+      keeping = tf.keras.backend.random_binomial([1], self.training_res_using_rate)
     else:
-      keeping = 0.0
+      keeping = self.testing_res_using_rate
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
       inputs = layer(inputs, mask=mask, training=training)
       if self.version not in [3,8,10,11,9,12]:
