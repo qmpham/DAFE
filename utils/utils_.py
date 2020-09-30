@@ -181,11 +181,6 @@ def average_checkpoints(model_dir,
         if not path.startswith(model_key) or ".OPTIMIZER_SLOT" in path:
           continue
         variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
-        print(variable_path)
-      for path in six.iterkeys(reader.get_variable_to_shape_map()):
-        if not path.startswith(model_key) or ".OPTIMIZER_SLOT" in path:
-          continue
-        variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
         variable = variable_which(trackables, variable_path)
         value = reader.get_tensor(path)
         #tf.print("variable:___", variable.name, tf.shape(value), variable_path, sep="|")
