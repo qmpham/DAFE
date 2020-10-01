@@ -8210,9 +8210,9 @@ def train_NGD(config,
       if isinstance(grad, tf.IndexedSlices):
         hessians.append(tape.jacobian(grad.values, var, experimental_use_pfor=False))
         tf.print(tape.jacobian(grad.values, var, experimental_use_pfor=False))
-      else:
+      #else:
         #hessians.append(tape.jacobian(grad, var, experimental_use_pfor=False))
-        tf.print(tape.jacobian(grad, var, experimental_use_pfor=False))
+        #tf.print(tape.jacobian(grad, var, experimental_use_pfor=False))
     #hessian_accumulator(hessians)
     #for hessian in hessian_accumulator.gradients:
     #  tf.print(hessian)
