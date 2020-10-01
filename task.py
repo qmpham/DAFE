@@ -8214,8 +8214,8 @@ def train_NGD(config,
         #hessians.append(tape.jacobian(grad, var, experimental_use_pfor=False))
         tf.print(tape.jacobian(grad, var, experimental_use_pfor=False))
     #hessian_accumulator(hessians)
-    for hessian in hessian_accumulator.gradients:
-      tf.print(hessian)
+    #for hessian in hessian_accumulator.gradients:
+    #  tf.print(hessian)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
