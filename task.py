@@ -8203,17 +8203,6 @@ def train_NGD(config,
         training_loss, reported_loss = loss, loss
       
       variables = model.trainable_variables
-      print("var numb: ", len(variables))
-      for var in variables:
-        print(var.name)
-      model_vars = []
-      classifier_vars = []
-      for var in variables:
-        if "ADAP_gate/dense" in var.name:
-          classifier_vars.append(var)
-        else:
-          model_vars.append(var)
-      variables = model_vars + classifier_vars
       gradients = optimizer.get_gradients(training_loss, variables)
       gradient_accumulator(gradients)
     for grad, var in zip(gradients, variables):
