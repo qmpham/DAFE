@@ -8207,12 +8207,12 @@ def train_NGD(config,
       gradients = optimizer.get_gradients(training_loss, variables)
       gradient_accumulator(gradients)
     for grad, var in zip(gradients, variables):
-      if isinstance(grad, tf.IndexedSlices):
-        hessians.append(tape.jacobian(grad.values, var, experimental_use_pfor=False))
-        tf.print(tape.jacobian(grad.values, var, experimental_use_pfor=False))
+      if not isinstance(grad, tf.IndexedSlices):
+        #hessians.append(tape.jacobian(grad.values, var, experimental_use_pfor=False))
+        #tf.print(tape.jacobian(grad.values, var, experimental_use_pfor=False))
       #else:
         #hessians.append(tape.jacobian(grad, var, experimental_use_pfor=False))
-        #tf.print(tape.jacobian(grad, var, experimental_use_pfor=False))
+        tf.print(tape.jacobian(grad, var, experimental_use_pfor=False))
     #hessian_accumulator(hessians)
     #for hessian in hessian_accumulator.gradients:
     #  tf.print(hessian)
