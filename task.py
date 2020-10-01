@@ -8220,6 +8220,8 @@ def train_NGD(config,
     for grad, var in zip(gradients, variables):
       if isinstance(grad, tf.IndexedSlices):
         hessians.append(tape.jacobian(grad.values, var, experimental_use_pfor=False))
+    for hessian in hessians:
+      tf.print(hessian)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
