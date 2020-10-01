@@ -8186,7 +8186,7 @@ def train_NGD(config,
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     hessian_accumulator = optimizer_util.GradientAccumulator()
-
+  hessians=[]
   def _accumulate_gradients(source, target):
     with tf.GradientTape(persistent=True) as tape: 
       outputs, _ = model(
@@ -8218,8 +8218,8 @@ def train_NGD(config,
       gradient_accumulator(gradients)
     for grad, var in zip(gradients, variables):
       if isinstance(grad, tf.IndexedSlices):
-        #hessians.append(tape.jacobian(grad.values, var, experimental_use_pfor=False))
-        hessian_accumulator(tape.jacobian(grad.values, var, experimental_use_pfor=False))
+        hessians.append(tape.jacobian(grad.values, var, experimental_use_pfor=False))
+    hessian_accumulator(hessians)
     for hessian in hessian_accumulator.gradients:
       tf.print(hessian)
     num_examples = tf.reduce_sum(target["length"])
