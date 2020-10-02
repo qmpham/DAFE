@@ -8189,6 +8189,7 @@ def train_NGD(config,
   with tf.device("CPU:0"): 
     hessian_accumulator = optimizer_util.GradientAccumulator()
   hessians=[]
+
   def _accumulate_gradients(source, target):
     
     @tf.function
@@ -8221,7 +8222,7 @@ def train_NGD(config,
         #tf.print(tape.jacobian(grad.values, var, experimental_use_pfor=False))
       #else:
         #hessians.append(tape.jacobian(grad, var, experimental_use_pfor=False))
-        tf.print(tape.jacobian(grad, var, experimental_use_pfor=False))
+        print(tape.jacobian(grad, var, experimental_use_pfor=False))
     #hessian_accumulator(hessians)
     #for hessian in hessian_accumulator.gradients:
     #  tf.print(hessian)
