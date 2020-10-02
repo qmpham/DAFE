@@ -14,6 +14,7 @@ from opennmt import START_OF_SENTENCE_ID
 from opennmt import END_OF_SENTENCE_ID
 from opennmt.utils.misc import print_bytes
 from opennmt.data import dataset as dataset_util
+from utils import dataprocess
 if tf.__version__=='2.3.0':
   from optimizer import utils_23 as optimizer_util
 else:
@@ -8238,7 +8239,7 @@ def train_NGD(config,
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
 
-  @dataset_util.function_on_next(train_dataset)
+  @dataprocess.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()

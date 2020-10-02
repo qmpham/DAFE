@@ -724,8 +724,27 @@ def create_trainining_dataset_robustness(strategy, model, domain, is_noisy, sour
 
 
 
+def function_on_next(dataset, as_numpy=False):  
 
+  def decorator(func):
+    def _fun():
+      iterator = iter(dataset)
 
+      def _tf_fun():
+        return func(lambda: next(iterator))
+
+      while True:
+        try:
+          outputs = _tf_fun()
+          if as_numpy:
+            outputs = tf.nest.map_structure(lambda x: x.numpy(), outputs)
+          yield outputs
+        except tf.errors.OutOfRangeError:
+          break
+
+    return _fun
+
+  return decorator
 
 
 
