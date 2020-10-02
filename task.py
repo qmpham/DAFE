@@ -8214,7 +8214,7 @@ def train_NGD(config,
     variables = model.trainable_variables
     with tf.GradientTape(persistent=True) as tape: 
       gradients, loss = build(source, target)
-      
+
     for grad, var in zip(gradients, variables):
       if not isinstance(grad, tf.IndexedSlices):
         #hessians.append(tape.jacobian(grad.values, var, experimental_use_pfor=False))
@@ -8227,7 +8227,7 @@ def train_NGD(config,
     #  tf.print(hessian)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples
+    return loss, num_examples
     
   def _apply_gradients():
     variables = model.trainable_variables
