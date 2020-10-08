@@ -1859,10 +1859,10 @@ def train(config,
     else:
       training_loss, reported_loss = loss, loss
     if config.get("multi_domain", True):
-      domain = source["domain"][0]
+      _domain = source["domain"][0]
     if config.get("apply_importance_weight", False):
       print("apply_importance_weight")
-      training_loss = training_loss * importance_weights[domain]
+      training_loss = training_loss * importance_weights[_domain]
     if config.get("ADAP_activity_regularizing",False):
       if experiment=="residualv28":
         layer_activity_regularization_losses = []
@@ -1960,7 +1960,7 @@ def train(config,
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples, domain
+    return reported_loss, num_examples, _domain
 
   def _accumulate_model_gradients(source, target):
     outputs, _ = model(
@@ -2154,9 +2154,9 @@ def train(config,
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-      domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)      
+      _domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)      
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, domain, num_examples
+    return loss, _domain, num_examples
 
   @dataset_util.function_on_next(train_dataset)
   def _train_model_forward(next_fn):    
@@ -2280,9 +2280,10 @@ def train(config,
         _number_examples.append(num_examples)
         _model_step()
       else:
-        loss, num_examples, domain = next(train_data_flow)    
+        loss, _domain, num_examples = next(train_data_flow)    
         _loss.append(loss)
-        _per_domain_accum_loss[int(domain)].append(loss)
+        print(_domain)
+        _per_domain_accum_loss[int(_domain)].append(loss)
         _number_examples.append(num_examples)
         _step()  
       step = optimizer.iterations.numpy()
