@@ -1946,8 +1946,8 @@ def train(config,
 
     variables = model.trainable_variables
     print("var numb: ", len(variables))
-    for var in variables:
-      print(var.name)
+    """ for var in variables:
+      print(var.name) """
     model_vars = []
     classifier_vars = []
     for var in variables:
