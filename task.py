@@ -2310,7 +2310,7 @@ def train(config,
           _number_examples = []
           start = time.time()
           for i in range(len(domain)):
-            print(_per_domain_accum_loss[i])
+            print(_per_domain_loss[i])
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
