@@ -5271,6 +5271,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     self.training_res_using_rate = training_res_using_rate
     self.testing_res_using_rate = testing_res_using_rate
     print("ADAP contribution", self.ADAP_contribution)
+    print("testing_res_using_rate: ", testing_res_using_rate)
+    print("training_res_using_rate: ", training_res_using_rate)
   
   def initialize(self, vocab_size=None, output_layer=None):  
     if output_layer is not None:

@@ -8188,7 +8188,7 @@ def train_NGD(config,
     gradient_accumulator = optimizer_util.GradientAccumulator() 
   with tf.device("CPU:0"): 
     hessian_accumulator = optimizer_util.GradientAccumulator()
-  hessians=[]
+  diag_hessians=[]
 
   def _accumulate_gradients(source, target):
     

@@ -1518,7 +1518,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       print("version 15: h_{1..5} = h_{1..5} + adap(h_{1..5})")
     self.training_res_using_rate = training_res_using_rate
     self.testing_res_using_rate = testing_res_using_rate
-
+    print("testing_res_using_rate: ", testing_res_using_rate)
+    print("training_res_using_rate: ", training_res_using_rate)
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
     domain = inputs[1]
     domain = domain[0]
