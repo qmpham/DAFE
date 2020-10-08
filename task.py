@@ -2282,7 +2282,7 @@ def train(config,
       else:
         loss, _domain, num_examples = next(train_data_flow)    
         _loss.append(loss.numpy())
-        print(_domain.numpy())
+        #print(_domain.numpy())
         _per_domain_accum_loss[int(_domain.numpy())].append(loss.numpy())
         _number_examples.append(num_examples.numpy())
         _step()  
@@ -2309,8 +2309,8 @@ def train(config,
           _loss = []
           _number_examples = []
           start = time.time()
-          for i in range(len(domain)):
-            print(_per_domain_loss[i])
+          """ for i in range(len(domain)):
+            print(_per_domain_loss[i]) """
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
