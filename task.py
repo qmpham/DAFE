@@ -2283,8 +2283,8 @@ def train(config,
         loss, _domain, num_examples = next(train_data_flow)    
         _loss.append(loss.numpy())
         print(_domain.numpy())
-        _per_domain_accum_loss[int(_domain.numpy())].append(loss)
-        _number_examples.append(num_examples)
+        _per_domain_accum_loss[int(_domain.numpy())].append(loss.numpy())
+        _number_examples.append(num_examples.numpy())
         _step()  
       step = optimizer.iterations.numpy()
       for i in range(len(domain)):
