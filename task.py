@@ -1960,7 +1960,7 @@ def train(config,
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples
+    return reported_loss, num_examples, domain
 
   def _accumulate_model_gradients(source, target):
     outputs, _ = model(
@@ -2150,12 +2150,13 @@ def train(config,
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_num_examples, per_replica_domain = strategy.experimental_run_v2(
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+      domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)      
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, num_examples
+    return loss, domain, num_examples
 
   @dataset_util.function_on_next(train_dataset)
   def _train_model_forward(next_fn):    
@@ -2220,6 +2221,12 @@ def train(config,
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
   _loss = []  
+  _per_domain_loss = []
+  _per_domain_accum_loss = []
+  for _ in domain:
+    _per_domain_loss.append([])
+    _per_domain_accum_loss.append([])
+
   _d_classfication_loss = []
   _number_examples = []
   step = optimizer.iterations.numpy()
@@ -2269,15 +2276,21 @@ def train(config,
           _d_classfication_loss.append(d_classfication_loss)
           _classifier_step()
         loss, num_examples = next(train_model_data_flow)    
-        _loss.append(loss)             
+        _loss.append(loss)
         _number_examples.append(num_examples)
         _model_step()
       else:
-        loss, num_examples = next(train_data_flow)    
+        loss, num_examples, domain = next(train_data_flow)    
         _loss.append(loss)
+        _per_domain_accum_loss[int(domain)].append(loss)
         _number_examples.append(num_examples)
         _step()  
       step = optimizer.iterations.numpy()
+      for i in range(len(domain)):
+        if len(_per_domain_accum_loss[i])==report_every:
+          _per_domain_loss[i].append(np.mean(_per_domain_accum_loss[i]))
+          _per_domain_accum_loss[i] = []
+
       if step % report_every == 0:
         elapsed = time.time() - start
         if config.get("adv_step",None):
@@ -2295,6 +2308,8 @@ def train(config,
           _loss = []
           _number_examples = []
           start = time.time()
+          for i in range(len(domain)):
+            print(_per_domain_accum_loss[i])
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
