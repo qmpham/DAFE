@@ -2216,7 +2216,7 @@ def train(config,
   train_data_flow = iter(_train_forward())
   train_model_data_flow = iter(_train_model_forward())
   train_classifier_data_flow = iter(_train_classifier_forward())
-  _, _ = next(train_data_flow)
+  _, _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
