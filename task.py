@@ -2303,6 +2303,7 @@ def train(config,
       for i in range(len(domain)):
         if len(_per_domain_accum_loss[i])==report_every:
           #_per_domain_loss[i].append(np.mean(_per_domain_accum_loss[i]))
+          tf.summary.experimental.set_step(step)
           tf.summary.scalar("loss_%d"%i, np.mean(_per_domain_accum_loss[i]), description="loss in domain %d"%i)
           _per_domain_accum_loss[i] = []
 
