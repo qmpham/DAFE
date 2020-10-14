@@ -1245,6 +1245,7 @@ def main():
   print("learning_rate: ", learning_rate)
   meta_train_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr"))
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)
+  adapter_optimizer = tfa.optimizers.LazyAdam(learning_rate)
   model.initialize(data_config)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=meta_test_optimizer)
   checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=config.get("max_to_keep",5))
@@ -1287,7 +1288,7 @@ def main():
   elif args.run == "metatrainv1":
     task.meta_train_v1(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "train":
-    task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+    task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint,adapter_optimizer=adapter_optimizer, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_NGD":
     task.train_NGD(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_wada":

@@ -1786,6 +1786,7 @@ def train(config,
           strategy,  
           checkpoint_manager,
           checkpoint,
+          adapter_optimizer=None,
           checkpoint_path=None,
           maximum_length=80,
           batch_size = 2048,
@@ -2120,7 +2121,7 @@ def train(config,
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       grads_and_vars_1.append((scaled_gradient, variable))
-    optimizer.apply_gradients(grads_and_vars_1)
+    adapter_optimizer.apply_gradients(grads_and_vars_1)
     gradient_accumulator.reset()
     adapter_gradient_accumulator.reset()
  
