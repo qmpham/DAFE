@@ -2289,7 +2289,8 @@ def train(config,
       step = optimizer.iterations.numpy()
       for i in range(len(domain)):
         if len(_per_domain_accum_loss[i])==report_every:
-          _per_domain_loss[i].append(np.mean(_per_domain_accum_loss[i]))
+          #_per_domain_loss[i].append(np.mean(_per_domain_accum_loss[i]))
+          tf.summary.scalar("loss_%d"%i, np.mean(_per_domain_accum_loss[i]), description="loss in domain %d"%i)
           _per_domain_accum_loss[i] = []
 
       if step % report_every == 0:
@@ -2309,8 +2310,6 @@ def train(config,
           _loss = []
           _number_examples = []
           start = time.time()
-          """ for i in range(len(domain)):
-            print(_per_domain_loss[i]) """
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
