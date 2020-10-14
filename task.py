@@ -1864,7 +1864,7 @@ def train(config,
     if config.get("apply_importance_weight", False):
       print("apply_importance_weight")
       training_loss = training_loss * importance_weights[_domain]
-    training_loss_1 = 0
+    training_loss_1 = 0.0
     if config.get("ADAP_activity_regularizing",False):
       if experiment=="residualv28":
         layer_activity_regularization_losses = []
