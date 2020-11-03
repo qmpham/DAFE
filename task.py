@@ -8344,7 +8344,6 @@ def train_NGD(config,
       if count % report_every == 0:
         for h in hessian_accumulators:
           print(h)
-      """
       loss, num_examples = next(train_data_flow)    
       _loss.append(loss)
       _number_examples.append(num_examples)
@@ -8379,8 +8378,7 @@ def train_NGD(config,
         tf.summary.flush()
       if step > train_steps:
         break
-      """
-
+      
 
 
 
