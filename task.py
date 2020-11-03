@@ -8213,7 +8213,6 @@ def train_NGD(config,
     return 0
 
   def _accumulate_diag_hessians(source,target):    
-    diag_hessians=[]
     variables = model.trainable_variables
     with tf.GradientTape(persistent=True) as tape:
       tape.watch(variables)
@@ -8238,7 +8237,7 @@ def train_NGD(config,
         elif "my_inputter_1_embedding" in var.name:
           grad_emb_tgt_val = tf.reshape(grad.values, tf.shape(target_inputs))
 
-    for var, gradient, diag_hessian, hessian_accumulator in zip(variables, gradients, diag_hessians, hessian_accumulators):
+    for var, gradient, hessian_accumulator in zip(variables, gradients, hessian_accumulators):
       if isinstance(gradient, tf.IndexedSlices):
         if "my_inputter_embedding" in var.name:
           unique_indices, new_index_positions = tf.unique(gradient.indices)
@@ -8268,8 +8267,8 @@ def train_NGD(config,
 
     variables = model.trainable_variables
     print("var numb: ", len(variables))
-    for var in variables:
-      print(var.name)
+    #for var in variables:
+    #  print(var.name)
     gradients = optimizer.get_gradients(training_loss, variables)
     new_gradients = []
     for gradient, hessian_accumulator in zip(gradients, hessian_accumulators):
