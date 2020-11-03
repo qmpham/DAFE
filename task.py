@@ -61,14 +61,6 @@ def update(v,g,lr=1.0):
   else:
     return v-lr*g
 
-def EWC_accum(v,g):
-  if isinstance(g, tf.IndexedSlices):
-    v.scatter_nd_add(tf.expand_dims(g.indices,1),tf.math.square(g.values))
-    #return tf.tensor_scatter_nd_add(v,tf.expand_dims(g.indices,1),tf.math.square(g.values))  
-  else:
-    v.assign_add(tf.math.square(g))
-    #return v + tf.math.square(g)
-
 def translate(source_file,
               reference,
               model,
@@ -8190,7 +8182,14 @@ def train_NGD(config,
   
   train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
+                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), 
+                                            temperature=config.get("temperature",1.0))
+  hessian_datasets = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob=None, 
+                                            temperature=config.get("temperature",1.0))
+
+
   from utils.dataprocess import count_lines
   datasets_size = [count_lines(src) for src in source_file]
   importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
@@ -8199,23 +8198,31 @@ def train_NGD(config,
   importance_weights = [w/sum(importance_weights) for w in importance_weights]
   importance_weights = tf.constant(importance_weights)
   tf.print("importance_weights: ", importance_weights)
+  ### update factore of diag hessians
+  alpha = 0.1
+  epsilon = 0.0001
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator() 
-  with tf.device("CPU:0"): 
-    hessian_accumulator = optimizer_util.GradientAccumulator()
-  diag_hessians=[]
+    hessian_accumulators = [tf.Variable(
+              tf.zeros_like(var),
+              trainable=False) for var in model.trainable_variables]
 
-  def _accumulate_gradients(source, target):
-    
-    @tf.function
-    def build(src, tgt):
-      outputs, _ = model(
-          source,
-          labels=target,
-          training=True,
-          step=optimizer.iterations)
+  def normalize_hessian():
+    return 0
+
+  def _accumulate_diag_hessians(source,target):    
+    diag_hessians=[]
+    variables = model.trainable_variables
+    with tf.GradientTape(persistent=True) as tape:
+      tape.watch(variables)
+      outputs, _, source_inputs, target_inputs = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations,
+        return_embedding=True)
       loss = model.compute_loss(outputs, target, training=True)
 
       if isinstance(loss, tuple):
@@ -8223,40 +8230,59 @@ def train_NGD(config,
         reported_loss = loss[0] / loss[2]
       else:
         training_loss, reported_loss = loss, loss
-        
-      variables = model.trainable_variables
-      gradients = optimizer.get_gradients(training_loss, variables)
-      gradient_accumulator(gradients)
-      return gradients, training_loss
-    
-    variables = model.trainable_variables
-    with tf.GradientTape(persistent=True) as tape: 
-      gradients, loss = build(source, target)
+      
+      gradients = tape.gradient(training_loss, variables)
+      for var, grad in zip(variables, gradients):
+        if "my_inputter_embedding" in var.name:
+          grad_emb_src_val = tf.reshape(grad.values, tf.shape(source_inputs))
+        elif "my_inputter_1_embedding" in var.name:
+          grad_emb_tgt_val = tf.reshape(grad.values, tf.shape(target_inputs))
 
-    for grad, var in zip(gradients, variables):
-      if not isinstance(grad, tf.IndexedSlices):
-        #hessians.append(tape.jacobian(grad.values, var, experimental_use_pfor=False))
-        #tf.print(tape.jacobian(grad.values, var, experimental_use_pfor=False))
-      #else:
-        #hessians.append(tape.jacobian(grad, var, experimental_use_pfor=False))
-        print(tape.jacobian(grad, var, experimental_use_pfor=False))
-    #hessian_accumulator(hessians)
-    #for hessian in hessian_accumulator.gradients:
-    #  tf.print(hessian)
+    for var, gradient, diag_hessian, hessian_accumulator in zip(variables, gradients, diag_hessians, hessian_accumulators):
+      if isinstance(gradient, tf.IndexedSlices):
+        if "my_inputter_embedding" in var.name:
+          unique_indices, new_index_positions = tf.unique(gradient.indices)
+          hessian_accumulator.scatter_add(tf.IndexedSlices(tf.math.unsorted_segment_sum(tf.reshape(tf.reduce_sum(tape.batch_jacobian(grad_emb_src_val, 
+                                  source_inputs),[1,2]), tf.shape(gradient.values)), new_index_positions, tf.shape(unique_indices)[0]),unique_indices))
+        elif "my_inputter_1_embedding" in var.name:
+          hessian_accumulator.scatter_add(tf.IndexedSlices(tf.math.unsorted_segment_sum(tf.reshape(tf.reduce_sum(tape.batch_jacobian(grad_emb_tgt_val, 
+                                  target_inputs),[1,2]), tf.shape(gradient.values)), new_index_positions, tf.shape(unique_indices)[0]),unique_indices))
+        else:
+          hessian_accumulator.scatter_add(tape.gradient(gradient, var))
+      else:
+        hessian_accumulator.add(tape.batch_jacobian(gradient.values, var))
+  
+  def _accumulate_gradients(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+
+    variables = model.trainable_variables
+    print("var numb: ", len(variables))
+    for var in variables:
+      print(var.name)
+    gradients = optimizer.get_gradients(training_loss, variables)
+    new_gradients = []
+    for gradient, hessian_accumulator in zip(gradients, hessian_accumulators):
+      if isinstance(gradient,tf.IndexedSlices):
+        new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_accumulator, gradient.indices) + epsilon), gradient.indices))
+      else:
+        new_gradients.append(gradient / (hessian_accumulator + epsilon))
+    gradient_accumulator(new_gradients)
     num_examples = tf.reduce_sum(target["length"])
-    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return loss, num_examples
+    return reported_loss, num_examples, _domain
     
   def _apply_gradients():
     variables = model.trainable_variables
-    model_vars = []
-    classifier_vars = []
-    for var in variables:
-      if "ADAP_gate/dense" in var.name:
-        classifier_vars.append(var)
-      else:
-        model_vars.append(var)
-    variables = model_vars + classifier_vars
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
@@ -8276,6 +8302,12 @@ def train_NGD(config,
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
 
+  @dataset_util.function_on_next(hessian_datasets)
+  def _hessian_accumulator_iteration(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      return per_replica_source, per_replica_target
+
   @tf.function
   def _step():
     with strategy.scope():
@@ -8285,7 +8317,7 @@ def train_NGD(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  
+  _hessian_accumulator_flow = iter(_hessian_accumulator_iteration())
   _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
@@ -8303,8 +8335,16 @@ def train_NGD(config,
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
 
   with _summary_writer.as_default():
+    count = 0
     while True:
       #####Training batch
+      _source, _target = next(_hessian_accumulator_flow)
+      _accumulate_diag_hessians(_source, _target)
+      count +=1
+      if count % report_every == 0:
+        for h in hessian_accumulators:
+          print(h)
+      """
       loss, num_examples = next(train_data_flow)    
       _loss.append(loss)
       _number_examples.append(num_examples)
@@ -8312,21 +8352,12 @@ def train_NGD(config,
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
-        if config.get("adv_step",None):
-          tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; classification_loss = %f, number_examples = %d, after %f seconds",
-          step, learning_rate(step), np.mean(_loss), np.mean(_d_classfication_loss), np.sum(_number_examples), elapsed)
-          _loss = []
-          _d_classfication_loss = []
-          _number_examples = []
-          start = time.time()
-        else:
-          tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
-          _loss = []
-          _number_examples = []
-          start = time.time()
+        tf.get_logger().info(
+          "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
+          step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+        _loss = []
+        _number_examples = []
+        start = time.time()
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
@@ -8348,7 +8379,7 @@ def train_NGD(config,
         tf.summary.flush()
       if step > train_steps:
         break
-
+      """
 
 
 

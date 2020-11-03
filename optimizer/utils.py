@@ -99,4 +99,65 @@ class GradientAccumulator(object):
 
 
 
+class DiagHessianAccumulator(object):
+  """Distribution strategies-aware gradient accumulation utility."""
+
+  def __init__(self, alpha=0.1):
+    """Initializes the accumulator."""
+    self._hessians = []
+    self.alpha = alpha
+    self._accum_steps = tf.Variable(
+        initial_value=0,
+        dtype=tf.int64,
+        trainable=False,
+        aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA)
+
+  @property
+  def step(self):
+    """Number of accumulated steps."""
+    return self._accum_steps.value()
+
+  @property
+  def gradients(self):
+    """The accumulated gradients."""
+    return list(hessian.value() for hessian in self._get_replica_hessians())
+
+  def __call__(self, hessians):
+    """Accumulates :obj:`gradients`."""
+    if not self._hessians:
+      self._hessians.extend([
+          tf.Variable(tf.zeros_like(hessian), trainable=False)
+          for hessian in hessians])
+    if len(hessians) != len(self._hessians):
+      raise ValueError("Expected %s hessians, but got %d" % (
+          len(self._hessians), len(hessians)))
+
+    for accum_hessian, hessian in zip(self._get_replica_hessians(), hessians):
+      accum_hessian.assign(accum_hessian * self.alpha + hessian * (1-self.alpha))
+
+    self._accum_steps.assign_add(1)
+
+  def reset(self):
+    """Resets the accumulated gradients."""
+    if self._hessians:
+      self._accum_steps.assign(0)
+      for hessian in self._get_replica_hessians():
+        hessian.assign(tf.zeros_like(hessian))
+
+  def _get_replica_hessians(self):
+    if tf.distribute.has_strategy():
+      # In a replica context, we want to accumulate gradients on each replica
+      # without synchronization, so we directly assign the value of the
+      # current replica.
+      replica_context = tf.distribute.get_replica_context()
+      if replica_context is None:
+        return self._hessians
+      return (
+          hessian.device_map.select_for_current_replica(hessian.values, replica_context)
+          for hessian in self._hessians)
+    else:
+      return self._hessians
+
+
+
 

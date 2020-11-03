@@ -103,7 +103,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         vocab_size=self.labels_inputter.vocabulary_size,
         output_layer=output_layer)
 
-  def call(self, features, labels=None, training=None, step=None, internal_node_printing=False):
+  def call(self, features, labels=None, training=None, step=None, internal_node_printing=False, return_embedding=False):
     # Encode the source.
     assert isinstance(self.features_inputter, My_inputter)
     assert isinstance(self.labels_inputter, My_inputter)    
@@ -123,7 +123,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
 
     # When a target is provided, compute the decoder outputs for it.
     if labels is not None:
-      outputs = self._decode_target(
+      outputs, target_inputs = self._decode_target(
           labels,
           encoder_outputs,
           encoder_state,
@@ -139,8 +139,10 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           encoder_outputs,
           encoder_state,
           encoder_sequence_length)
-    
-    return outputs, predictions
+    if return_embedding:
+      return outputs, predictions, source_inputs, target_inputs
+    else:
+      return outputs, predictions
 
   def adv_call(self, features, labels=None, training=None, step=None):
     # Encode the source.
@@ -275,7 +277,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
           sampling_probability=sampling_probability,
           training=training)
       outputs["noisy_logits"] = noisy_logits
-    return outputs
+    return outputs, target_inputs
 
   def _decode_target_forward_fn(self,
                      labels,

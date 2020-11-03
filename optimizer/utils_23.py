@@ -99,3 +99,53 @@ class GradientAccumulator(object):
     self._accum_steps.assign(0)
     for gradient in self._gradients:
       gradient.assign(tf.zeros(gradient.shape, dtype=gradient.dtype), read_value=False)
+
+class DiagHessianAccumulator(object):
+  def __init__(self, alpha=0.1):
+    """Initializes the accumulator."""
+    self._hessians = []
+    self._accum_steps = None
+    self.alpha = alpha
+  @property
+  def step(self):
+    """Number of accumulated steps."""
+    if self._accum_steps is None:
+      self._accum_steps = tf.Variable(
+          tf.constant(0, dtype=tf.int64),
+          trainable=False,
+          synchronization=tf.VariableSynchronization.ON_READ,
+          aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA)
+    return self._accum_steps.value()
+
+  @property
+  def gradients(self):
+    """The accumulated gradients on the current replica."""
+    if not self._hessians:
+      raise ValueError("The accumulator should be called first to initialize the gradients")
+    return list(hessian.value() for hessian in self._hessians)
+
+  def __call__(self, hessians):
+    """Accumulates :obj:`gradients` on the current replica."""
+    if not self._hessians:
+      _ = self.step  # Create the step variable.
+      self._hessians.extend([
+          tf.Variable(
+              tf.zeros_like(hessian),
+              trainable=False,
+              synchronization=tf.VariableSynchronization.ON_READ)
+          for hessian in hessians])
+    if len(hessians) != len(self._hessians):
+      raise ValueError("Expected %s hessians, but got %d" % (
+          len(self._hessians), len(hessians)))
+
+    for accum_hessian, hessian in zip(self._hessians, hessians):
+      accum_hessian.assign(accum_hessian * self.alpha + hessian * (1-self.alpha) , read_value=False)
+    self._accum_steps.assign_add(1)
+
+  def reset(self):
+    """Resets the accumulated gradients on the current replica."""
+    if not self._hessians:
+      return
+    self._accum_steps.assign(0)
+    for hessian in self._hessians:
+      hessian.assign(tf.zeros(hessian.shape, dtype=hessian.dtype), read_value=False)
