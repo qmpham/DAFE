@@ -8211,12 +8211,9 @@ def train_NGD(config,
 
   def normalize_hessian():
     return 0
-
-  def _accumulate_diag_hessians(source,target):    
-    variables = model.trainable_variables
-    with tf.GradientTape(persistent=True) as tape:
-      tape.watch(variables)
-      outputs, _, source_inputs, target_inputs = model(
+  @tf.function
+  def build(source, target):
+    outputs, _, source_inputs, target_inputs = model(
         source,
         labels=target,
         training=True,
@@ -8230,7 +8227,14 @@ def train_NGD(config,
       else:
         training_loss, reported_loss = loss, loss
       
-      gradients = tape.gradient(training_loss, variables)
+      gradients = optimizer.get_gradients(training_loss, variables)
+      return gradients
+
+  def _accumulate_diag_hessians(source,target):    
+    variables = model.trainable_variables
+    with tf.GradientTape(persistent=True) as tape:
+      tape.watch(variables)
+      gradients = _build(source,target)
       for var, grad in zip(variables, gradients):
         if "my_inputter_embedding" in var.name:
           grad_emb_src_val = tf.reshape(grad.values, tf.shape(source_inputs))
@@ -8244,12 +8248,15 @@ def train_NGD(config,
           hessian_accumulator.scatter_add(tf.IndexedSlices(tf.math.unsorted_segment_sum(tf.reshape(tf.reduce_sum(tape.batch_jacobian(grad_emb_src_val, 
                                   source_inputs),[1,2]), tf.shape(gradient.values)), new_index_positions, tf.shape(unique_indices)[0]),unique_indices))
         elif "my_inputter_1_embedding" in var.name:
+          unique_indices, new_index_positions = tf.unique(gradient.indices)
           hessian_accumulator.scatter_add(tf.IndexedSlices(tf.math.unsorted_segment_sum(tf.reshape(tf.reduce_sum(tape.batch_jacobian(grad_emb_tgt_val, 
                                   target_inputs),[1,2]), tf.shape(gradient.values)), new_index_positions, tf.shape(unique_indices)[0]),unique_indices))
         else:
           hessian_accumulator.scatter_add(tape.gradient(gradient, var))
       else:
-        hessian_accumulator.add(tape.batch_jacobian(gradient.values, var))
+        if "multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v15/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense_3/bias" in var.name:
+          hessian_accumulator.add(tape.batch_jacobian(gradient.values, var))
+          tf.print(tape.batch_jacobian(gradient.values, var))
   
   def _accumulate_gradients(source, target):
     outputs, _ = model(
