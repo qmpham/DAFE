@@ -8291,7 +8291,7 @@ def train_NGD(config,
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
 
-  @dataprocess.function_on_next(train_dataset)
+  @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
