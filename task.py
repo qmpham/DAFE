@@ -8212,23 +8212,23 @@ def train_NGD(config,
   def normalize_hessian():
     return 0
   @tf.function
-  def build(source, target):
+  def _build(source, target):
     outputs, _, source_inputs, target_inputs = model(
         source,
         labels=target,
         training=True,
         step=optimizer.iterations,
         return_embedding=True)
-      loss = model.compute_loss(outputs, target, training=True)
+    loss = model.compute_loss(outputs, target, training=True)
 
-      if isinstance(loss, tuple):
-        training_loss = loss[0] / loss[1]
-        reported_loss = loss[0] / loss[2]
-      else:
-        training_loss, reported_loss = loss, loss
-      
-      gradients = optimizer.get_gradients(training_loss, variables)
-      return gradients
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    
+    gradients = optimizer.get_gradients(training_loss, variables)
+    return gradients
 
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
