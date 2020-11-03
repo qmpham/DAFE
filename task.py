@@ -8340,8 +8340,8 @@ def train_NGD(config,
       #####Training batch
       _source, _target = next(_hessian_accumulator_flow)
       _accumulate_diag_hessians(_source, _target)
-      count +=1
-      if count % report_every == 0:
+      
+      if step % report_every == 0:
         for h in hessian_accumulators:
           print(h)
       loss, num_examples = next(train_data_flow)    
