@@ -8341,15 +8341,14 @@ def train_NGD(config,
       #####Training batch
       _source, _target = next(_hessian_accumulator_flow)
       _accumulate_diag_hessians(_source, _target)
-      
-      if step % report_every == 0:
-        for h in hessian_accumulators:
-          print(h)
       loss, num_examples = next(train_data_flow)    
       _loss.append(loss)
       _number_examples.append(num_examples)
       _step()  
       step = optimizer.iterations.numpy()
+      if step % report_every == 0:
+        for h in hessian_accumulators:
+          print(h)
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
