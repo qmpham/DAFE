@@ -8220,7 +8220,7 @@ def train_NGD(config,
         step=optimizer.iterations,
         return_embedding=True)
     loss = model.compute_loss(outputs, target, training=True)
-
+    variables = model.trainable_variables
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
@@ -8228,13 +8228,13 @@ def train_NGD(config,
       training_loss, reported_loss = loss, loss
     
     gradients = optimizer.get_gradients(training_loss, variables)
-    return gradients
+    return gradients, source_inputs, target_inputs
 
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
     with tf.GradientTape(persistent=True) as tape:
       tape.watch(variables)
-      gradients = _build(source,target)
+      gradients, source_inputs, target_inputs = _build(source,target)
       for var, grad in zip(variables, gradients):
         if "my_inputter_embedding" in var.name:
           grad_emb_src_val = tf.reshape(grad.values, tf.shape(source_inputs))
