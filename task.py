@@ -8258,7 +8258,7 @@ def train_NGD(config,
       else:
         if "multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v15/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense_3/bias" in var.name:
           #hessian_accumulator.assign_add(tape.batch_jacobian(gradient.values, var))
-          tf.print(tape.batch_jacobian(gradient.values, var))
+          tf.print(tape.batch_jacobian(gradient, var))
   
   def _accumulate_gradients(source, target):
     outputs, _ = model(
