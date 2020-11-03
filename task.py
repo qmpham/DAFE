@@ -8244,13 +8244,15 @@ def train_NGD(config,
     for var, gradient, hessian_accumulator in zip(variables, gradients, hessian_accumulators):
       if isinstance(gradient, tf.IndexedSlices):
         if "my_inputter_embedding" in var.name:
-          unique_indices, new_index_positions = tf.unique(gradient.indices)
-          hessian_accumulator.scatter_add(tf.IndexedSlices(tf.math.unsorted_segment_sum(tf.reshape(tf.reduce_sum(tape.batch_jacobian(grad_emb_src_val, 
-                                  source_inputs),[1,2]), tf.shape(gradient.values)), new_index_positions, tf.shape(unique_indices)[0]),unique_indices))
+          #unique_indices, new_index_positions = tf.unique(gradient.indices)
+          #hessian_accumulator.scatter_add(tf.IndexedSlices(tf.math.unsorted_segment_sum(tf.reshape(tf.reduce_sum(tape.batch_jacobian(grad_emb_src_val, 
+          #                        source_inputs),[1,2]), tf.shape(gradient.values)), new_index_positions, tf.shape(unique_indices)[0]),unique_indices))
+          continue        
         elif "my_inputter_1_embedding" in var.name:
-          unique_indices, new_index_positions = tf.unique(gradient.indices)
-          hessian_accumulator.scatter_add(tf.IndexedSlices(tf.math.unsorted_segment_sum(tf.reshape(tf.reduce_sum(tape.batch_jacobian(grad_emb_tgt_val, 
-                                  target_inputs),[1,2]), tf.shape(gradient.values)), new_index_positions, tf.shape(unique_indices)[0]),unique_indices))
+          #unique_indices, new_index_positions = tf.unique(gradient.indices)
+          #hessian_accumulator.scatter_add(tf.IndexedSlices(tf.math.unsorted_segment_sum(tf.reshape(tf.reduce_sum(tape.batch_jacobian(grad_emb_tgt_val, 
+          #                        target_inputs),[1,2]), tf.shape(gradient.values)), new_index_positions, tf.shape(unique_indices)[0]),unique_indices))
+          continue
         else:
           hessian_accumulator.scatter_add(tape.gradient(gradient, var))
       else:
