@@ -8279,7 +8279,7 @@ def train_NGD(config,
         new_gradients.append(gradient / (hessian_accumulator + epsilon))
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
-    return reported_loss, num_examples, _domain
+    return reported_loss, num_examples
     
   def _apply_gradients():
     variables = model.trainable_variables
