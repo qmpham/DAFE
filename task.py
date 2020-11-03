@@ -8277,7 +8277,7 @@ def train_NGD(config,
         new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_accumulator, gradient.indices) + epsilon), gradient.indices))
       else:
         new_gradients.append(gradient / (hessian_accumulator + epsilon))
-    gradient_accumulator(new_gradients)
+    gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples, _domain
     
