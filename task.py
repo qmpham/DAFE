@@ -8230,7 +8230,7 @@ def train_NGD(config,
         step=optimizer.iterations)
       loss = model.compute_individual_loss(outputs, target, training=True)
     for var, hessian_accumulator in zip(variables, hessian_accumulators):
-      jacobian = tape.jacobian(loss, var, parallel_iterations=batch_train_size, experimental_use_pfor=True)
+      jacobian = tape.jacobian(loss, var, parallel_iterations=batch_train_size, experimental_use_pfor=False)
       diag_hessian_approx = tf.reduce_mean(jacobian * jacobian, 0)
       hessian_accumulator.assign_add(diag_hessian_approx)
     hessian_accumulator_count.assign_add(tf.shape(loss)[0])
