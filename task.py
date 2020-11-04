@@ -8177,6 +8177,8 @@ def train_NGD(config,
   #####
   batch_train_size = config["batch_train_size"]  
   batch_hessian_size = config.get("batch_hessian_size",10)
+  print("batch_hessian_size: ", batch_hessian_size)
+  print("batch_train_size: ", batch_train_size)
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
@@ -8203,8 +8205,8 @@ def train_NGD(config,
   importance_weights = tf.constant(importance_weights)
   tf.print("importance_weights: ", importance_weights)
   ### update factore of diag hessians
-  alpha = 0.1
-  epsilon = 0.0001
+  alpha = config.get("hessian_moving_rate",0.1)
+  epsilon = config.get("posterior_weight",1e-8)
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -8220,8 +8222,10 @@ def train_NGD(config,
       sum += tf.reduce_sum(h).numpy()
     for h in hessian_accumulators:
       h = h/sum
-    return 0
-
+  def avg_hessian():
+    for h in hessian_accumulators:
+      h.assign(h/hessian_accumulator_count)
+    hessian_accumulator_count.assign(0)
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
     with tf.GradientTape(persistent=True) as tape:
@@ -8234,7 +8238,7 @@ def train_NGD(config,
       loss = model.compute_individual_loss(outputs, target, training=True)
     for var, hessian_accumulator in zip(variables, hessian_accumulators):
       jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False)
-      diag_hessian_approx = tf.reduce_mean(jacobian * jacobian, 0)
+      diag_hessian_approx = tf.reduce_sum(jacobian * jacobian, 0)
       hessian_accumulator.assign_add(diag_hessian_approx)
     hessian_accumulator_count.assign_add(tf.shape(loss)[0]) 
   
@@ -8305,7 +8309,7 @@ def train_NGD(config,
   train_data_flow = iter(_train_forward())
   _hessian_accumulator_flow = iter(_hessian_accumulator_iteration())
   _, _ = next(train_data_flow)
-
+  
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
   _loss = []  
@@ -8326,7 +8330,10 @@ def train_NGD(config,
       #####Training batch
       if step % hessian_update_every == 0:
         _source, _target = next(_hessian_accumulator_flow)
-        _accumulate_diag_hessians(_source, _target)
+        for i in range(int(config.get("hessian_accum_step",1))):
+          _accumulate_diag_hessians(_source, _target)
+        avg_hessian()
+        normalize_hessian()
       loss, num_examples = next(train_data_flow)    
       _loss.append(loss)
       _number_examples.append(num_examples)
