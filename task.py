@@ -8288,9 +8288,8 @@ def train_NGD(config,
 
   @dataset_util.function_on_next(hessian_datasets)
   def _hessian_accumulator_iteration(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      return per_replica_source, per_replica_target
+    per_replica_source, per_replica_target = next_fn()
+    return per_replica_source, per_replica_target
 
   @tf.function
   def _step():
