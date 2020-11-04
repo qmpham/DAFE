@@ -8177,8 +8177,8 @@ def train_NGD(config,
   #####
   batch_train_size = config["batch_train_size"]  
   batch_hessian_size = config.get("batch_hessian_size",10)
-  print("batch_hessian_size: ", batch_hessian_size)
-  print("batch_train_size: ", batch_train_size)
+  print("batch_hessian_size: ", batch_hessian_size, "examples")
+  print("batch_train_size: ", batch_train_size, batch_type)
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
