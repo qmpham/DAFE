@@ -8209,7 +8209,7 @@ def train_NGD(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator() 
-  hessian_accumulators = [tf.Variable(
+  """ hessian_accumulators = [tf.Variable(
             tf.zeros_like(var),
             trainable=False) for var in model.trainable_variables]
   hessian_accumulator_count = tf.Variable(0,trainable=False)
@@ -8236,7 +8236,7 @@ def train_NGD(config,
       jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False)
       diag_hessian_approx = tf.reduce_mean(jacobian * jacobian, 0)
       hessian_accumulator.assign_add(diag_hessian_approx)
-    hessian_accumulator_count.assign_add(tf.shape(loss)[0])
+    hessian_accumulator_count.assign_add(tf.shape(loss)[0]) """
   
   def _accumulate_gradients(source, target):
     outputs, _ = model(
@@ -8289,10 +8289,10 @@ def train_NGD(config,
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
 
-  @dataset_util.function_on_next(hessian_datasets)
+  """ @dataset_util.function_on_next(hessian_datasets)
   def _hessian_accumulator_iteration(next_fn):    
     per_replica_source, per_replica_target = next_fn()
-    return per_replica_source, per_replica_target
+    return per_replica_source, per_replica_target """
 
   @tf.function
   def _step():
@@ -8303,7 +8303,7 @@ def train_NGD(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  _hessian_accumulator_flow = iter(_hessian_accumulator_iteration())
+  #_hessian_accumulator_flow = iter(_hessian_accumulator_iteration())
   _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
@@ -8324,9 +8324,9 @@ def train_NGD(config,
     count = 0
     while True:
       #####Training batch
-      if step % hessian_update_every:
+      """ if step % hessian_update_every:
         _source, _target = next(_hessian_accumulator_flow)
-        _accumulate_diag_hessians(_source, _target)
+        _accumulate_diag_hessians(_source, _target) """
       loss, num_examples = next(train_data_flow)    
       _loss.append(loss)
       _number_examples.append(num_examples)
