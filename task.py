@@ -8257,13 +8257,13 @@ def train_NGD(config,
     #for var in variables:
     #  print(var.name)
     gradients = optimizer.get_gradients(training_loss, variables)
-    """ new_gradients = []
+    new_gradients = []
     for gradient, hessian_accumulator in zip(gradients, hessian_accumulators):
       if isinstance(gradient,tf.IndexedSlices):
         new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_accumulator, gradient.indices) + epsilon), 
         gradient.indices, dense_shape=gradient.dense_shape))
       else:
-        new_gradients.append(gradient / (hessian_accumulator + epsilon)) """
+        new_gradients.append(gradient / (hessian_accumulator + epsilon))
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
