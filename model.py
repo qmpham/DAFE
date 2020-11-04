@@ -444,12 +444,14 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
       outputs = dict(logits=outputs)
     logits = outputs["logits"]
     labels_lengths = self.labels_inputter.get_length(labels)
+  
     max_time = tf.shape(logits)[1]
-    cross_entropy = losses._softmax_cross_entropy(logits, labels, 0.1, training)
+
+    cross_entropy = _softmax_cross_entropy(logits, labels["ids_out"], 0.1, training)
     weights = tf.sequence_mask(
         labels_lengths, maxlen=max_time, dtype=cross_entropy.dtype)
-    loss = tf.reduce_sum(cross_entropy * weights, axis=1)
-    loss_token_normalizer = tf.reduce_sum(weights, axis=1)
+    loss = tf.reduce_sum(cross_entropy * weights,1)
+    loss_token_normalizer = tf.reduce_sum(weights,1)
     
     return loss/loss_token_normalizer
   
