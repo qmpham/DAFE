@@ -8161,6 +8161,8 @@ def train_NGD(config,
     train_steps = config.get("train_steps")
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
+  if config.get("report_every",None)!=None:
+    report_every = config.get("report_every")
   #####
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
