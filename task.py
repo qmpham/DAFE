@@ -8319,7 +8319,7 @@ def train_NGD(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-
+  step = optimizer.iterations.numpy()
   with _summary_writer.as_default():
     count = 0
     while True:
