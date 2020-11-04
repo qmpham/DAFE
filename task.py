@@ -8218,6 +8218,7 @@ def train_NGD(config,
       h = h/sum
     return 0
 
+  @tf.function()
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
     with tf.GradientTape(persistent=True) as tape:
