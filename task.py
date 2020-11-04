@@ -8248,7 +8248,7 @@ def train_NGD(config,
     for var, hessian_accumulator in zip(variables, hessian_accumulators):
       jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False)
       diag_hessian_approx = tf.reduce_sum(jacobian * jacobian, 0)
-      hessian_accumulator.assign_add(diag_hessian_approx*(1-alpha))
+      hessian_accumulator.assign_add(diag_hessian_approx)
     hessian_accumulator_count.assign_add(tf.shape(loss)[0]) 
   
   def _accumulate_gradients(source, target):
