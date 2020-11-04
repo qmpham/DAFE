@@ -8175,6 +8175,7 @@ def train_NGD(config,
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
   batch_train_size = config["batch_train_size"]  
+  batch_hessian_size = config.get("batch_hessian_size",10)
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
@@ -8186,7 +8187,7 @@ def train_NGD(config,
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), 
                                             temperature=config.get("temperature",1.0))
-  hessian_datasets = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+  hessian_datasets = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_hessian_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, 
                                             temperature=config.get("temperature",1.0))
@@ -8231,7 +8232,7 @@ def train_NGD(config,
         step=optimizer.iterations)
       loss = model.compute_individual_loss(outputs, target, training=True)
     for var, hessian_accumulator in zip(variables, hessian_accumulators):
-      jacobian = tape.jacobian(loss, var, parallel_iterations=batch_train_size, experimental_use_pfor=False)
+      jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False)
       diag_hessian_approx = tf.reduce_mean(jacobian * jacobian, 0)
       hessian_accumulator.assign_add(diag_hessian_approx)
     hessian_accumulator_count.assign_add(tf.shape(loss)[0])
