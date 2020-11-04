@@ -8209,7 +8209,7 @@ def train_NGD(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator() 
-  """ hessian_accumulators = [tf.Variable(
+  hessian_accumulators = [tf.Variable(
             tf.zeros_like(var),
             trainable=False) for var in model.trainable_variables]
   hessian_accumulator_count = tf.Variable(0,trainable=False)
@@ -8236,7 +8236,7 @@ def train_NGD(config,
       jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False)
       diag_hessian_approx = tf.reduce_mean(jacobian * jacobian, 0)
       hessian_accumulator.assign_add(diag_hessian_approx)
-    hessian_accumulator_count.assign_add(tf.shape(loss)[0]) """
+    hessian_accumulator_count.assign_add(tf.shape(loss)[0]) 
   
   def _accumulate_gradients(source, target):
     outputs, _ = model(
