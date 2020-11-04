@@ -8264,7 +8264,7 @@ def train_NGD(config,
         gradient.indices, dense_shape=gradient.dense_shape))
       else:
         new_gradients.append(gradient / (hessian_accumulator + epsilon))
-    gradient_accumulator(gradients)
+    gradient_accumulator(new_gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
     
@@ -8289,10 +8289,10 @@ def train_NGD(config,
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
 
-  """ @dataset_util.function_on_next(hessian_datasets)
+  @dataset_util.function_on_next(hessian_datasets)
   def _hessian_accumulator_iteration(next_fn):    
     per_replica_source, per_replica_target = next_fn()
-    return per_replica_source, per_replica_target """
+    return per_replica_source, per_replica_target
 
   @tf.function
   def _step():
@@ -8324,9 +8324,9 @@ def train_NGD(config,
     count = 0
     while True:
       #####Training batch
-      """ if step % hessian_update_every:
+      if step % hessian_update_every == 0:
         _source, _target = next(_hessian_accumulator_flow)
-        _accumulate_diag_hessians(_source, _target) """
+        _accumulate_diag_hessians(_source, _target)
       loss, num_examples = next(train_data_flow)    
       _loss.append(loss)
       _number_examples.append(num_examples)
