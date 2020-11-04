@@ -8230,7 +8230,7 @@ def train_NGD(config,
       h = h/sum
   def avg_hessian_accumulators():
     for h in hessian_accumulators:
-      h.assign(h/hessian_accumulator_count)
+      h.assign(h/tf.cast(hessian_accumulator_count, tf.float32)))
   def reset_hessian_accumulators():
     for h in hessian_accumulators:
       h.assign(tf.zeros_like(h))
