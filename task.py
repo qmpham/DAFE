@@ -8214,17 +8214,26 @@ def train_NGD(config,
   hessian_accumulators = [tf.Variable(
             tf.zeros_like(var),
             trainable=False) for var in model.trainable_variables]
+  hessian_moving_stats = [tf.Variable(
+            tf.zeros_like(var),
+            trainable=False) for var in model.trainable_variables]
   hessian_accumulator_count = tf.Variable(0,trainable=False)
 
-  def normalize_hessian():
+  def update_hessian_moving_stats():
+    for accum, stat in zip(hessian_accumulators, hessian_moving_stats):
+      stat.assign(stat * alpha + accum * (1-alpha))
+  def normalize_hessian_accumulators():
     sum = 0
     for h in hessian_accumulators:
       sum += tf.reduce_sum(h).numpy()
     for h in hessian_accumulators:
       h = h/sum
-  def avg_hessian():
+  def avg_hessian_accumulators():
     for h in hessian_accumulators:
       h.assign(h/hessian_accumulator_count)
+  def reset_hessian_accumulators():
+    for h in hessian_accumulators:
+      h.assign(tf.zeros_like(h))
     hessian_accumulator_count.assign(0)
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
@@ -8239,7 +8248,7 @@ def train_NGD(config,
     for var, hessian_accumulator in zip(variables, hessian_accumulators):
       jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False)
       diag_hessian_approx = tf.reduce_sum(jacobian * jacobian, 0)
-      hessian_accumulator.assign_add(diag_hessian_approx)
+      hessian_accumulator.assign_add(diag_hessian_approx*(1-alpha))
     hessian_accumulator_count.assign_add(tf.shape(loss)[0]) 
   
   def _accumulate_gradients(source, target):
@@ -8262,12 +8271,12 @@ def train_NGD(config,
     #  print(var.name)
     gradients = optimizer.get_gradients(training_loss, variables)
     new_gradients = []
-    for gradient, hessian_accumulator in zip(gradients, hessian_accumulators):
+    for gradient, hessian_moving_stat in zip(gradients, hessian_moving_stats):
       if isinstance(gradient,tf.IndexedSlices):
-        new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_accumulator, gradient.indices) + epsilon), 
+        new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat, gradient.indices) + epsilon), 
         gradient.indices, dense_shape=gradient.dense_shape))
       else:
-        new_gradients.append(gradient / (hessian_accumulator + epsilon))
+        new_gradients.append(gradient / (hessian_moving_stat + epsilon))
     gradient_accumulator(new_gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
@@ -8325,20 +8334,23 @@ def train_NGD(config,
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
   step = optimizer.iterations.numpy()
   with _summary_writer.as_default():
-    count = 0
     while True:
       #####Training batch
       if step % hessian_update_every == 0:
         _source, _target = next(_hessian_accumulator_flow)
         for i in range(int(config.get("hessian_accum_step",1))):
           _accumulate_diag_hessians(_source, _target)
-        avg_hessian()
-        normalize_hessian()
+        avg_hessian_accumulators()
+        normalize_hessian_accumulators()
+        update_hessian_moving_stats()
+        reset_hessian_accumulators()
+
       loss, num_examples = next(train_data_flow)    
       _loss.append(loss)
       _number_examples.append(num_examples)
       _step()  
       step = optimizer.iterations.numpy()
+
       """ if step % report_every == 0:
         for h, var in zip(hessian_accumulators, model.trainable_variables):
           if "multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v15/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense_3/bias" in var.name:
