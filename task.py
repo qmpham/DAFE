@@ -8163,6 +8163,7 @@ def train_NGD(config,
     batch_type = config.get("batch_type")
   if config.get("report_every",None)!=None:
     report_every = config.get("report_every")
+  hessian_update_every = config.get("hessian_update_every",100)
   #####
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
@@ -8323,8 +8324,9 @@ def train_NGD(config,
     count = 0
     while True:
       #####Training batch
-      _source, _target = next(_hessian_accumulator_flow)
-      _accumulate_diag_hessians(_source, _target)
+      if step % hessian_update_every:
+        _source, _target = next(_hessian_accumulator_flow)
+        _accumulate_diag_hessians(_source, _target)
       loss, num_examples = next(train_data_flow)    
       _loss.append(loss)
       _number_examples.append(num_examples)
