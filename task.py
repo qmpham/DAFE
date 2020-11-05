@@ -8315,7 +8315,7 @@ def train_NGD(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  _hessian_accumulator_flow = iter(_hessian_accumulator_iteration())
+  _hessian_accumulator_flow = iter(hessian_datasets)
   _, _ = next(train_data_flow)
   
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
