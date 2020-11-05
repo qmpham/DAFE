@@ -77,7 +77,7 @@ def main():
   else:
     devices = tf.config.experimental.list_logical_devices(device_type="GPU")
     strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
-    async_strategy = tf.distribute.Strategy(devices=[d.name for d in devices])
+    async_strategy = tf.distribute.Strategy()
     if not os.path.exists(os.path.join(config["model_dir"],"eval")):
       os.makedirs(os.path.join(config["model_dir"],"eval"))
 
