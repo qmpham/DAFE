@@ -8302,7 +8302,6 @@ def train_NGD(config,
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
 
-  @dataset_util.function_on_next(hessian_datasets)
   def _hessian_accumulator_iteration(next_fn):    
     per_replica_source, per_replica_target = next_fn()
     return per_replica_source, per_replica_target
