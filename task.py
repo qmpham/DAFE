@@ -8312,7 +8312,7 @@ def train_NGD(config,
     return loss, num_examples
 
   @dataprocess.function_on_next(hessian_datasets)
-  def _train_forward(next_fn):    
+  def _hessian_acc_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
       strategy.experimental_run_v2(
@@ -8327,7 +8327,7 @@ def train_NGD(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  _hessian_accumulator_flow = iter(hessian_datasets)
+  _hessian_accumulator_flow = iter(_hessian_acc_forward())
   _, _ = next(train_data_flow)
   
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
@@ -8348,9 +8348,10 @@ def train_NGD(config,
     while True:
       #####Training batch
       if step % hessian_update_every == 0:
-        _source, _target = next(_hessian_accumulator_flow)
+        #_source, _target = next(_hessian_accumulator_flow)
         for i in range(int(config.get("hessian_accum_step",1))):
-          _accumulate_diag_hessians(_source, _target)
+          #_accumulate_diag_hessians(_source, _target)
+          next(_hessian_accumulator_flow)
         avg_hessian_accumulators()
         normalize_hessian_accumulators()
         update_hessian_moving_stats()
