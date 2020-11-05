@@ -8279,7 +8279,7 @@ def train_NGD(config,
     gradient_accumulator.reset()
   def update_hessian_moving_stats():
     for accum, stat in zip(hessian_accumulators, hessian_moving_stats):
-      stat.assign(stat * alpha + accum / float(strategy.num_replicas_in_sync) * (1-alpha))
+      stat.assign(stat * alpha + accum / (tf.cast(hessian_accumulators.step,tf.float32) * strategy.num_replicas_in_sync) * (1-alpha))
     hessian_accumulators.reset()
   #########
   @dataset_util.function_on_next(train_dataset)
