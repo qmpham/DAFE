@@ -8144,7 +8144,8 @@ def train_NGD(config,
           optimizer,          
           learning_rate,
           model,  
-          strategy,  
+          strategy, 
+          async_strategy, 
           checkpoint_manager,
           checkpoint,
           checkpoint_path=None,
@@ -8210,10 +8211,12 @@ def train_NGD(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator() 
+    
+  with async_strategy.scope():
     hessian_accumulators = optimizer_util.DiagHessianAccumulator()
     hessian_moving_stats = [tf.Variable(
-              tf.zeros_like(var),
-              trainable=False, aggregation=tf.VariableAggregation.NONE) for var in model.trainable_variables]
+            tf.zeros_like(var),
+            trainable=False, aggregation=tf.VariableAggregation.NONE) for var in model.trainable_variables]
 
   def normalize_hessian_accumulators():
     sum = 0
@@ -8298,7 +8301,7 @@ def train_NGD(config,
     return loss, num_examples
   @dataprocess.function_on_next(hessian_datasets)
   def _hessian_acc_forward(next_fn):    
-    with strategy.scope():
+    with async_strategy.scope():
       per_replica_source, per_replica_target = next_fn()
       strategy.experimental_run_v2(
           _accumulate_diag_hessians, args=(per_replica_source, per_replica_target))
@@ -8309,8 +8312,7 @@ def train_NGD(config,
       strategy.experimental_run_v2(_apply_gradients)
   @tf.function
   def _hessian_stats_update_step():
-    with strategy.scope():
-      strategy.experimental_run_v2(update_hessian_moving_stats)
+    async_strategy.experimental_run_v2(update_hessian_moving_stats)
   ##########
   # Runs the training loop.
   import time

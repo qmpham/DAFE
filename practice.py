@@ -77,6 +77,7 @@ def main():
   else:
     devices = tf.config.experimental.list_logical_devices(device_type="GPU")
     strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
+    async_strategy = tf.distribute.Strategy(devices=[d.name for d in devices])
     if not os.path.exists(os.path.join(config["model_dir"],"eval")):
       os.makedirs(os.path.join(config["model_dir"],"eval"))
 
@@ -1291,7 +1292,7 @@ def main():
   elif args.run == "train":
     task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint,adapter_optimizer=adapter_optimizer, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_NGD":
-    task.train_NGD(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+    task.train_NGD(config, meta_test_optimizer, learning_rate, model, strategy, async_strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_wada":
     task.train_wada(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "finetune_wada":
