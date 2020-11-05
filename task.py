@@ -8211,9 +8211,12 @@ def train_NGD(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator() 
-  hessian_accumulators = [tf.Variable(
+    hessian_accumulators = optimizer_util.DiagHessianAccumulator()
+    """
+    [tf.Variable(
             tf.zeros_like(var),
             trainable=False) for var in model.trainable_variables]
+    """
   hessian_moving_stats = [tf.Variable(
             tf.zeros_like(var),
             trainable=False) for var in model.trainable_variables]
@@ -8228,13 +8231,16 @@ def train_NGD(config,
       sum += tf.reduce_sum(h).numpy()
     for h in hessian_accumulators:
       h = h/sum
+  
   def avg_hessian_accumulators():
     for h in hessian_accumulators:
       h.assign(h/tf.cast(hessian_accumulator_count, tf.float32))
+  
   def reset_hessian_accumulators():
     for h in hessian_accumulators:
       h.assign(tf.zeros_like(h))
     hessian_accumulator_count.assign(0)
+  
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
     with tf.GradientTape(persistent=True) as tape:
@@ -8245,11 +8251,14 @@ def train_NGD(config,
         training=True,
         step=optimizer.iterations)
       loss = model.compute_individual_loss(outputs, target, training=True)
-    for var, hessian_accumulator in zip(variables, hessian_accumulators):
+    diag_hessians = []
+    for var in variables:
       jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False)
       diag_hessian_approx = tf.reduce_sum(jacobian * jacobian, 0)
-      hessian_accumulator.assign_add(diag_hessian_approx)
-    hessian_accumulator_count.assign_add(tf.shape(loss)[0]) 
+      diag_hessians.append(diag_hessian_approx)
+    hessian_accumulators(diag_hessians)
+    #hessian_accumulator.assign_add(diag_hessian_approx)
+    #hessian_accumulator_count.assign_add(tf.shape(loss)[0]) 
   
   def _accumulate_gradients(source, target):
     outputs, _ = model(
@@ -8302,10 +8311,13 @@ def train_NGD(config,
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
 
-  def _hessian_accumulator_iteration(next_fn):    
-    per_replica_source, per_replica_target = next_fn()
-    return per_replica_source, per_replica_target
-
+  @dataprocess.function_on_next(hessian_datasets)
+  def _train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      strategy.experimental_run_v2(
+          _accumulate_diag_hessians, args=(per_replica_source, per_replica_target))
+  
   @tf.function
   def _step():
     with strategy.scope():
