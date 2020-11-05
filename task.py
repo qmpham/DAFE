@@ -8213,7 +8213,7 @@ def train_NGD(config,
     hessian_accumulators = optimizer_util.DiagHessianAccumulator()
     hessian_moving_stats = [tf.Variable(
               tf.zeros_like(var),
-              trainable=False) for var in model.trainable_variables]
+              trainable=False, aggregation=tf.VariableAggregation.MEAN) for var in model.trainable_variables]
 
   def normalize_hessian_accumulators():
     sum = 0
