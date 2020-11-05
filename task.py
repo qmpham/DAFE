@@ -8225,6 +8225,7 @@ def train_NGD(config,
   def update_hessian_moving_stats():
     for accum, stat in zip(hessian_accumulators, hessian_moving_stats):
       stat.assign(stat * alpha + accum * (1-alpha))
+  
   def normalize_hessian_accumulators():
     sum = 0
     for h in hessian_accumulators:
