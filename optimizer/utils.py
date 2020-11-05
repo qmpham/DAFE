@@ -116,7 +116,7 @@ class DiagHessianAccumulator(object):
     return self._accum_steps.value()
 
   @property
-  def gradients(self):
+  def hessians(self):
     """The accumulated gradients."""
     return list(hessian.value() for hessian in self._get_replica_hessians())
 

@@ -8222,16 +8222,20 @@ def train_NGD(config,
     for h in hessian_accumulators._hessians:
       h = h/sum
   #########
+  @tf.function
+  def _build_model(src,tgt):
+    outputs, _ = model(
+        src,
+        labels=tgt,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_individual_loss(outputs, tgt, training=True)
+    return loss
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
     with tf.GradientTape(persistent=True) as tape:
       tape.watch(variables)
-      outputs, _ = model(
-        source,
-        labels=target,
-        training=True,
-        step=optimizer.iterations)
-      loss = model.compute_individual_loss(outputs, target, training=True)
+      loss = _build_model(source, target)
     diag_hessians = []
     for var in variables:
       jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False)
@@ -8278,7 +8282,7 @@ def train_NGD(config,
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
   def update_hessian_moving_stats():
-    for accum, stat in zip(hessian_accumulators, hessian_moving_stats):
+    for accum, stat in zip(hessian_accumulators.hessians, hessian_moving_stats):
       stat.assign(stat * alpha + accum / (tf.cast(hessian_accumulators.step,tf.float32) * strategy.num_replicas_in_sync) * (1-alpha))
     hessian_accumulators.reset()
   #########
