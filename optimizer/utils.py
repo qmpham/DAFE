@@ -97,8 +97,6 @@ class GradientAccumulator(object):
     else:
       return self._gradients
 
-
-
 class DiagHessianAccumulator(object):
   """Distribution strategies-aware gradient accumulation utility."""
 
@@ -133,7 +131,7 @@ class DiagHessianAccumulator(object):
           len(self._hessians), len(hessians)))
 
     for accum_hessian, hessian in zip(self._get_replica_hessians(), hessians):
-      accum_hessian.assign(accum_hessian * self.alpha + hessian * (1-self.alpha))
+      accum_hessian.assign_add(hessian)
 
     self._accum_steps.assign_add(1)
 
