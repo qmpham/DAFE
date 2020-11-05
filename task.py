@@ -8239,7 +8239,6 @@ def train_NGD(config,
   def reset_hessian_accumulators():
     for h in hessian_accumulators:
       h.assign(tf.zeros_like(h))
-    hessian_accumulator_count.assign(0)
   
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
@@ -8323,6 +8322,15 @@ def train_NGD(config,
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
 
+  @tf.function
+  def _hessian_acc_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(avg_hessian_accumulators)
+      strategy.experimental_run_v2(normalize_hessian_accumulators)
+  @tf.function
+  def _reset_hessian_acc_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(reset_hessian_accumulators)
   # Runs the training loop.
   import time
   start = time.time()  
@@ -8352,10 +8360,12 @@ def train_NGD(config,
         for i in range(int(config.get("hessian_accum_step",1))):
           #_accumulate_diag_hessians(_source, _target)
           next(_hessian_accumulator_flow)
-        avg_hessian_accumulators()
-        normalize_hessian_accumulators()
+        #avg_hessian_accumulators()
+        _hessian_acc_step()
+        #normalize_hessian_accumulators()
         update_hessian_moving_stats()
-        reset_hessian_accumulators()
+        #reset_hessian_accumulators()
+        _reset_hessian_acc_step()
 
       loss, num_examples = next(train_data_flow)    
       _loss.append(loss)
