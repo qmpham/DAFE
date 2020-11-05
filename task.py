@@ -8217,10 +8217,10 @@ def train_NGD(config,
             tf.zeros_like(var),
             trainable=False) for var in model.trainable_variables]
     """
-  hessian_moving_stats = [tf.Variable(
-            tf.zeros_like(var),
-            trainable=False) for var in model.trainable_variables]
-  hessian_accumulator_count = tf.Variable(0,trainable=False)
+    hessian_moving_stats = [tf.Variable(
+              tf.zeros_like(var),
+              trainable=False) for var in model.trainable_variables]
+  #hessian_accumulator_count = tf.Variable(0,trainable=False)
 
   def update_hessian_moving_stats():
     for accum, stat in zip(hessian_accumulators, hessian_moving_stats):
@@ -8228,18 +8228,14 @@ def train_NGD(config,
   
   def normalize_hessian_accumulators():
     sum = 0
-    for h in hessian_accumulators:
+    for h in hessian_accumulators._hessians:
       sum += tf.reduce_sum(h).numpy()
-    for h in hessian_accumulators:
+    for h in hessian_accumulators._hessians:
       h = h/sum
   
   def avg_hessian_accumulators():
-    for h in hessian_accumulators:
-      h.assign(h/tf.cast(hessian_accumulator_count, tf.float32))
-  
-  def reset_hessian_accumulators():
-    for h in hessian_accumulators:
-      h.assign(tf.zeros_like(h))
+    for h in hessian_accumulators._hessians:
+      h.assign(h/(strategy.num_replicas_in_sync * tf.cast(hessian_accumulator_count, tf.float32)))
   
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
@@ -8322,7 +8318,10 @@ def train_NGD(config,
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
-
+  @tf.function
+  def _hessian_stats_update_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(update_hessian_moving_stats)
   @tf.function
   def _hessian_acc_step():
     with strategy.scope():
@@ -8331,7 +8330,7 @@ def train_NGD(config,
   @tf.function
   def _reset_hessian_acc_step():
     with strategy.scope():
-      strategy.experimental_run_v2(reset_hessian_accumulators)
+      strategy.experimental_run_v2(hessian_accumulators.reset)
   # Runs the training loop.
   import time
   start = time.time()  
@@ -8364,7 +8363,7 @@ def train_NGD(config,
         #avg_hessian_accumulators()
         _hessian_acc_step()
         #normalize_hessian_accumulators()
-        update_hessian_moving_stats()
+        _hessian_stats_update_step()
         #reset_hessian_accumulators()
         _reset_hessian_acc_step()
 
