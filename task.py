@@ -8235,7 +8235,7 @@ def train_NGD(config,
   
   def avg_hessian_accumulators():
     for h in hessian_accumulators._hessians:
-      h.assign(h/(strategy.num_replicas_in_sync * tf.cast(hessian_accumulator_count, tf.float32)))
+      h.assign(h/float(strategy.num_replicas_in_sync))
   
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
@@ -8250,7 +8250,7 @@ def train_NGD(config,
     diag_hessians = []
     for var in variables:
       jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False)
-      diag_hessian_approx = tf.reduce_sum(jacobian * jacobian, 0)
+      diag_hessian_approx = tf.reduce_mean(jacobian * jacobian, 0)
       diag_hessians.append(diag_hessian_approx)
     hessian_accumulators(diag_hessians)
     #hessian_accumulator.assign_add(diag_hessian_approx)
