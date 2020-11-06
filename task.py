@@ -8266,7 +8266,8 @@ def train_NGD(config,
         for grad, acc in zip(gradients, hessian_accumulators):
           if isinstance(grad, tf.IndexedSlices):
             #diag_hessian_acc_new.append(tf.tensor_scatter_nd_add(acc, tf.expand_dims(grad.indices,1), grad.values * grad.values))
-            acc.scatter_add(tf.IndexedSlices(grad.values * grad.values, grad.indices, dense_shape=grad.dense_shape))
+            #acc.scatter_add(tf.IndexedSlices(grad.values * grad.values, grad.indices, dense_shape=grad.dense_shape))
+            continue
           else:
             acc.assign_add(grad * grad)
             #diag_hessian_acc_new.append(tf.add(acc, grad * grad))
