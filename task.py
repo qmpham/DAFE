@@ -8266,7 +8266,7 @@ def train_NGD(config,
           else:
             diag_hessian_acc_new.append(tf.add(acc, grad * grad))
         return diag_hessian_acc_new
-      hessian_accumulators([p[-1]/batch_hessian_size for p in tf.scan(hessian_accum_along_loss, loss, initializer=[tf.zeros_like(var) for var in variables], parallel_iterations=batch_hessian_size)])
+      hessian_accumulators([p[-1]/batch_hessian_size for p in tf.scan(hessian_accum_along_loss, loss, initializer=[tf.zeros_like(var) for var in variables], swap_memory=True, parallel_iterations=batch_hessian_size)])
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
