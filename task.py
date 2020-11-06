@@ -8234,11 +8234,11 @@ def train_NGD(config,
   
   def _accumulate_diag_hessians(source,target):    
     outputs, _ = model(
-        src,
-        labels=tgt,
+        source,
+        labels=target,
         training=True,
         step=optimizer.iterations)
-    loss = model.compute_individual_loss(outputs, tgt, training=True)
+    loss = model.compute_individual_loss(outputs, target, training=True)
     variables = model.trainable_variables
     #loss = _build_model(source, target)
     #diag_hessians = []
