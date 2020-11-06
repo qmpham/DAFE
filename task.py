@@ -8298,7 +8298,7 @@ def train_NGD(config,
     return loss, num_examples
   @dataprocess.function_on_next(hessian_datasets)
   def _hessian_acc_forward(next_fn):    
-    with async_strategy.scope():
+    with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
       strategy.experimental_run_v2(
           _accumulate_diag_hessians, args=(per_replica_source, per_replica_target))
@@ -8309,7 +8309,7 @@ def train_NGD(config,
       strategy.experimental_run_v2(_apply_gradients)
   @tf.function
   def _hessian_stats_update_step():
-    async_strategy.experimental_run_v2(update_hessian_moving_stats)
+    strategy.experimental_run_v2(update_hessian_moving_stats)
   ##########
   # Runs the training loop.
   import time
