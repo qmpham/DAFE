@@ -8233,7 +8233,7 @@ def train_NGD(config,
     return loss
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
-    with tf.GradientTape() as tape:
+    with tf.GradientTape(persistent=True) as tape:
       tape.watch(variables)
       loss = _build_model(source, target)
     diag_hessians = []
