@@ -118,7 +118,7 @@ class DiagHessianAccumulator(object):
     return self._accum_steps.value()
 
   @property
-  def gradients(self):
+  def hessians(self):
     """The accumulated gradients on the current replica."""
     if not self._hessians:
       raise ValueError("The accumulator should be called first to initialize the gradients")
@@ -139,7 +139,10 @@ class DiagHessianAccumulator(object):
           len(self._hessians), len(hessians)))
 
     for accum_hessian, hessian in zip(self._hessians, hessians):
-      accum_hessian.assign(accum_hessian * self.alpha + hessian * (1-self.alpha) , read_value=False)
+      if isinstance(hessian,tf.IndexedSlices):
+        accum_hessian.assign_add(tf.IndexedSlices(hessian.value * hessian.value, hessian.indices, dense_shape=hessian.dense_shape))
+      else:
+        accum_hessian.assign_add(hessian * hessian)
     self._accum_steps.assign_add(1)
 
   def reset(self):

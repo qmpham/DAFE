@@ -131,7 +131,10 @@ class DiagHessianAccumulator(object):
           len(self._hessians), len(hessians)))
 
     for accum_hessian, hessian in zip(self._get_replica_hessians(), hessians):
-      accum_hessian.assign_add(hessian)
+      if isinstance(hessian,tf.IndexedSlices):
+        accum_hessian.assign_add(tf.IndexedSlices(hessian.value * hessian.value, hessian.indices, dense_shape=hessian.dense_shape))
+      else:
+        accum_hessian.assign_add(hessian * hessian)
 
     self._accum_steps.assign_add(1)
 
