@@ -82,7 +82,7 @@ class GradientAccumulator(object):
           tf.Variable(
               tf.zeros_like(gradient),
               trainable=False,
-              synchronization=tf.VariableSynchronization.NONE)
+              synchronization=tf.VariableSynchronization.ON_READ)
           for gradient in gradients])
     if len(gradients) != len(self._gradients):
       raise ValueError("Expected %s gradients, but got %d" % (

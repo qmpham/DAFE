@@ -8213,7 +8213,7 @@ def train_NGD(config,
     hessian_accumulators = optimizer_util.DiagHessianAccumulator()
     hessian_moving_stats = [tf.Variable(
             tf.zeros_like(var),
-            trainable=False, synchronization=tf.VariableSynchronization.NONE) for var in model.trainable_variables]
+            trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
 
   def normalize_hessian_accumulators():
     sum = 0
@@ -8264,7 +8264,7 @@ def train_NGD(config,
     new_gradients = []
     for gradient, hessian_moving_stat in zip(gradients, hessian_moving_stats):
       if isinstance(gradient,tf.IndexedSlices):
-        new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat, gradient.indices) + epsilon), 
+        new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon), 
         gradient.indices, dense_shape=gradient.dense_shape))
       else:
         new_gradients.append(gradient / (hessian_moving_stat + epsilon))
