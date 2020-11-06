@@ -8222,7 +8222,7 @@ def train_NGD(config,
     for h in hessian_accumulators._hessians:
       h = h/sum
   #########
-  @tf.function
+  
   def _build_model(src,tgt):
     outputs, _ = model(
         src,
@@ -8296,7 +8296,7 @@ def train_NGD(config,
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
-  @dataprocess.function_on_next(hessian_datasets)
+  @dataset_util.function_on_next(hessian_datasets)
   def _hessian_acc_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
