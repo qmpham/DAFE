@@ -8264,7 +8264,8 @@ def train_NGD(config,
           if isinstance(grad, tf.IndexedSlices):
             diag_hessian_acc_new.append(tf.tensor_scatter_nd_add(acc, tf.expand_dims(grad.indices,1), grad.values * grad.values))
           else:
-            return diag_hessian_acc_new.append(tf.add(acc, grad * grad))
+            diag_hessian_acc_new.append(tf.add(acc, grad * grad))
+        return diag_hessian_acc_new
       hessian_accumulators([p[-1]/batch_hessian_size for p in tf.scan(hessian_accum_along_loss, loss, initializer=[tf.zeros_like(var) for var in variables], parallel_iterations=batch_hessian_size)])
   def _accumulate_gradients(source, target):
     outputs, _ = model(
