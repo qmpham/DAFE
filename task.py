@@ -8242,7 +8242,7 @@ def train_NGD(config,
         def hessian_accum_along_loss(diag_hessian_approx, x):
           p = tape.gradient(x,var)
           if isinstance(p,tf.IndexedSlices):
-            return tf.tensor_scatter_nd_add(diag_hessian_approx, tf.expand_dims(p.indices), p.values * p.values)
+            return tf.tensor_scatter_nd_add(diag_hessian_approx, tf.expand_dims(p.indices,1), p.values * p.values)
           else:
             return tf.add(diag_hessian_approx, p * p)
         #jacobian 
