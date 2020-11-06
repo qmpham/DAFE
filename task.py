@@ -8258,7 +8258,7 @@ def train_NGD(config,
         diag_hessians.append(tf.scan(hessian_accum_along_loss, loss, initializer=tf.zeros_like(var), parallel_iterations=batch_hessian_size)[-1]/tf.cast(batch_hessian_size,tf.float32))
       """
     def hessian_accum_along_loss(diag_hessian_acc, x):
-      gradients = optimizer.get_gradients(x,variables)
+      gradients = tape.gradient(x,variables)
       diag_hessian_acc_new = []
       for grad, acc in zip(gradients, diag_hessian_acc):
         if isinstance(grad, tf.IndexedSlices):
