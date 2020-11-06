@@ -8233,22 +8233,20 @@ def train_NGD(config,
     return loss
   def _accumulate_diag_hessians(source,target):    
     variables = model.trainable_variables
-    with tf.GradientTape() as tape:
-      tape.watch(variables)
-      loss = _build_model(source, target)
-      diag_hessians = []
-      for var in variables:
-        #jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False) 
-        def hessian_accum_along_loss(diag_hessian_approx, x):
-          p = tape.gradient(x,var)
-          if isinstance(p,tf.IndexedSlices):
-            return tf.tensor_scatter_nd_add(diag_hessian_approx, tf.expand_dims(p.indices,1), p.values * p.values)
-          else:
-            return tf.add(diag_hessian_approx, p * p)
-        #jacobian 
-        #diag_hessian_approx = tf.reduce_mean(jacobian * jacobian, 0)
-        diag_hessians.append(tf.scan(hessian_accum_along_loss, loss, initializer=tf.zeros_like(var), parallel_iterations=batch_hessian_size)[-1]/tf.cast(batch_hessian_size,tf.float32))
-      hessian_accumulators(diag_hessians)
+    loss = _build_model(source, target)
+    diag_hessians = []
+    for var in variables:
+      #jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False) 
+      def hessian_accum_along_loss(diag_hessian_approx, x):
+        p = tf.gradients(x,var)
+        if isinstance(p,tf.IndexedSlices):
+          return tf.tensor_scatter_nd_add(diag_hessian_approx, tf.expand_dims(p.indices,1), p.values * p.values)
+        else:
+          return tf.add(diag_hessian_approx, p * p)
+      #jacobian 
+      #diag_hessian_approx = tf.reduce_mean(jacobian * jacobian, 0)
+      diag_hessians.append(tf.scan(hessian_accum_along_loss, loss, initializer=tf.zeros_like(var), parallel_iterations=batch_hessian_size)[-1]/tf.cast(batch_hessian_size,tf.float32))
+    hessian_accumulators(diag_hessians)
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
