@@ -124,7 +124,7 @@ class DiagHessianAccumulator(object):
     """Accumulates :obj:`gradients`."""
     if not self._hessians:
       self._hessians.extend([
-          tf.Variable(tf.zeros_like(hessian), trainable=False)
+          tf.Variable(tf.zeros_like(hessian), trainable=False, synchronization=tf.VariableSynchronization.NONE)
           for hessian in hessians])
     if len(hessians) != len(self._hessians):
       raise ValueError("Expected %s hessians, but got %d" % (
