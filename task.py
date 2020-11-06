@@ -8179,6 +8179,7 @@ def train_NGD(config,
   batch_hessian_size = config.get("batch_hessian_size",10)
   print("batch_hessian_size: ", batch_hessian_size, "examples")
   print("batch_train_size: ", batch_train_size, batch_type)
+  hessian_accum_step = config.get("hessian_accum_step",1)
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
@@ -8319,7 +8320,7 @@ def train_NGD(config,
     gradient_accumulator.reset()
   def update_hessian_moving_stats():
     for accum, stat in zip(hessian_accumulators.hessians, hessian_moving_stats):
-      stat.assign(stat * alpha + accum / (tf.cast(hessian_accumulators.step,tf.float32) * strategy.num_replicas_in_sync * batch_hessian_size) * (1-alpha))
+      stat.assign(stat * alpha + accum / tf.cast(hessian_accum_step * strategy.num_replicas_in_sync * batch_hessian_size, tf.float32) * (1-alpha))
     
   #########
   @dataset_util.function_on_next(train_dataset)
@@ -8373,7 +8374,7 @@ def train_NGD(config,
       #####Training batch
       if step % hessian_update_every == 0:
         #_source, _target = next(_hessian_accumulator_flow)
-        for i in range(int(config.get("hessian_accum_step",1))):
+        for i in range(hessian_accum_step):
           #_accumulate_diag_hessians(_source, _target)
           next(_hessian_accumulator_flow)
         #avg_hessian_accumulators()

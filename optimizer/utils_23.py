@@ -143,7 +143,7 @@ class DiagHessianAccumulator(object):
         accum_hessian.assign_add(tf.IndexedSlices(hessian.values * hessian.values, hessian.indices, dense_shape=hessian.dense_shape))
       else:
         accum_hessian.assign_add(hessian * hessian)
-    self._accum_steps.assign_add(1)
+    #self._accum_steps.assign_add(1)
 
   def reset(self):
     """Resets the accumulated gradients on the current replica."""

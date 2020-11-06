@@ -108,7 +108,8 @@ class DiagHessianAccumulator(object):
         initial_value=0,
         dtype=tf.int64,
         trainable=False,
-        aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA)
+        aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA,
+        synchronization=tf.VariableSynchronization.ON_READ)
 
   @property
   def step(self):
@@ -136,7 +137,7 @@ class DiagHessianAccumulator(object):
       else:
         accum_hessian.assign_add(hessian * hessian)
 
-    self._accum_steps.assign_add(1)
+    #self._accum_steps.assign_add(1)
 
   def reset(self):
     """Resets the accumulated gradients."""
