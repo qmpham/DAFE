@@ -8238,7 +8238,7 @@ def train_NGD(config,
     for var in variables:
       #jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False) 
       def hessian_accum_along_loss(diag_hessian_approx, x):
-        p = tf.gradients(x,var)
+        p = tf.gradients(x,var)[0]
         if isinstance(p,tf.IndexedSlices):
           return tf.tensor_scatter_nd_add(diag_hessian_approx, tf.expand_dims(p.indices,1), p.values * p.values)
         else:
