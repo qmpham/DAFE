@@ -32,7 +32,7 @@ from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
 from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckpt, average_checkpoints_tf2_3
-from utils.dataprocess import count_lines
+from utils.dataprocess import count_lines, create_async_trainining_dataset
 from opennmt.utils import misc
 
 
@@ -8191,7 +8191,7 @@ def train_NGD(config,
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), 
                                             temperature=config.get("temperature",1.0))
-  hessian_datasets = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_hessian_size, "examples", shuffle_buffer_size, 
+  hessian_datasets = create_async_trainining_dataset(strategy, model, domain, source_file, target_file, batch_hessian_size, "examples", shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, 
                                             temperature=config.get("temperature",1.0))
@@ -8237,6 +8237,7 @@ def train_NGD(config,
     return loss
   
   def _accumulate_diag_hessians(source,target): 
+    tf.print(source)
     with tf.GradientTape(persistent=True) as tape:  
       variables = model.trainable_variables
       tape.watch(variables)
@@ -8292,7 +8293,65 @@ def train_NGD(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
+    if config.get("ADAP_activity_regularizing",False):
+      layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
+      output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
+      d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
+      d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
+      d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
+      print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+      print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
+      print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
+      print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
+      if isinstance(layer_activity_regularization_loss_scale, list):
+        domain = source["domain"][0]
+        layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
+        layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
+        #tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
+      if isinstance(output_activity_regularization_loss_scale, list):
+        domain = source["domain"][0]
+        output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
+        output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
+      regularization_losses = model.losses
+      print("model_name_scope", model.name_scope())
+      print(regularization_losses)
+      layer_activity_regularization_losses = []
+      output_activity_regularization_losses = []
+      d_classification_gate_losses = []
+      d_classifier_activity_regularization_losses = []
+      d_classifier_weight_regularization_losses = []
+      for loss_ in regularization_losses:
+        if "multi_adap__dense" in loss_.name:
+          output_activity_regularization_losses.append(loss_)
+        elif "ADAP_gate" in loss_.name: #and "ActivityRegularizer" not in loss_.name and "Regularizer" not in loss_.name
+          if "ActivityRegularizer" in loss_.name:
+            d_classifier_activity_regularization_losses.append(loss_)
+          elif "Regularizer" in loss_.name:
+            d_classifier_weight_regularization_losses.append(loss_)
+          else:
+            d_classification_gate_losses.append(loss_)
+        elif "ADAP_" in loss_.name:
+          layer_activity_regularization_losses.append(loss_)
 
+      print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
+      print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
+      print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
+      print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
+      print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
+      if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
+        training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
+
+      if len(output_activity_regularization_losses)>0 and output_activity_regularization_loss_scale>0:
+        training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
+
+      if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
+        training_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
+
+      if len(d_classifier_activity_regularization_losses)>0 and d_classifier_activity_regularization_loss_scale>0:
+        training_loss += d_classifier_activity_regularization_loss_scale * tf.add_n(d_classifier_activity_regularization_losses)
+
+      if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
+        training_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)
     variables = model.trainable_variables
     print("var numb: ", len(variables))
     #for var in variables:
