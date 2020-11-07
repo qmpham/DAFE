@@ -8357,7 +8357,7 @@ def train_NGD(config,
         new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) * tf.reduce_mean(hessian_moving_stat.value()) + epsilon), 
         gradient.indices, dense_shape=gradient.dense_shape))
       else:
-        new_gradients.append(gradient / (hessian_moving_stat+epsilon) * tf.reduce_mean(hessian_moving_stat))
+        new_gradients.append(gradient / (hessian_moving_stat.value()+ epsilon) * tf.reduce_mean(hessian_moving_stat.value()))
     gradient_accumulator(new_gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
@@ -8373,7 +8373,7 @@ def train_NGD(config,
     gradient_accumulator.reset()
   def update_hessian_moving_stats():
     for accum, stat in zip(hessian_accumulators.hessians, hessian_moving_stats):
-      stat.assign(stat * alpha + accum / tf.cast(hessian_accum_step * strategy.num_replicas_in_sync * batch_hessian_size, tf.float32) * (1-alpha))
+      stat.assign(stat * alpha + accum / tf.cast(hessian_accum_step * batch_hessian_size, tf.float32) * (1-alpha))
     
   #########
   @dataset_util.function_on_next(train_dataset)
