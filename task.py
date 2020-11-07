@@ -32,7 +32,7 @@ from opennmt.inputters.text_inputter import WordEmbedder
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, var_spec
 from layers.layers import Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE
 from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckpt, average_checkpoints_tf2_3
-from utils.dataprocess import count_lines, create_async_trainining_dataset
+from utils.dataprocess import count_lines
 from opennmt.utils import misc
 
 
