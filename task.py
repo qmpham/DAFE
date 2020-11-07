@@ -8391,7 +8391,7 @@ def train_NGD(config,
       step = optimizer.iterations.numpy()
 
       if step % report_every == 0:
-        for h, var in zip(hessian_accumulators, model.trainable_variables):
+        for h, var in zip(hessian_accumulators.hessians, model.trainable_variables):
           if "multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v15/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense_3/bias" in var.name:
             print(h)
       if step % report_every == 0:
