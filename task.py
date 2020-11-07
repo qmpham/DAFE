@@ -8206,7 +8206,7 @@ def train_NGD(config,
   tf.print("importance_weights: ", importance_weights)
   ### update factore of diag hessians
   alpha = config.get("hessian_moving_rate",0.1)
-  #epsilon = config.get("posterior_weight",1e-8)
+  epsilon = config.get("posterior_weight",1e-8)
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -8360,10 +8360,10 @@ def train_NGD(config,
     new_gradients = []
     for gradient, hessian_moving_stat in zip(gradients, hessian_moving_stats):
       if isinstance(gradient,tf.IndexedSlices):
-        new_gradients.append(tf.IndexedSlices(gradient.values / tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices), 
+        new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon), 
         gradient.indices, dense_shape=gradient.dense_shape))
       else:
-        new_gradients.append(gradient / hessian_moving_stat)
+        new_gradients.append(gradient / (hessian_moving_stat+epsilon))
     gradient_accumulator(new_gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
