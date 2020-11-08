@@ -8352,7 +8352,7 @@ def train_NGD(config,
     #  print(var.name)
     gradients = optimizer.get_gradients(training_loss, variables)
     new_gradients = []
-    for gradient, hessian_moving_stat in zip(gradients, hessian_moving_stats):
+    for gradient, hessian_moving_stat, var in zip(gradients, hessian_moving_stats, variables):
       if isinstance(gradient,tf.IndexedSlices):
         if "ADAP" in var.name:
           new_gradients.append(gradient)
