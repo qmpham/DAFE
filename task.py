@@ -8274,7 +8274,7 @@ def train_NGD(config,
         return diag_hessian_acc
       tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
       #hessian_accumulators([p[-1]/batch_hessian_size for p in tf.scan(hessian_accum_along_loss, loss, initializer=[tf.zeros_like(var) for var in variables], swap_memory=True, parallel_iterations=batch_hessian_size)])
-  def _accumulate_gradients(source, target):
+  def _accumulate_NGD_gradients(source, target):
     outputs, _ = model(
         source,
         labels=target,
@@ -8361,6 +8361,86 @@ def train_NGD(config,
     gradient_accumulator(new_gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
+  def _accumulate_gradients(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    if config.get("ADAP_activity_regularizing",False):
+      layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
+      output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
+      d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
+      d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
+      d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
+      print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+      print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
+      print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
+      print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
+      if isinstance(layer_activity_regularization_loss_scale, list):
+        domain = source["domain"][0]
+        layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
+        layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
+        #tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
+      if isinstance(output_activity_regularization_loss_scale, list):
+        domain = source["domain"][0]
+        output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
+        output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
+      regularization_losses = model.losses
+      print("model_name_scope", model.name_scope())
+      print(regularization_losses)
+      layer_activity_regularization_losses = []
+      output_activity_regularization_losses = []
+      d_classification_gate_losses = []
+      d_classifier_activity_regularization_losses = []
+      d_classifier_weight_regularization_losses = []
+      for loss_ in regularization_losses:
+        if "multi_adap__dense" in loss_.name:
+          output_activity_regularization_losses.append(loss_)
+        elif "ADAP_gate" in loss_.name: #and "ActivityRegularizer" not in loss_.name and "Regularizer" not in loss_.name
+          if "ActivityRegularizer" in loss_.name:
+            d_classifier_activity_regularization_losses.append(loss_)
+          elif "Regularizer" in loss_.name:
+            d_classifier_weight_regularization_losses.append(loss_)
+          else:
+            d_classification_gate_losses.append(loss_)
+        elif "ADAP_" in loss_.name:
+          layer_activity_regularization_losses.append(loss_)
+
+      print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
+      print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
+      print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
+      print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
+      print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
+      if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
+        training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
+
+      if len(output_activity_regularization_losses)>0 and output_activity_regularization_loss_scale>0:
+        training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
+
+      if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
+        training_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
+
+      if len(d_classifier_activity_regularization_losses)>0 and d_classifier_activity_regularization_loss_scale>0:
+        training_loss += d_classifier_activity_regularization_loss_scale * tf.add_n(d_classifier_activity_regularization_losses)
+
+      if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
+        training_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)
+    variables = model.trainable_variables
+    print("var numb: ", len(variables))
+    #for var in variables:
+    #  print(var.name)
+    gradients = optimizer.get_gradients(training_loss, variables)
+    gradient_accumulator(gradients)
+    num_examples = tf.reduce_sum(target["length"])
+    return reported_loss, num_examples
   #########
   def _apply_gradients():
     variables = model.trainable_variables
@@ -8376,6 +8456,16 @@ def train_NGD(config,
       stat.assign(stat * alpha + accum / tf.cast(hessian_accum_step * batch_hessian_size, tf.float32) * (1-alpha))
     
   #########
+  @dataset_util.function_on_next(train_dataset)
+  def _NGD_train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+          _accumulate_NGD_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, num_examples
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
@@ -8404,7 +8494,7 @@ def train_NGD(config,
   # Runs the training loop.
   import time
   start = time.time()  
-  train_data_flow = iter(_train_forward())
+  NGD_train_data_flow = iter(_NGD_train_forward())
   _hessian_accumulator_flow = iter(_hessian_acc_forward())
   _, _ = next(train_data_flow)
   
@@ -8425,7 +8515,7 @@ def train_NGD(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      if step % hessian_update_every == 0:
+      if step % hessian_update_every == 0 and step > config.get("NGD_warm_start",0):
         #_source, _target = next(_hessian_accumulator_flow)
         for i in range(hessian_accum_step):
           #_accumulate_diag_hessians(_source, _target)
@@ -8436,10 +8526,14 @@ def train_NGD(config,
         _hessian_stats_update_step()
         #reset_hessian_accumulators()
         #_reset_hessian_acc_step()
-
-      loss, num_examples = next(train_data_flow)    
-      _loss.append(loss)
-      _number_examples.append(num_examples)
+      if step > config.get("NGD_warm_start",0):
+        loss, num_examples = next(NGD_train_data_flow)    
+        _loss.append(loss)
+        _number_examples.append(num_examples)
+      else:
+        loss, num_examples = next(train_data_flow)    
+        _loss.append(loss)
+        _number_examples.append(num_examples)
       _step()  
       step = optimizer.iterations.numpy()
 
