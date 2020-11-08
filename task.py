@@ -8219,17 +8219,7 @@ def train_NGD(config,
             tf.zeros_like(var),
             trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
 
-  #########
-  
-  def _build_model(src,tgt):
-    outputs, _ = model(
-        src,
-        labels=tgt,
-        training=True,
-        step=optimizer.iterations)
-    loss = model.compute_individual_loss(outputs, tgt, training=True)
-    return loss
-  
+  #########  
   def _accumulate_diag_hessians(source,target): 
     #tf.print(source)
     with tf.GradientTape(persistent=True) as tape:  
@@ -8241,39 +8231,11 @@ def train_NGD(config,
           training=True,
           step=optimizer.iterations)
       loss = model.compute_individual_loss(outputs, target, training=True)
-      #loss = _build_model(source, target)
-      #diag_hessians = []
-      """
-      for var in variables:
-        #jacobian = tape.jacobian(loss, var, parallel_iterations=batch_hessian_size, experimental_use_pfor=False) 
-        def hessian_accum_along_loss(diag_hessian_approx, x):
-          p = tf.gradients(x,var)[0]
-          if isinstance(p,tf.IndexedSlices):
-            return tf.tensor_scatter_nd_add(diag_hessian_approx, tf.expand_dims(p.indices,1), p.values * p.values)
-          else:
-            return tf.add(diag_hessian_approx, p * p)
-        #jacobian 
-        #diag_hessian_approx = tf.reduce_mean(jacobian * jacobian, 0)
-        diag_hessians.append(tf.scan(hessian_accum_along_loss, loss, initializer=tf.zeros_like(var), parallel_iterations=batch_hessian_size)[-1]/tf.cast(batch_hessian_size,tf.float32))
-      """
       def hessian_accum_along_loss(diag_hessian_acc, x):
         gradients = tape.gradient(x,variables)
         hessian_accumulators(gradients)
-        #diag_hessian_acc_new = []
-        """
-        for grad, acc in zip(gradients, hessian_accumulators):
-          if isinstance(grad, tf.IndexedSlices):
-            #diag_hessian_acc_new.append(tf.tensor_scatter_nd_add(acc, tf.expand_dims(grad.indices,1), grad.values * grad.values))
-            #acc.scatter_add(tf.IndexedSlices(grad.values * grad.values, grad.indices, dense_shape=grad.dense_shape))
-            acc.assign(tf.tensor_scatter_nd_add(acc.value(), tf.expand_dims(grad.indices,1), grad.values * grad.values))
-            continue
-          else:
-            acc.assign_add(grad * grad)
-            #diag_hessian_acc_new.append(tf.add(acc, grad * grad))
-        """
         return diag_hessian_acc
       tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
-      #hessian_accumulators([p[-1]/batch_hessian_size for p in tf.scan(hessian_accum_along_loss, loss, initializer=[tf.zeros_like(var) for var in variables], swap_memory=True, parallel_iterations=batch_hessian_size)])
   def _accumulate_NGD_gradients(source, target):
     outputs, _ = model(
         source,
@@ -8454,7 +8416,6 @@ def train_NGD(config,
   def update_hessian_moving_stats():
     for accum, stat in zip(hessian_accumulators.hessians, hessian_moving_stats):
       stat.assign(stat * alpha + accum / tf.cast(hessian_accum_step * batch_hessian_size, tf.float32) * (1-alpha))
-    
   #########
   @dataset_util.function_on_next(train_dataset)
   def _NGD_train_forward(next_fn):    
