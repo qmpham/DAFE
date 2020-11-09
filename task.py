@@ -8321,7 +8321,7 @@ def train_NGD(config,
         else:
           new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon), 
         gradient.indices, dense_shape=gradient.dense_shape))
-          tf.print(tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon)
+          tf.print("hessian: ",tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon)
       else:
         new_gradients.append(gradient / (hessian_moving_stat.value() +epsilon))
     gradient_accumulator(new_gradients)
