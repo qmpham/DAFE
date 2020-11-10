@@ -8475,6 +8475,7 @@ def train_NGD(config,
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
   step = optimizer.iterations.numpy()
+
   with _summary_writer.as_default():
     while True:
       #####Training batch
@@ -8504,6 +8505,22 @@ def train_NGD(config,
       #   for h, var in zip(hessian_accumulators.hessians, model.trainable_variables):
       #     if "multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v15/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense_3/bias" in var.name:
       #       print(h)
+      if step % eval_every == 0 and step>0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        output_files = []
+        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+            output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+            score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+            tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+            output_files.append(output_file)
+        ##### BLEU on concat dev set.
+        output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
+        score = scorer(ref_eval_concat, output_file_concat)
+        print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
+        tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
+        #############################
+        tf.summary.flush()
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
