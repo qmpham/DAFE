@@ -8194,7 +8194,7 @@ def train_NGD(config,
   hessian_datasets = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_hessian_size, "examples", shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, 
-                                            temperature=config.get("temperature",1.0))
+                                            temperature=config.get("temperature",1.0), pick_in_order=True)
 
   from utils.dataprocess import count_lines
   datasets_size = [count_lines(src) for src in source_file]
@@ -8289,11 +8289,11 @@ def train_NGD(config,
         elif "ADAP_" in loss_.name:
           layer_activity_regularization_losses.append(loss_)
 
-      print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
-      print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
-      print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
-      print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
-      print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
+      # print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
+      # print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
+      # print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
+      # print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
+      # print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
       if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
         training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
 
@@ -8343,10 +8343,10 @@ def train_NGD(config,
       d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
       d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
       d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
-      print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
-      print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
-      print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
-      print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
+      # print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+      # print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
+      # print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
+      # print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
       if isinstance(layer_activity_regularization_loss_scale, list):
         domain = source["domain"][0]
         layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
@@ -8377,11 +8377,11 @@ def train_NGD(config,
         elif "ADAP_" in loss_.name:
           layer_activity_regularization_losses.append(loss_)
 
-      print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
-      print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
-      print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
-      print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
-      print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
+      # print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
+      # print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
+      # print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
+      # print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
+      # print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
       if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
         training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
 
