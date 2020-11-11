@@ -8194,7 +8194,7 @@ def train_NGD(config,
   hessian_datasets = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), 
-                                            temperature=config.get("temperature",1.0), pick_in_order=True)
+                                            temperature=config.get("temperature",1.0), pick_in_order=False)
 
   from utils.dataprocess import count_lines
   datasets_size = [count_lines(src) for src in source_file]
@@ -8221,7 +8221,7 @@ def train_NGD(config,
 
   #########  
   def _accumulate_diag_hessians(source,target): 
-    #tf.print(source)
+    tf.print(source["domain"])
     with tf.GradientTape(persistent=True) as tape:  
       variables = model.trainable_variables
       tape.watch(variables)
