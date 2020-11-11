@@ -8191,10 +8191,10 @@ def train_NGD(config,
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), 
                                             temperature=config.get("temperature",1.0))
-  hessian_datasets = [create_trainining_dataset(strategy, model, [d], [src_f], [tgt_f], batch_hessian_size, "examples", shuffle_buffer_size, 
+  hessian_datasets = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True), picking_prob=None, 
-                                            temperature=config.get("temperature",1.0)) for src_f, tgt_f, d in zip(source_file, target_file, domain)]
+                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), 
+                                            temperature=config.get("temperature",1.0), pick_in_order=True)
 
   from utils.dataprocess import count_lines
   datasets_size = [count_lines(src) for src in source_file]
@@ -8220,7 +8220,6 @@ def train_NGD(config,
             trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
 
   #########  
-  @tf.function()
   def _accumulate_diag_hessians(source,target): 
     #tf.print(source)
     with tf.GradientTape(persistent=True) as tape:  
@@ -8458,8 +8457,7 @@ def train_NGD(config,
   import time
   start = time.time()  
   NGD_train_data_flow = iter(_NGD_train_forward())
-  #_hessian_accumulator_flow = iter(_hessian_acc_forward())
-  hessian_iters = [iter(dataset) for dataset in hessian_datasets]
+  _hessian_accumulator_flow = iter(_hessian_acc_forward())
   train_data_flow = iter(_train_forward())
   _, _ = next(train_data_flow)
   
@@ -8497,13 +8495,8 @@ def train_NGD(config,
     while True:
       #####Training batch
       if step % hessian_update_every == 0 and step > config.get("NGD_warm_start",0):
-        # for i in range(hessian_accum_step):
-        #   next(_hessian_accumulator_flow)
-        with strategy.scope():
-          for hessian_iter in hessian_iters:
-            per_replica_source, per_replica_target = next(hessian_iter)
-            strategy.experimental_run_v2(
-              _accumulate_diag_hessians, args=(per_replica_source, per_replica_target))
+        for i in range(hessian_accum_step):
+          next(_hessian_accumulator_flow)
         _hessian_stats_update_step()
       if step > config.get("NGD_warm_start",0):
         loss, num_examples = next(NGD_train_data_flow)    

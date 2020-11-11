@@ -340,7 +340,7 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
 
   return meta_train_dataset, meta_test_dataset
 
-def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0):
+def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0, pick_in_order=False):
 
   print("maximum_length", maximum_length)
   train_datasets = [] 
@@ -386,8 +386,11 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
     print("picking probability: ", picking_prob)
   else:
     print("picking probability: ", picking_prob)
-
-  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
+  if pick_in_order:
+    choice_dataset = tf.data.Dataset.range(len(train_datasets)).repeat()
+    train_dataset = tf.data.experimental.choose_from_datasets(train_datasets, choice_dataset)
+  else:
+    train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
   with strategy.scope():
     base_dataset = train_dataset
     train_dataset = strategy.experimental_distribute_datasets_from_function(
