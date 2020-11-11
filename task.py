@@ -8220,6 +8220,7 @@ def train_NGD(config,
             trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
 
   #########  
+  @tf.function()
   def _accumulate_diag_hessians(source,target): 
     #tf.print(source)
     with tf.GradientTape(persistent=True) as tape:  
