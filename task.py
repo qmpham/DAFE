@@ -8179,6 +8179,7 @@ def train_NGD(config,
   batch_hessian_size = config.get("batch_hessian_size",10)
   print("batch_hessian_size: ", batch_hessian_size, "examples")
   print("batch_train_size: ", batch_train_size, batch_type)
+  print("current learning rate: ", learning_rate(step))
   hessian_accum_step = config.get("hessian_accum_step",1)
   batch_type = batch_type
   source_file = config["src"]
@@ -8195,6 +8196,7 @@ def train_NGD(config,
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, 
                                             temperature=config.get("temperature",1.0), pick_in_order=True)
+
 
   from utils.dataprocess import count_lines
   datasets_size = [count_lines(src) for src in source_file]
