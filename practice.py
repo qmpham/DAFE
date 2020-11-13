@@ -27,7 +27,7 @@ from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder, TextInputter
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, create_slurm_strategy
 import task
-from optimizer import schedules
+from optimizer import schedules as my_schedules
 from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v6, Multi_domain_Gate_v1, Multi_domain_FeedForwardNetwork_v5, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_FeedForwardNetwork_v1, Multi_domain_FeedForwardNetwork_v0
 def main():
   seed = 1234
@@ -1243,7 +1243,8 @@ def main():
   print("warmup_steps: ", warmup_steps)
   print("step_duration: ", config.get("step_duration",16))
   print("d_model: ", config.get("d_model",512))
-  learning_rate = onmt.schedules.ScheduleWrapper(schedule=schedules.NGDDecay(scale=config.get("learning_rate",1.0), model_dim=config.get("d_model",512), warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
+  learning_rate = onmt.schedules.ScheduleWrapper(schedule=my_schedules.NGDDecay(scale=config.get("learning_rate",1.0), model_dim=config.get("d_model",512), warmup_steps=warmup_steps), step_duration= config.get("step_duration",16))
+  
   print("learning_rate: ", learning_rate)
   meta_train_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr"))
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate)
