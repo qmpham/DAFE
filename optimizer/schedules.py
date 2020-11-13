@@ -18,4 +18,4 @@ class NGDDecay(tf.keras.optimizers.schedules.LearningRateSchedule):
     step = tf.cast(step + 1, tf.float32)
     return (self.scale
             * tf.pow(self.model_dim, -0.5)
-            * tf.minimum(tf.pow(step, -0.2), step * tf.pow(self.warmup_steps, -1.2)))
+            * tf.minimum(tf.pow(step, -0.35), step * tf.pow(self.warmup_steps, -1.35)))
