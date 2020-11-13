@@ -8179,7 +8179,6 @@ def train_NGD(config,
   batch_hessian_size = config.get("batch_hessian_size",10)
   print("batch_hessian_size: ", batch_hessian_size, "examples")
   print("batch_train_size: ", batch_train_size, batch_type)
-  print("current learning rate: ", learning_rate(step))
   hessian_accum_step = config.get("hessian_accum_step",1)
   batch_type = batch_type
   source_file = config["src"]
@@ -8490,6 +8489,7 @@ def train_NGD(config,
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
   step = optimizer.iterations.numpy()
+  print("current learning rate: ", learning_rate(step))
   if step % eval_every == 0 and step>0:
     checkpoint_path = checkpoint_manager.latest_checkpoint
     tf.summary.experimental.set_step(step)
