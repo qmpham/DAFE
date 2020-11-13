@@ -27,7 +27,7 @@ from opennmt.utils import BLEUScorer
 from opennmt.inputters.text_inputter import WordEmbedder, TextInputter
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, create_slurm_strategy
 import task
-import optimizer import schedules
+from optimizer import schedules
 from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v6, Multi_domain_Gate_v1, Multi_domain_FeedForwardNetwork_v5, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_FeedForwardNetwork_v1, Multi_domain_FeedForwardNetwork_v0
 def main():
   seed = 1234
