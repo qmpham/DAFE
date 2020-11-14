@@ -8324,10 +8324,11 @@ def train_NGD(config,
     for gradient, hessian_moving_stat, var in zip(gradients, hessian_moving_stats, variables):
       if isinstance(gradient,tf.IndexedSlices):
         rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon)))
-        tf.print("hessian %s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices))
+        tf.print("hessian %s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices), "indices: ", gradient.indices, sep="|")
+        tf.print("hessian_stat: ", hessian_moving_stat.value())
       else:
         rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat.value()+epsilon)))
-        tf.print("hessian %s: "%var.name, hessian_moving_stat.value())
+        #tf.print("hessian %s: "%var.name, hessian_moving_stat.value())
     for gradient, hessian_moving_stat, var in zip(gradients, hessian_moving_stats, variables):
       if isinstance(gradient,tf.IndexedSlices):
         # new_gradients.append(gradient)
