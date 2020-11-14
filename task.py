@@ -8236,7 +8236,10 @@ def train_NGD(config,
       loss = model.compute_individual_loss(outputs, target, training=True)
       def hessian_accum_along_loss(diag_hessian_acc, x):
         gradients = tape.gradient(x,variables)
-        hessian_accumulators(tf.square(gradients))
+        _hessians = []
+        for grad in gradients:
+          _hessians.append(tf.square(grad))
+        hessian_accumulators(_hessians)
         return diag_hessian_acc
       tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
   def _accumulate_NGD_gradients(source, target):
