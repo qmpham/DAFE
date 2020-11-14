@@ -8517,7 +8517,7 @@ def train_NGD(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      if step % hessian_update_every == 0 and step > config.get("NGD_warm_start",0):
+      if step % hessian_update_every == 0 and step >= config.get("NGD_warm_start",0):
         for i in range(hessian_accum_step):
           next(_hessian_accumulator_flow)
         _hessian_stats_update_step()
