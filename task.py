@@ -8221,6 +8221,9 @@ def train_NGD(config,
     hessian_moving_stats = [tf.Variable(
             tf.zeros_like(var),
             trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
+    normalized_hessian_moving_stats = [tf.Variable(
+            tf.zeros_like(var),
+            trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
 
   #########  
   def _accumulate_diag_hessians(source,target): 
@@ -8320,7 +8323,7 @@ def train_NGD(config,
     gradients = optimizer.get_gradients(training_loss, variables)
     new_gradients = []
     
-    for gradient, hessian_moving_stat, var in zip(gradients, hessian_moving_stats, variables):
+    for gradient, hessian_moving_stat, var in zip(gradients, normalized_hessian_moving_stats, variables):
       if isinstance(gradient,tf.IndexedSlices):
         if "embedding" in var.name:
           continue
@@ -8331,7 +8334,7 @@ def train_NGD(config,
       else:
         rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat.value()+epsilon)))
         #tf.print("hessian %s: "%var.name, hessian_moving_stat.value())
-    for gradient, hessian_moving_stat, var in zip(gradients, hessian_moving_stats, variables):
+    for gradient, hessian_moving_stat, var in zip(gradients, normalized_hessian_moving_stats, variables):
       if isinstance(gradient,tf.IndexedSlices):
         # new_gradients.append(gradient)
         # new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon) 
@@ -8439,7 +8442,10 @@ def train_NGD(config,
     gradient_accumulator.reset()
   def update_hessian_moving_stats():
     for accum, stat in zip(hessian_accumulators.hessians, hessian_moving_stats):
-      stat.assign(stat * alpha + accum / tf.cast(hessian_accum_step * batch_hessian_size, tf.float32) * (1-alpha))
+      stat.assign(accum / tf.cast(hessian_accum_step * batch_hessian_size, tf.float32))
+    for accum, normalized_accum in zip(hessian_moving_stats, normalized_hessian_moving_stats):
+      mean = tf.reduce_mean(accum.value())
+      normalized_accum.assign(accum.value()/mean)
   #########
   @dataset_util.function_on_next(train_dataset)
   def _NGD_train_forward(next_fn):    
