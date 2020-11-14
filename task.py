@@ -8224,7 +8224,6 @@ def train_NGD(config,
 
   #########  
   def _accumulate_diag_hessians(source,target): 
-    #tf.print(source)
     with tf.GradientTape(persistent=True) as tape:  
       variables = model.trainable_variables
       tape.watch(variables)
@@ -8323,9 +8322,12 @@ def train_NGD(config,
     
     for gradient, hessian_moving_stat, var in zip(gradients, hessian_moving_stats, variables):
       if isinstance(gradient,tf.IndexedSlices):
-        rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon)))
-        tf.print("hessian %s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices), "indices: ", gradient.indices, sep="|")
-        tf.print("hessian_stat: ", hessian_moving_stat.value())
+        if "embedding" in var.name:
+          continue
+        else:
+          rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon)))
+          tf.print("hessian %s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices), "indices: ", gradient.indices, sep="|")
+          tf.print("hessian_stat: ", hessian_moving_stat.value())
       else:
         rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat.value()+epsilon)))
         #tf.print("hessian %s: "%var.name, hessian_moving_stat.value())
@@ -8516,31 +8518,25 @@ def train_NGD(config,
     while True:
       #####Training batch
       if step % hessian_update_every == 0 and step > config.get("NGD_warm_start",0):
-        #_source, _target = next(_hessian_accumulator_flow)
         for i in range(hessian_accum_step):
-          #_accumulate_diag_hessians(_source, _target)
           next(_hessian_accumulator_flow)
-        #avg_hessian_accumulators()
-        #_hessian_acc_step()
-        #normalize_hessian_accumulators()
         _hessian_stats_update_step()
-        #reset_hessian_accumulators()
-        #_reset_hessian_acc_step()
-      if step > config.get("NGD_warm_start",0):
-        loss, num_examples = next(NGD_train_data_flow)    
-        _loss.append(loss)
-        _number_examples.append(num_examples)
-      else:
-        loss, num_examples = next(train_data_flow)    
-        _loss.append(loss)
-        _number_examples.append(num_examples)
-      _step()  
-      step = optimizer.iterations.numpy()
+      
+      # if step > config.get("NGD_warm_start",0):
+      #   loss, num_examples = next(NGD_train_data_flow)    
+      #   _loss.append(loss)
+      #   _number_examples.append(num_examples)
+      # else:
+      #   loss, num_examples = next(train_data_flow)    
+      #   _loss.append(loss)
+      #   _number_examples.append(num_examples)
+      # _step()  
+      # step = optimizer.iterations.numpy()
 
-      # if step % report_every == 0:
-      #   for h, var in zip(hessian_accumulators.hessians, model.trainable_variables):
-      #     if "multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v15/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense_3/bias" in var.name:
-      #       print(h)
+      if step % report_every == 0:
+        for h, var in zip(hessian_accumulators.hessians, model.trainable_variables):
+          if "multi_domain__sequence_to_sequence/multi_domain__self_attention_encoder_v15/self_attention_encoder_layer/transformer_layer_wrapper/multi_head_attention/dense_3/bias" in var.name:
+            print(h)
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
