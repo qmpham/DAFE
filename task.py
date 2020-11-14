@@ -8534,9 +8534,9 @@ def train_NGD(config,
       # step = optimizer.iterations.numpy()
 
       if step % report_every == 0:
-        for h, var in zip(hessian_accumulators.hessians, model.trainable_variables):
+        for h, var in zip(hessian_moving_stats, model.trainable_variables):
           if "ADAP" in var.name:
-            print(h)
+            print("hessian %s: "%var.name, h)
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
