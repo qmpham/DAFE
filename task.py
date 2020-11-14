@@ -8527,16 +8527,16 @@ def train_NGD(config,
           next(_hessian_accumulator_flow)
         _hessian_stats_update_step()
       
-      # if step >= config.get("NGD_warm_start",0):
-      #   loss, num_examples = next(NGD_train_data_flow)    
-      #   _loss.append(loss)
-      #   _number_examples.append(num_examples)
-      # else:
-      #   loss, num_examples = next(train_data_flow)    
-      #   _loss.append(loss)
-      #   _number_examples.append(num_examples)
-      # _step()  
-      # step = optimizer.iterations.numpy()
+      if step >= config.get("NGD_warm_start",0):
+        loss, num_examples = next(NGD_train_data_flow)    
+        _loss.append(loss)
+        _number_examples.append(num_examples)
+      else:
+        loss, num_examples = next(train_data_flow)    
+        _loss.append(loss)
+        _number_examples.append(num_examples)
+      _step()  
+      step = optimizer.iterations.numpy()
 
       if step % report_every == 0:
         for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
