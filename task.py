@@ -8523,7 +8523,7 @@ def train_NGD(config,
           next(_hessian_accumulator_flow)
         _hessian_stats_update_step()
       
-      if step >= config.get("NGD_warm_start",0):
+      if step > config.get("NGD_warm_start",0):
         loss, num_examples = next(NGD_train_data_flow)    
         _loss.append(loss)
         _number_examples.append(num_examples)
