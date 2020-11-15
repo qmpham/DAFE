@@ -8345,7 +8345,7 @@ def train_NGD(config,
       else:
         #new_gradients.append(gradient / (hessian_moving_stat.value() +epsilon) * 1 / tf.sqrt(tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat.value()+epsilon))))
         new_gradients.append(gradient / (hessian_moving_stat.value()+epsilon) * 1 / tf.sqrt(rescale_sum.value()))
-        tf.print("hessian %s: "%var.name, hessian_moving_stat.value())
+        #tf.print("hessian %s: "%var.name, hessian_moving_stat.value())
     gradient_accumulator(new_gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
