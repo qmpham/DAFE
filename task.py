@@ -8331,6 +8331,7 @@ def train_NGD(config,
       else:
         rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat.value()+epsilon)))
         #tf.print("hessian %s: "%var.name, hessian_moving_stat.value())
+    tf.print("rescale_sum: ", rescale_sum)
     for gradient, hessian_moving_stat, var in zip(gradients, normalized_hessian_moving_stats, variables):
       if isinstance(gradient,tf.IndexedSlices):
         # new_gradients.append(gradient)
