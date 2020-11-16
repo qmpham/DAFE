@@ -8532,42 +8532,42 @@ def train_NGD(config,
         loss, num_examples = next(train_data_flow)    
         _loss.append(loss)
         _number_examples.append(num_examples)
-      # _step()  
-      # step = optimizer.iterations.numpy()
+        _step()  
+      step = optimizer.iterations.numpy()
 
       # if step % report_every == 0:
       #   for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
       #       #print("hessian %s: "%var.name, h)
       #       print("normalized hessian %s: "%var.name, n_h)
-      # if step % report_every == 0:
-      #   elapsed = time.time() - start
-      #   tf.get_logger().info(
-      #     "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
-      #     step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
-      #   _loss = []
-      #   _number_examples = []
-      #   start = time.time()
-      # if step % save_every == 0:
-      #   tf.get_logger().info("Saving checkpoint for step %d", step)
-      #   checkpoint_manager.save(checkpoint_number=step)
-      # if step % eval_every == 0:
-      #   checkpoint_path = checkpoint_manager.latest_checkpoint
-      #   tf.summary.experimental.set_step(step)
-      #   output_files = []
-      #   for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-      #       output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-      #       score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-      #       tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
-      #       output_files.append(output_file)
-      #   ##### BLEU on concat dev set.
-      #   output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
-      #   score = scorer(ref_eval_concat, output_file_concat)
-      #   print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
-      #   tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
-      #   #############################
-      #   tf.summary.flush()
-      # if step > train_steps:
-      #   break
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+          "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
+          step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+        _loss = []
+        _number_examples = []
+        start = time.time()
+      if step % save_every == 0:
+        tf.get_logger().info("Saving checkpoint for step %d", step)
+        checkpoint_manager.save(checkpoint_number=step)
+      if step % eval_every == 0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        output_files = []
+        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+            output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+            score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+            tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+            output_files.append(output_file)
+        ##### BLEU on concat dev set.
+        output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
+        score = scorer(ref_eval_concat, output_file_concat)
+        print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
+        tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
+        #############################
+        tf.summary.flush()
+      if step > train_steps:
+        break
       
 
 
