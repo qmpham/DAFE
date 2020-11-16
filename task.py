@@ -8223,7 +8223,7 @@ def train_NGD(config,
             trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
     normalized_hessian_moving_stats = [tf.Variable(
             tf.zeros_like(var),
-            trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
+            trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO) for var in model.trainable_variables]
 
   #########  
   def _accumulate_diag_hessians(source,target): 
