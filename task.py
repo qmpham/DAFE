@@ -8929,7 +8929,7 @@ def debug_NGD(config,
   _loss = []  
   _number_examples = []
       
-  for _ in range(20):    
+  for _ in range(3):    
     for i in range(hessian_accum_step):
       next(_hessian_accumulator_flow)
     _hessian_stats_update_step()
