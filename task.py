@@ -8519,6 +8519,9 @@ def train_NGD(config,
   #   tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
   #   #############################
   #   tf.summary.flush()
+  if step % report_every == 0:
+    for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
+      print("hessian %s: "%var.name, var.numpy())
   with _summary_writer.as_default():
     while True:
       #####Training batch
