@@ -8336,13 +8336,13 @@ def train_NGD(config,
         rescale_sum += tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat.value()+epsilon))
     for gradient, hessian_moving_stat, var in zip(gradients, normalized_hessian_moving_stats, variables):
       if isinstance(gradient,tf.IndexedSlices):
-        new_gradients.append(gradient)
+        # new_gradients.append(gradient)
         # new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon) 
         # * 1 / tf.sqrt(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon))), 
         # gradient.indices, dense_shape=gradient.dense_shape))
-        # new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon) 
-        #  * 1 / tf.sqrt(rescale_sum.value()), 
-        #  gradient.indices, dense_shape=gradient.dense_shape))
+        new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon) 
+         * 1 / tf.sqrt(rescale_sum.value()), 
+         gradient.indices, dense_shape=gradient.dense_shape))
       else:
         #new_gradients.append(gradient / (hessian_moving_stat.value() +epsilon) * 1 / tf.sqrt(tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat.value()+epsilon))))
         new_gradients.append(gradient / (hessian_moving_stat.value()+epsilon) * 1 / tf.sqrt(rescale_sum))
