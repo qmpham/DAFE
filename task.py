@@ -8333,7 +8333,7 @@ def train_NGD(config,
       else:
         rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat + epsilon)))
         #tf.print("hessian %s: "%var.name, hessian_moving_stat.value())
-    tf.print("rescale_sum: ", rescale_sum)
+    #tf.print("rescale_sum: ", rescale_sum)
     for gradient, hessian_moving_stat, var in zip(gradients, normalized_hessian_moving_stats, variables):
       if isinstance(gradient,tf.IndexedSlices):
         # new_gradients.append(gradient)
@@ -8538,10 +8538,10 @@ def train_NGD(config,
       _step()  
       step = optimizer.iterations.numpy()
 
-      if step % report_every == 0:
-        for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
-            #print("hessian %s: "%var.name, h)
-            print("normalized hessian %s: "%var.name, n_h)
+      # if step % report_every == 0:
+      #   for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
+      #       #print("hessian %s: "%var.name, h)
+      #       print("normalized hessian %s: "%var.name, n_h)
         #break
       if step % report_every == 0:
         elapsed = time.time() - start
