@@ -8340,7 +8340,7 @@ def train_NGD(config,
         new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon) 
          * 1 / tf.sqrt(rescale_sum.value()), 
          gradient.indices, dense_shape=gradient.dense_shape))
-        tf.print("hessian_%s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices))
+        # tf.print("hessian_%s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices))
       else:
         # new_gradients.append(gradient / (hessian_moving_stat.value() +epsilon) * 1 / tf.sqrt(tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat.value()+epsilon))))
         new_gradients.append(gradient / (hessian_moving_stat.value()+epsilon) * 1 / tf.sqrt(rescale_sum.value()))
@@ -8532,13 +8532,14 @@ def train_NGD(config,
         loss, num_examples = next(train_data_flow)    
         _loss.append(loss)
         _number_examples.append(num_examples)
-      _step()  
+        _step()  
       step = optimizer.iterations.numpy()
 
-      # if step % report_every == 0:
-      #   for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
-      #       #print("hessian %s: "%var.name, h)
-      #       print("normalized hessian %s: "%var.name, n_h)
+      if step % report_every == 0:
+        for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
+            #print("hessian %s: "%var.name, h)
+            print("normalized hessian %s: "%var.name, n_h)
+        break
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
