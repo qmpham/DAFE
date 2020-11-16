@@ -8223,7 +8223,7 @@ def train_NGD(config,
             trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
     normalized_hessian_moving_stats = [tf.Variable(
             tf.zeros_like(var),
-            trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
+            trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
 
   #########  
   def _accumulate_diag_hessians(source,target): 
@@ -8325,7 +8325,7 @@ def train_NGD(config,
     rescale_sum.assign(0.0)
     for gradient, hessian_moving_stat, var in zip(gradients, normalized_hessian_moving_stats, variables):
       if isinstance(gradient,tf.IndexedSlices):
-        rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon)))
+        rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat, gradient.indices) + epsilon)))
         #tf.print("hessian %s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices), "indices: ", gradient.indices, sep="|")
         #tf.print("hessian_stat: ", hessian_moving_stat.value())
       else:
@@ -8338,13 +8338,13 @@ def train_NGD(config,
         # new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon) 
         # * 1 / tf.sqrt(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon))), 
         # gradient.indices, dense_shape=gradient.dense_shape))
-        new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon) 
+        new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat, gradient.indices) + epsilon) 
          * 1 / tf.sqrt(rescale_sum.value()), 
          gradient.indices, dense_shape=gradient.dense_shape))
         # tf.print("hessian_%s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices))
       else:
         # new_gradients.append(gradient / (hessian_moving_stat.value() +epsilon) * 1 / tf.sqrt(tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat.value()+epsilon))))
-        new_gradients.append(gradient / (hessian_moving_stat.value()+epsilon) * 1 / tf.sqrt(rescale_sum.value()))
+        new_gradients.append(gradient / (hessian_moving_stat + epsilon) * 1 / tf.sqrt(rescale_sum.value()))
     gradient_accumulator(new_gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
