@@ -8209,6 +8209,8 @@ def train_NGD(config,
   ### update factore of diag hessians
   alpha = config.get("hessian_moving_rate",0.1)
   epsilon = config.get("posterior_weight",1e-8)
+  print("epsilon: ", epsilon)
+  print("hessian_moving_rate: ", alpha)
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
