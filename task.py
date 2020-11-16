@@ -8540,7 +8540,7 @@ def train_NGD(config,
         for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
             #print("hessian %s: "%var.name, h)
             print("normalized hessian %s: "%var.name, n_h)
-        break
+        #break
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
