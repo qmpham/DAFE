@@ -8533,7 +8533,7 @@ def train_NGD(config,
         loss, num_examples = next(train_data_flow)    
         _loss.append(loss)
         _number_examples.append(num_examples)
-        _step()  
+      _step()  
       step = optimizer.iterations.numpy()
 
       if step % report_every == 0:
