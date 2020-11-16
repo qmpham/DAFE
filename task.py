@@ -8539,11 +8539,11 @@ def train_NGD(config,
       _step()  
       step = optimizer.iterations.numpy()
 
-      if step % report_every == 0:
-        for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
-            #print("hessian %s: "%var.name, h)
-            print("normalized hessian %s: "%var.name, tf.reduce_sum(tf.square(n_h)))
-        #break
+      # if step % report_every == 0:
+      #   for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
+      #       #print("hessian %s: "%var.name, h)
+      #       print("normalized hessian %s: "%var.name, tf.reduce_sum(tf.square(n_h)))
+      #   #break
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
@@ -8928,21 +8928,12 @@ def debug_NGD(config,
   print("accumulation step", config.get("accumulation_step",1))
   _loss = []  
   _number_examples = []
-  
-  score_type = config.get("score_type","MultiBLEU")
-  if score_type == "sacreBLEU":
-    print("using sacreBLEU")
-    scorer = BLEUScorer()
-  elif score_type == "MultiBLEU":
-    print("using MultiBLEU")
-    scorer = MultiBLEUScorer()
-  ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
       
-  for _ in range(5):    
+  for _ in range(20):    
     for i in range(hessian_accum_step):
       next(_hessian_accumulator_flow)
     _hessian_stats_update_step()
-    loss, num_examples = next(train_data_flow)    
+    loss, num_examples = next(NGD_train_data_flow)    
     _loss.append(loss)
     _number_examples.append(num_examples)
     _step()  
