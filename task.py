@@ -8446,7 +8446,7 @@ def train_NGD(config,
     for accum, stat in zip(hessian_accumulators.hessians, hessian_moving_stats):
       stat.assign(accum / tf.cast(hessian_accum_step * batch_hessian_size, tf.float32))
     for hessian, normalized_hessian in zip(hessian_moving_stats, normalized_hessian_moving_stats):
-      normalized_accum.assign(hessian/tf.reduce_sum(hessian))
+      normalized_hessian.assign(hessian/tf.reduce_sum(hessian))
     
   #########
   @dataset_util.function_on_next(train_dataset)
