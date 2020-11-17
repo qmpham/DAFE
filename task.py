@@ -8222,7 +8222,7 @@ def train_NGD(config,
     rescale_sum = tf.Variable(0.0, trainable=False, synchronization=tf.VariableSynchronization.ON_READ)
     hessian_moving_stats = [tf.Variable(
             tf.zeros_like(var),
-            trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
+            trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO) for var in model.trainable_variables]
     normalized_hessian_moving_stats = [tf.Variable(
             tf.zeros_like(var),
             trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO) for var in model.trainable_variables]
@@ -8445,8 +8445,9 @@ def train_NGD(config,
   def update_hessian_moving_stats():
     for accum, stat in zip(hessian_accumulators.hessians, hessian_moving_stats):
       stat.assign(accum / tf.cast(hessian_accum_step * batch_hessian_size, tf.float32))
-    for accum, normalized_accum in zip(hessian_moving_stats, normalized_hessian_moving_stats):
-      normalized_accum.assign(accum.value()/tf.reduce_sum(accum.value()))
+    for hessian, normalized_hessian in zip(hessian_moving_stats, normalized_hessian_moving_stats):
+      normalized_accum.assign(hessian/tf.reduce_sum(hessian))
+    
   #########
   @dataset_util.function_on_next(train_dataset)
   def _NGD_train_forward(next_fn):    
