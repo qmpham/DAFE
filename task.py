@@ -8328,7 +8328,10 @@ def train_NGD(config,
     rescale_sum.assign(0.0)
     for gradient, hessian_moving_stat, var in zip(gradients, normalized_hessian_moving_stats, variables):
       if isinstance(gradient,tf.IndexedSlices):
-        rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat, gradient.indices) + epsilon)))
+        if "embedding" in var.name:
+          rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat, gradient.indices) + epsilon)))
+        else:
+          rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient.values)/ epsilon))
         #tf.print("hessian %s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices), "indices: ", gradient.indices, sep="|")
         #tf.print("hessian_stat: ", hessian_moving_stat.value())
         #continue
@@ -8342,8 +8345,12 @@ def train_NGD(config,
         # new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon) 
         # * 1 / tf.sqrt(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon))), 
         # gradient.indices, dense_shape=gradient.dense_shape))
-        new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat, gradient.indices) + epsilon) 
+        if "embedding" in var.name:
+          new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat, gradient.indices) + epsilon) 
          * 1 / tf.sqrt(rescale_sum.value()), 
+         gradient.indices, dense_shape=gradient.dense_shape))
+        else:
+          new_gradients.append(tf.IndexedSlices(gradient.values / epsilon * 1 / tf.sqrt(rescale_sum.value()), 
          gradient.indices, dense_shape=gradient.dense_shape))
         # tf.print("hessian_%s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices))
       else:
