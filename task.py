@@ -8202,7 +8202,7 @@ def train_NGD(config,
   datasets_size = [count_lines(src) for src in source_file]
   importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
   temperature=config.get("temperature",1.0)
-  importance_weights = [w ** temperature for w in importance_weights]
+  importance_weights = [w ** (-temperature) for w in importance_weights]
   importance_weights = [w/sum(importance_weights) for w in importance_weights]
   importance_weights = tf.constant(importance_weights)
   tf.print("importance_weights: ", importance_weights)
