@@ -8243,7 +8243,7 @@ def train_NGD(config,
         gradients = tape.gradient(x,variables)
         _hessians = []
         for grad in gradients:
-          _hessians.append(tf.square(grad) * importance_weights[_dom])
+          _hessians.append(tf.square(grad))
         hessian_accumulators(_hessians)
         return diag_hessian_acc
       tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
