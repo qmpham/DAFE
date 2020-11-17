@@ -8202,7 +8202,7 @@ def train_NGD(config,
   datasets_size = [count_lines(src) for src in source_file]
   importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
   temperature=config.get("temperature",1.0)
-  importance_weights = [w ** (-temperature) for w in importance_weights]
+  importance_weights = [w ** (temperature) for w in importance_weights]
   importance_weights = [w/sum(importance_weights) for w in importance_weights]
   
   ### update factore of diag hessians
@@ -8243,7 +8243,7 @@ def train_NGD(config,
         gradients = tape.gradient(x,variables)
         _hessians = []
         for grad in gradients:
-          _hessians.append(tf.square(grad)*0.33)
+          _hessians.append(tf.square(grad)/importance_weights[_dom])
         hessian_accumulators(_hessians)
         return diag_hessian_acc
       tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
