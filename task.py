@@ -8204,8 +8204,7 @@ def train_NGD(config,
   temperature=config.get("temperature",1.0)
   importance_weights = [w ** (-temperature) for w in importance_weights]
   importance_weights = [w/sum(importance_weights) for w in importance_weights]
-  importance_weights = tf.constant(importance_weights)
-  tf.print("importance_weights: ", importance_weights)
+  
   ### update factore of diag hessians
   alpha = config.get("hessian_moving_rate",0.1)
   epsilon = config.get("posterior_weight",1e-8)
@@ -8226,7 +8225,8 @@ def train_NGD(config,
     normalized_hessian_moving_stats = [tf.Variable(
             tf.zeros_like(var),
             trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO) for var in model.trainable_variables]
-
+    importance_weights = tf.constant(importance_weights)
+    tf.print("importance_weights: ", importance_weights)
   #########  
   def _accumulate_diag_hessians(source,target): 
     with tf.GradientTape(persistent=True) as tape:  
@@ -8243,7 +8243,7 @@ def train_NGD(config,
         gradients = tape.gradient(x,variables)
         _hessians = []
         for grad in gradients:
-          _hessians.append(tf.square(grad))
+          _hessians.append(tf.square(grad)*0.33)
         hessian_accumulators(_hessians)
         return diag_hessian_acc
       tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
