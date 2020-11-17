@@ -8219,7 +8219,7 @@ def train_NGD(config,
     # hessian_accumulators = [tf.Variable(
     #         tf.zeros_like(var),
     #         trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
-    #rescale_sum = tf.Variable(0.0, trainable=False, synchronization=tf.VariableSynchronization.ON_READ)
+    rescale_sum = tf.Variable(0.0, trainable=False, synchronization=tf.VariableSynchronization.ON_READ)
     hessian_moving_stats = [tf.Variable(
             tf.zeros_like(var),
             trainable=False, synchronization=tf.VariableSynchronization.ON_READ) for var in model.trainable_variables]
