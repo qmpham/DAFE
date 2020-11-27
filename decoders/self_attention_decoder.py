@@ -5420,7 +5420,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           inputs = inputs + adapt
       if self.version == 15:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-        inputs = inputs + adapt * keeping
+        inputs = inputs + tf.nn.dropout(adapt, 1-self.training_res_using_rate)
 
     if self.version not in [3,8,9,10,11,12,15]:
       total_adapt = tf.add_n(total_adapt)
@@ -5441,7 +5441,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       z = tf.exp((g-1)*2/g)
       outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
     elif self.version==7:
-      outputs = self.layer_norm(inputs + total_adapt * keeping)
+      outputs = self.layer_norm(inputs + tf.nn.dropout(total_adapt,1-self.training_res_using_rate))
     elif self.version==9:
       outputs = self.layer_norm(inputs + total_adapt)
     elif self.version==8:
