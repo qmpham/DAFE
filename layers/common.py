@@ -164,7 +164,7 @@ class LayerWrapper(tf.keras.layers.Layer):
     x = inputs
     if self.input_layer_norm is not None:
       x = self.input_layer_norm(x)  # pylint: disable=not-callable
-    #x = dropout(x, self.input_dropout, training=training)
+    x = dropout(x, self.input_dropout, training=training)
 
     all_outputs = self.layer(x, *args, **kwargs)
     if isinstance(all_outputs, tuple):
@@ -174,9 +174,9 @@ class LayerWrapper(tf.keras.layers.Layer):
       outputs = all_outputs
       extra_outputs = None
 
-    #outputs = dropout(outputs, self.output_dropout, training=training)
+    outputs = dropout(outputs, self.output_dropout, training=training)
     if self.residual_connection and outputs.shape[-1] == inputs.shape[-1]:
-      outputs += dropout(inputs, self.output_dropout, training=training)
+      outputs += inputs
     if self.output_layer_norm is not None:
       outputs = self.output_layer_norm(outputs)  # pylint: disable=not-callable
 

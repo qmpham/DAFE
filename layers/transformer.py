@@ -237,8 +237,7 @@ class TransformerLayerWrapper(common.LayerWrapper):
     
     super(TransformerLayerWrapper, self).__init__(
         layer,
-        normalize_input=False,
-        normalize_output=True,
+        normalize_input=True,
         output_dropout=output_dropout,
         residual_connection=True,
         **kwargs)
