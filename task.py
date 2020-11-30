@@ -85,6 +85,8 @@ def translate(source_file,
   checkpoint.restore(checkpoint_path)
   if isinstance(model, SequenceToSequence_with_dprob):
     dataset = model.examples_inputter.make_inference_dataset(source_file, probs_file, batch_size)
+  elif isinstance(model, onmt.models.Transformer):
+    dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size)
   else:
     dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain, is_noisy=is_noisy)
   iterator = iter(dataset)
