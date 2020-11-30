@@ -1853,6 +1853,8 @@ def train(config,
       training_loss, reported_loss = loss, loss
     if config.get("multi_domain", True):
       _domain = source["domain"][0]
+    else:
+      _domain = 0
     if config.get("apply_importance_weight", False):
       print("apply_importance_weight")
       training_loss = training_loss * importance_weights[_domain]
@@ -2275,8 +2277,6 @@ def train(config,
       else:
         loss, _domain, num_examples = next(train_data_flow)    
         _loss.append(loss.numpy())
-        #print(_domain.numpy())
-        _per_domain_accum_loss[int(_domain.numpy())].append(loss.numpy())
         _number_examples.append(num_examples.numpy())
         _step()  
       step = optimizer.iterations.numpy()
