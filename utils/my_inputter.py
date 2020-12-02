@@ -660,6 +660,100 @@ class Multi_domain_SequenceToSequenceInputter_DRO(ParallelInputter):
             prefetch_buffer_size=prefetch_buffer_size))
         return dataset
 
+class Priming_inputter(ParallelInputter):
+    
+    def __init__(self,
+               features_inputter,
+               labels_inputter,
+               src_priming_inputter,
+               tgt_priming_inputter,
+               share_parameters=False):
+        self.features_inputter = features_inputter
+        self.labels_inputter = labels_inputter
+        self.src_priming_inputter = src_priming_inputter
+        self.tgt_priming_inputter = tgt_priming_inputter
+        self.features_inputter.asset_prefix = "source"
+        self.labels_inputter.asset_prefix = "target"
+        self.src_priming_inputter.asset_prefix = "source_priming"
+        self.tgt_priming_inputter.asset_prefix = "target_primming"
+        super(Priming_inputter, self).__init__(
+            [features_inputter, labels_inputter, src_priming_inputter, tgt_priming_inputter], share_parameters=share_parameters, combine_features=False)
+    
+    def initialize(self, data_config, asset_prefix=""):
+        super(Priming_inputter, self).initialize(data_config, asset_prefix=asset_prefix)
+
+    def make_dataset(self, data_file, training=None):
+        dataset = super(Priming_inputter, self).make_dataset(data_file, training=training)
+        return dataset
+
+    def make_features(self, element=None, features=None, training=None):
+        features, labels, src_primer, tgt_primers = super(Priming_inputter, self).make_features(element=element, features=features, training=training)
+        _shift_target_sequence(labels)
+        features["src_primer"] = tgt_primers[""]
+        labels["tgt_primer"] = src_primer[""]
+        
+        return features, labels   
+
+    def make_inference_dataset(self,
+                             features_file,
+                             probs_file,
+                             batch_size,
+                             length_bucket_width=None,
+                             num_threads=1,
+                             prefetch_buffer_size=None):
+        def add_prob(f,p):
+            feats = self.features_inputter.make_features(f)
+            probs = self.probs_inputter.make_features(p)
+            feats["domain"] = tf.math.softmax(probs["probs"])
+            return feats
+        
+        #dataset = self.make_dataset([features_file, probs_file], training=True)
+        datasets = [self.features_inputter.make_dataset(features_file), self.probs_inputter.make_dataset(probs_file)]
+        dataset = tf.data.Dataset.zip(tuple(datasets))
+        dataset = dataset.apply(dataset_util.inference_pipeline(
+                       batch_size,
+                       process_fn=add_prob,
+                       num_threads=num_threads))
+        return dataset        
+
+    def make_training_dataset(self,
+                                features_file,
+                                labels_file,
+                                probs_file,
+                                batch_size,
+                                batch_type="examples",
+                                batch_multiplier=1,
+                                batch_size_multiple=1,
+                                shuffle_buffer_size=None,
+                                length_bucket_width=None,
+                                maximum_features_length=None,
+                                maximum_labels_length=None,
+                                single_pass=False,
+                                num_shards=1,
+                                shard_index=0,
+                                num_threads=4,
+                                prefetch_buffer_size=None):
+        
+        map_func = lambda *arg: self.make_features(arg, training=True)
+        dataset = self.make_dataset([features_file, labels_file, probs_file], training=True)
+        dataset = dataset.apply(dataset_util.training_pipeline(
+            batch_size,
+            batch_type=batch_type,
+            batch_multiplier=batch_multiplier,
+            batch_size_multiple=batch_size_multiple,
+            process_fn=map_func,
+            length_bucket_width=length_bucket_width,
+            features_length_fn=self.features_inputter.get_length,
+            labels_length_fn=self.labels_inputter.get_length,
+            maximum_features_length=maximum_features_length,
+            maximum_labels_length=maximum_labels_length,
+            single_pass=single_pass,
+            num_shards=num_shards,
+            shard_index=shard_index,
+            num_threads=num_threads,
+            shuffle_buffer_size=shuffle_buffer_size,
+            prefetch_buffer_size=prefetch_buffer_size))
+        return dataset
     
 
 
