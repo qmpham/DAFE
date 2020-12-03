@@ -5621,7 +5621,11 @@ def averaged_checkpoint_translate(config, source_file,
   checkpoint.restore(new_checkpoint_manager.latest_checkpoint)
   tf.get_logger().info("Evaluating model %s", new_checkpoint_manager.latest_checkpoint)
   print("In domain %d"%domain)
-  dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain, is_noisy=is_noisy)
+  if isinstance(model, onmt.models.Transformer):
+    dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size)
+  else:
+    dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain, is_noisy=is_noisy)
+  
   iterator = iter(dataset)
 
   # Create the mapping for target ids to tokens.
