@@ -8575,11 +8575,13 @@ def train_NGD(config,
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         output_files = []
+        eval_scores = []
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
             output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
             score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
             tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
             output_files.append(output_file)
+            eval_scores.append(score)
         ##### BLEU on concat dev set.
         output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
         score = scorer(ref_eval_concat, output_file_concat)
@@ -8587,6 +8589,25 @@ def train_NGD(config,
         tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
         #############################
         tf.summary.flush()
+        target_scores = config.get("eval_target_scores",None)
+        achivement_percentage = [1-e/float(t) for e,t in zip(eval_scores, target_scores)]
+        new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
+        print("new_picking_prob: ", new_picking_prob)
+        train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob= new_picking_prob, 
+                                            temperature=0.5)
+        @dataset_util.function_on_next(train_dataset)
+        def _train_forward(next_fn):    
+          with strategy.scope():
+            per_replica_source, per_replica_target = next_fn()
+            per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+                _accumulate_gradients, args=(per_replica_source, per_replica_target))
+            # TODO: these reductions could be delayed until _step is called.
+            loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+            num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+          return loss, num_examples
+        train_data_flow = iter(_train_forward())
       if step > train_steps:
         break
 
