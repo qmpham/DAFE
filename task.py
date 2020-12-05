@@ -8544,16 +8544,16 @@ def train_NGD(config,
                                         multi_domain=config.get("multi_domain", True), picking_prob= new_picking_prob, 
                                         temperature=0.5)
     @dataset_util.function_on_next(train_dataset)
-    def _train_forward(next_fn):    
+    def _NGD_train_forward(next_fn):    
       with strategy.scope():
         per_replica_source, per_replica_target = next_fn()
         per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-            _accumulate_gradients, args=(per_replica_source, per_replica_target))
+            _accumulate_NGD_gradients, args=(per_replica_source, per_replica_target))
         # TODO: these reductions could be delayed until _step is called.
         loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
         num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
       return loss, num_examples
-    train_data_flow = iter(_train_forward())
+    NGD_train_data_flow = iter(_NGD_train_forward())
 
   with _summary_writer.as_default():
     while True:
@@ -8617,16 +8617,16 @@ def train_NGD(config,
                                             multi_domain=config.get("multi_domain", True), picking_prob= new_picking_prob, 
                                             temperature=0.5)
         @dataset_util.function_on_next(train_dataset)
-        def _train_forward(next_fn):    
+        def _NGD_train_forward(next_fn):    
           with strategy.scope():
             per_replica_source, per_replica_target = next_fn()
             per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-                _accumulate_gradients, args=(per_replica_source, per_replica_target))
+                _accumulate_NGD_gradients, args=(per_replica_source, per_replica_target))
             # TODO: these reductions could be delayed until _step is called.
             loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
             num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
           return loss, num_examples
-        train_data_flow = iter(_train_forward())
+        NGD_train_data_flow = iter(_NGD_train_forward())
       if step > train_steps:
         break
 
