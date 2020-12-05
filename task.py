@@ -8519,7 +8519,7 @@ def train_NGD(config,
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
   
-  if step % eval_every == 0 and step>0:
+  if step>0:
     checkpoint_path = checkpoint_manager.latest_checkpoint
     tf.summary.experimental.set_step(step)
     output_files = []
