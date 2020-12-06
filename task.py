@@ -8523,11 +8523,13 @@ def train_NGD(config,
     checkpoint_path = checkpoint_manager.latest_checkpoint
     tf.summary.experimental.set_step(step)
     output_files = []
+    eval_scores = []
     for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
         output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
         score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
         tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
         output_files.append(output_file)
+        eval_scores.append(score)
     ##### BLEU on concat dev set.
     output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
     score = scorer(ref_eval_concat, output_file_concat)
