@@ -8535,7 +8535,7 @@ def train_NGD(config,
     ##### check overfitting
     t = len(domain) - sum(overfitting)
     for i in range(len(domain)):
-      if new_picking_prob[i] > 1.0/t and last_eval[i] > eval_scores[i]:
+      if new_picking_prob[i] > datasets_size[i]/float(sum(datasets_size)) and last_eval[i] > eval_scores[i]:
         overfitting[i] = True
         print("Domain %d overfitted"%i)
       else:
@@ -8551,7 +8551,7 @@ def train_NGD(config,
     target_scores = config.get("eval_target_scores",None)
     achivement_percentage = [1-e/float(t) for e,t in zip(eval_scores, target_scores)]
     new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
-    new_picking_prob = [p if not overfitted else data_size/(3*sum(datasets_size)) for p, overfitted, data_size in zip(new_picking_prob, overfitting, datasets_size)]
+    new_picking_prob = [p if not overfitted else data_size/sum(datasets_size) for p, overfitted, data_size in zip(new_picking_prob, overfitting, datasets_size)]
     new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
     print("new_picking_prob: ", new_picking_prob)
     train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
@@ -8619,7 +8619,7 @@ def train_NGD(config,
         ##### check overfitting
         t = len(domain) - sum(overfitting)
         for i in range(len(domain)):
-          if new_picking_prob[i] > 1.0/t and last_eval[i] > eval_scores[i]:
+          if new_picking_prob[i] > datasets_size[i]/float(sum(datasets_size)) and last_eval[i] > eval_scores[i]:
             overfitting[i] = True
             print("Domain %d overfitted"%i)
           else:
@@ -8635,7 +8635,7 @@ def train_NGD(config,
         target_scores = config.get("eval_target_scores",None)
         achivement_percentage = [1-e/float(t) for e,t in zip(eval_scores, target_scores)]
         new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
-        new_picking_prob = [p if not overfitted else data_size/(3*sum(datasets_size)) for p, overfitted, data_size in zip(new_picking_prob, overfitting, datasets_size)]
+        new_picking_prob = [p if not overfitted else data_size/sum(datasets_size) for p, overfitted, data_size in zip(new_picking_prob, overfitting, datasets_size)]
         new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
         print("new_picking_prob: ", new_picking_prob)
         train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
