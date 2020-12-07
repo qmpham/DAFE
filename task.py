@@ -8504,7 +8504,7 @@ def train_NGD(config,
   _hessian_accumulator_flow = iter(_hessian_acc_forward())
   train_data_flow = iter(_train_forward())
   _, _ = next(train_data_flow)
-  
+  last_eval = [0.0] * len(domain)
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
   _loss = []  
@@ -8519,6 +8519,8 @@ def train_NGD(config,
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
   
+  new_picking_prob = [1.0/len(domain)] * len(domain)
+  overfitting = [False] * (len(domain))
   if step>0:
     checkpoint_path = checkpoint_manager.latest_checkpoint
     tf.summary.experimental.set_step(step)
@@ -8530,6 +8532,12 @@ def train_NGD(config,
         tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
         output_files.append(output_file)
         eval_scores.append(score)
+    ##### check overfitting
+    for i in range(len(domain)):
+      if new_picking_prob[i] > 1.0/len(domain) and last_eval[i] > eval_scores[i]:
+        overfitting[i] = True
+        print("Domain %d overfitted"%i)
+      last_eval[i] = eval_scores[i]
     ##### BLEU on concat dev set.
     output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
     score = scorer(ref_eval_concat, output_file_concat)
@@ -8539,6 +8547,8 @@ def train_NGD(config,
     tf.summary.flush()
     target_scores = config.get("eval_target_scores",None)
     achivement_percentage = [1-e/float(t) for e,t in zip(eval_scores, target_scores)]
+    new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
+    new_picking_prob = [p if not overfitted else 0 for p, overfitted in zip(new_picking_prob, overfitting)]
     new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
     print("new_picking_prob: ", new_picking_prob)
     train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
@@ -8603,6 +8613,12 @@ def train_NGD(config,
             tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
             output_files.append(output_file)
             eval_scores.append(score)
+        ##### check overfitting
+        for i in range(len(domain)):
+          if new_picking_prob[i] > 1.0/len(domain) and last_eval[i] > eval_scores[i]:
+            overfitting[i] = True
+            print("Domain %d overfitted"%i)
+          last_eval[i] = eval_scores[i]
         ##### BLEU on concat dev set.
         output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
         score = scorer(ref_eval_concat, output_file_concat)
@@ -8612,6 +8628,8 @@ def train_NGD(config,
         tf.summary.flush()
         target_scores = config.get("eval_target_scores",None)
         achivement_percentage = [1-e/float(t) for e,t in zip(eval_scores, target_scores)]
+        new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
+        new_picking_prob = [p if not overfitted else 0 for p, overfitted in zip(new_picking_prob, overfitting)]
         new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
         print("new_picking_prob: ", new_picking_prob)
         train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 

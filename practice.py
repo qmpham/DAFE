@@ -1305,7 +1305,6 @@ def main():
     task.train_ldr(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "dcote":
     task.domain_classification_on_top_encoder(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",1000), eval_every=config.get("eval_every",2000))
-  
   elif args.run == "trainv2":
     task.train_v2(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "trainv3":
