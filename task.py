@@ -8534,7 +8534,8 @@ def train_NGD(config,
         eval_scores.append(score)
     ##### check overfitting
     for i in range(len(domain)):
-      if new_picking_prob[i] > 1.0/len(domain) and last_eval[i] > eval_scores[i]:
+      t = sum(1-overfitting)
+      if new_picking_prob[i] > 1.0/t and last_eval[i] > eval_scores[i]:
         overfitting[i] = True
         print("Domain %d overfitted"%i)
       last_eval[i] = eval_scores[i]
@@ -8615,7 +8616,8 @@ def train_NGD(config,
             eval_scores.append(score)
         ##### check overfitting
         for i in range(len(domain)):
-          if new_picking_prob[i] > 1.0/len(domain) and last_eval[i] > eval_scores[i]:
+          t = sum(1-overfitting)
+          if new_picking_prob[i] > 1.0/t and last_eval[i] > eval_scores[i]:
             overfitting[i] = True
             print("Domain %d overfitted"%i)
           last_eval[i] = eval_scores[i]
