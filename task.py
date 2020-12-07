@@ -8538,6 +8538,8 @@ def train_NGD(config,
       if new_picking_prob[i] > 1.0/t and last_eval[i] > eval_scores[i]:
         overfitting[i] = True
         print("Domain %d overfitted"%i)
+      else:
+        overfitting[i] = False
       last_eval[i] = eval_scores[i]
     ##### BLEU on concat dev set.
     output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
@@ -8620,6 +8622,8 @@ def train_NGD(config,
           if new_picking_prob[i] > 1.0/t and last_eval[i] > eval_scores[i]:
             overfitting[i] = True
             print("Domain %d overfitted"%i)
+          else:
+            overfitting[i] = False
           last_eval[i] = eval_scores[i]
         ##### BLEU on concat dev set.
         output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
