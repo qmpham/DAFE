@@ -8551,7 +8551,7 @@ def train_NGD(config,
     achivement_percentage = [1-e/float(t) for e,t in zip(eval_scores, target_scores)]
     new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
     new_picking_prob = [p if not overfitted else p/3.0 for p, overfitted, data_size in zip(new_picking_prob, overfitting, datasets_size)]
-    new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
+    new_picking_prob = [p/sum(new_picking_prob) for p in new_picking_prob]
     print("new_picking_prob: ", new_picking_prob)
     train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                         maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
@@ -8635,7 +8635,7 @@ def train_NGD(config,
         achivement_percentage = [1-e/float(t) for e,t in zip(eval_scores, target_scores)]
         new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
         new_picking_prob = [p if not overfitted else p/3.0 for p, overfitted, data_size in zip(new_picking_prob, overfitting, datasets_size)]
-        new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
+        new_picking_prob = [p/sum(new_picking_prob) for p in new_picking_prob]
         print("new_picking_prob: ", new_picking_prob)
         train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
