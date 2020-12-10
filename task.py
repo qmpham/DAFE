@@ -9513,7 +9513,279 @@ def debug_NGD(config,
   #     if step > train_steps:
   #       break
       
+def train_L2W(config,
+          optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          adapter_optimizer=None,
+          checkpoint_path=None,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
+  #####
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  else:
+    if checkpoint_path is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+      checkpoint.restore(checkpoint_path)
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_train_size = config["batch_train_size"]  
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config.get("domain",None)
+  
+  print("There are %d in-domain corpora"%len(source_file))
+  
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
+  
+  meta_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0), pick_in_order=True, window_size=len(domain))
 
+  # from utils.dataprocess import count_lines
+  # datasets_size = [count_lines(src) for src in source_file]
+  # importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
+  # temperature=config.get("temperature",1.0)
+  # importance_weights = [w ** temperature for w in importance_weights]
+  # importance_weights = [w/sum(importance_weights) for w in importance_weights]
+  # importance_weights = tf.constant(importance_weights)
+  # tf.print("importance_weights: ", importance_weights)
+  #####
+  with strategy.scope():
+    model.create_variables(optimizer=optimizer)
+    gradient_accumulator = optimizer_util.GradientAccumulator()  
+
+  def _accumulate_gradients(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    if config.get("multi_domain", True):
+      _domain = source["domain"][0]
+    else:
+      _domain = 0
+    if config.get("apply_importance_weight", False):
+      print("apply_importance_weight")
+      training_loss = training_loss #* importance_weights[_domain]
+
+    if config.get("ADAP_activity_regularizing",False):
+      
+      layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
+      output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
+      d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
+      d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
+      d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
+      print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+      print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
+      print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
+      print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
+      if isinstance(layer_activity_regularization_loss_scale, list):
+        domain = source["domain"][0]
+        layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
+        layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
+        #tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
+      if isinstance(output_activity_regularization_loss_scale, list):
+        domain = source["domain"][0]
+        output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
+        output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
+      regularization_losses = model.losses
+      print("model_name_scope", model.name_scope())
+      print(regularization_losses)
+      layer_activity_regularization_losses = []
+      output_activity_regularization_losses = []
+      d_classification_gate_losses = []
+      d_classifier_activity_regularization_losses = []
+      d_classifier_weight_regularization_losses = []
+      for loss_ in regularization_losses:
+        if "multi_adap__dense" in loss_.name:
+          output_activity_regularization_losses.append(loss_)
+        elif "ADAP_gate" in loss_.name: #and "ActivityRegularizer" not in loss_.name and "Regularizer" not in loss_.name
+          if "ActivityRegularizer" in loss_.name:
+            d_classifier_activity_regularization_losses.append(loss_)
+          elif "Regularizer" in loss_.name:
+            d_classifier_weight_regularization_losses.append(loss_)
+          else:
+            d_classification_gate_losses.append(loss_)
+        elif "ADAP_" in loss_.name:
+          layer_activity_regularization_losses.append(loss_)
+
+      print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
+      print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
+      print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
+      print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
+      print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
+      if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
+        training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
+
+      if len(output_activity_regularization_losses)>0 and output_activity_regularization_loss_scale>0:
+        training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
+
+      if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
+        training_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
+
+      if len(d_classifier_activity_regularization_losses)>0 and d_classifier_activity_regularization_loss_scale>0:
+        training_loss += d_classifier_activity_regularization_loss_scale * tf.add_n(d_classifier_activity_regularization_losses)
+
+      if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
+        training_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)
+
+    variables = model.trainable_variables
+    print("var numb: ", len(variables))
+    """ for var in variables:
+      print(var.name) """
+    gradients = optimizer.get_gradients(training_loss, variables)
+    gradient_accumulator(gradients)
+    num_examples = tf.reduce_sum(target["length"])
+    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
+    return reported_loss, num_examples, _domain
+    
+  def _apply_gradients():
+    variables = model.trainable_variables
+    grads_and_vars = []
+    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    gradient_accumulator.reset()
+ 
+  @dataset_util.function_on_next(train_dataset)
+  def _train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples, per_replica_domain = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+      _domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+    return loss, _domain, num_examples
+  
+  @tf.function
+  def _step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_gradients)
+
+  @dataset_util.function_on_next(meta_dataset)
+  def _meta_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+    return per_replica_source, per_replica_target
+
+  # Runs the training loop.
+  import time
+  start = time.time()  
+  train_data_flow = iter(_train_forward())
+  meta_data_flow = iter(_meta_forward())
+  _, _, _ = next(train_data_flow)
+
+  print("number of replicas: %d"%strategy.num_replicas_in_sync)
+  print("accumulation step", config.get("accumulation_step",1))
+  _loss = []  
+  _number_examples = []
+  step = optimizer.iterations.numpy()
+  if config.get("reset_step",None):
+    print("start from %d-th step"%config.get("reset_step",150000))
+    optimizer.iterations.assign(config.get("reset_step",150000))
+  if step <= 1:
+    initializer = config.get("initializer","default")
+    if initializer == "default":
+      print("Initializing variables by tensorflow default")      
+    elif initializer == "variance_scaling":
+      print("Initializing variables by tf.variance_scaling")
+      initial_value = []
+      for v in model.trainable_variables:
+        shape = tf.shape(v).numpy()
+        initial_value.append(variance_scaling_initialier(shape, scale=1.0, mode="fan_avg", distribution="uniform"))
+      weight_reset(initial_value)       
+
+  if config.get("continual_learning", False):
+    print("Continual Learning needs to load from old model")
+    assert config.get("checkpoint_path") != None
+    checkpoint_path = config.get("checkpoint_path")
+    load_and_update_if_needed_from_ckpt(config["model_dir"],   
+                        checkpoint_path,                        
+                        trackables={"model":model},
+                        vocab_update=True,
+                        model_key="model")
+
+  score_type = config.get("score_type","MultiBLEU")
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
+
+  with _summary_writer.as_default():
+    while True:
+      src, tgt = next(meta_data_flow)
+      print(src)
+      #####Training batch
+      # loss, _domain, num_examples = next(train_data_flow)    
+      # _loss.append(loss.numpy())
+      # _number_examples.append(num_examples.numpy())
+      # _step()  
+      # step = optimizer.iterations.numpy()
+      
+      # if step % report_every == 0:
+      #   elapsed = time.time() - start
+      #   tf.get_logger().info(
+      #     "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
+      #     step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+      #   _loss = []
+      #   _number_examples = []
+      #   start = time.time()
+      # if step % save_every == 0:
+      #   tf.get_logger().info("Saving checkpoint for step %d", step)
+      #   checkpoint_manager.save(checkpoint_number=step)
+      # if step % eval_every == 0:
+      #   checkpoint_path = checkpoint_manager.latest_checkpoint
+      #   tf.summary.experimental.set_step(step)
+      #   output_files = []
+      #   for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+      #     output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+      #     score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+      #     tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+      #     output_files.append(output_file)
+      #   ##### BLEU on concat dev set.
+      #   output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
+      #   score = scorer(ref_eval_concat, output_file_concat)
+      #   print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
+      #   tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
+      #   #############################
+      # tf.summary.flush()
+      # if step > train_steps:
+      #   break
 
 
 
