@@ -1285,7 +1285,7 @@ def main():
     task.meta_train_v1(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment)
   elif args.run == "train":
     task.train(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint,adapter_optimizer=adapter_optimizer, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
-  elif args.run == "train":
+  elif args.run == "train_L2W":
     task.train_L2W(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint,adapter_optimizer=adapter_optimizer, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_NGD":
     task.train_NGD(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
