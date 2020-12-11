@@ -1244,7 +1244,7 @@ def main():
   adapter_optimizer = tfa.optimizers.LazyAdam(learning_rate)
   model.initialize(data_config)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=meta_test_optimizer)
-  checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=config.get("max_to_keep",5))
+  checkpoint_manager = tf.train.CheckpointManager(checkpoint, config["model_dir"], max_to_keep=config.get("max_to_keep",10))
   ######
   model.params.update({"label_smoothing": 0.1})
   model.params.update({"average_loss_in_time": config.get("average_loss_in_time",True)})

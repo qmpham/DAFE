@@ -390,8 +390,6 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
     print("pick_in_order")
     choice_dataset = tf.data.Dataset.range(len(train_datasets)).repeat()
     train_dataset = tf.data.experimental.choose_from_datasets(train_datasets, choice_dataset)
-    if window_size:
-      train_dataset = train_dataset.window(window_size)
   else:
     print("random_pick")
     train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)

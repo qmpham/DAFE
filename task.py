@@ -9560,21 +9560,18 @@ def train_L2W(config,
   
   meta_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0), pick_in_order=True, window_size=len(domain))
-
-  # from utils.dataprocess import count_lines
-  # datasets_size = [count_lines(src) for src in source_file]
-  # importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
-  # temperature=config.get("temperature",1.0)
-  # importance_weights = [w ** temperature for w in importance_weights]
-  # importance_weights = [w/sum(importance_weights) for w in importance_weights]
-  # importance_weights = tf.constant(importance_weights)
-  # tf.print("importance_weights: ", importance_weights)
+                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0), 
+                                            pick_in_order=True)
+  dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
+                                            for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_tgt"))]
   #####
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
-
+    meta_gradient_accumulator = optimizer_util.GradientAccumulator() 
+  
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
@@ -9666,7 +9663,25 @@ def train_L2W(config,
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples, _domain
+
+  def _accumulate_meta_gradients(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
     
+    variables = model.trainable_variables    
+    gradients = optimizer.get_gradients(training_loss, variables)
+    meta_gradient_accumulator(gradients)
+
   def _apply_gradients():
     variables = model.trainable_variables
     grads_and_vars = []
