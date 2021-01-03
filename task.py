@@ -8233,6 +8233,7 @@ def train_NGD(config,
             trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO) for var in model.trainable_variables]
     importance_weights = tf.constant(importance_weights)
     tf.print("importance_weights: ", importance_weights)
+  
   #########  
   def _accumulate_diag_hessians(source,target): 
     with tf.GradientTape(persistent=True) as tape:  
@@ -8445,6 +8446,7 @@ def train_NGD(config,
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples
+  
   #########
   def _apply_gradients():
     variables = model.trainable_variables
@@ -8532,42 +8534,43 @@ def train_NGD(config,
         tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
         output_files.append(output_file)
         eval_scores.append(score)
-    ##### check overfitting
-    for i in range(len(domain)):
-      if new_picking_prob[i] > 2*datasets_size[i]/float(sum(datasets_size)) and last_eval[i] > eval_scores[i]:
-        overfitting[i] = True
-        print("Domain %d overfitted"%i)
-      else:
-        overfitting[i] = False
-      last_eval[i] = eval_scores[i]
     ##### BLEU on concat dev set.
     output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
     score = scorer(ref_eval_concat, output_file_concat)
     print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
     tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
-    #############################
-    tf.summary.flush()
-    target_scores = config.get("eval_target_scores",None)
-    achivement_percentage = [1-e/float(t) for e,t in zip(eval_scores, target_scores)]
-    new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
-    new_picking_prob = [p if not overfitted else p/3.0 for p, overfitted, data_size in zip(new_picking_prob, overfitting, datasets_size)]
-    new_picking_prob = [p/sum(new_picking_prob) for p in new_picking_prob]
-    print("new_picking_prob: ", new_picking_prob)
-    train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
-                                        maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                        multi_domain=config.get("multi_domain", True), picking_prob= new_picking_prob, 
-                                        temperature=0.5)
-    @dataset_util.function_on_next(train_dataset)
-    def _NGD_train_forward(next_fn):    
-      with strategy.scope():
-        per_replica_source, per_replica_target = next_fn()
-        per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-            _accumulate_NGD_gradients, args=(per_replica_source, per_replica_target))
-        # TODO: these reductions could be delayed until _step is called.
-        loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-        num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-      return loss, num_examples
-    NGD_train_data_flow = iter(_NGD_train_forward())
+    if config.get("dynamic_domain_batch",False):
+      ##### check overfitting
+      for i in range(len(domain)):
+        if new_picking_prob[i] > 2*datasets_size[i]/float(sum(datasets_size)) and last_eval[i] > eval_scores[i]:
+          overfitting[i] = True
+          print("Domain %d overfitted"%i)
+        else:
+          overfitting[i] = False
+        last_eval[i] = eval_scores[i]
+      #############################
+      tf.summary.flush()
+      target_scores = config.get("eval_target_scores",None)
+      achivement_percentage = [1-e/float(t) for e,t in zip(eval_scores, target_scores)]
+      new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
+      new_picking_prob = [p if not overfitted else p/3.0 for p, overfitted, data_size in zip(new_picking_prob, overfitting, datasets_size)]
+      new_picking_prob = [p/sum(new_picking_prob) for p in new_picking_prob]
+      print("new_picking_prob: ", new_picking_prob)
+      train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                          maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                          multi_domain=config.get("multi_domain", True), picking_prob= new_picking_prob, 
+                                          temperature=0.5)
+      @dataset_util.function_on_next(train_dataset)
+      def _NGD_train_forward(next_fn):    
+        with strategy.scope():
+          per_replica_source, per_replica_target = next_fn()
+          per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+              _accumulate_NGD_gradients, args=(per_replica_source, per_replica_target))
+          # TODO: these reductions could be delayed until _step is called.
+          loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+          num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+        return loss, num_examples
+      NGD_train_data_flow = iter(_NGD_train_forward())
 
   with _summary_writer.as_default():
     while True:
@@ -8576,7 +8579,6 @@ def train_NGD(config,
         for i in range(hessian_accum_step):
           next(_hessian_accumulator_flow)
         _hessian_stats_update_step()
-      
       if step >= config.get("NGD_warm_start",0):
         loss, num_examples = next(NGD_train_data_flow)    
         _loss.append(loss)
@@ -8587,7 +8589,6 @@ def train_NGD(config,
         _number_examples.append(num_examples)
       _step()  
       step = optimizer.iterations.numpy()
-
       # if step % report_every == 0:
       #   for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
       #       #print("hessian %s: "%var.name, h)
@@ -8615,15 +8616,6 @@ def train_NGD(config,
             tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
             output_files.append(output_file)
             eval_scores.append(score)
-        ##### check overfitting
-        
-        for i in range(len(domain)):
-          if new_picking_prob[i] > 2*datasets_size[i]/float(sum(datasets_size)) and last_eval[i] > eval_scores[i]:
-            overfitting[i] = True
-            print("Domain %d overfitted"%i)
-          else:
-            overfitting[i] = False
-          last_eval[i] = eval_scores[i]
         ##### BLEU on concat dev set.
         output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
         score = scorer(ref_eval_concat, output_file_concat)
@@ -8631,27 +8623,36 @@ def train_NGD(config,
         tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
         #############################
         tf.summary.flush()
-        target_scores = config.get("eval_target_scores",None)
-        achivement_percentage = [1-e/float(t) for e,t in zip(eval_scores, target_scores)]
-        new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
-        new_picking_prob = [p if not overfitted else p/3.0 for p, overfitted, data_size in zip(new_picking_prob, overfitting, datasets_size)]
-        new_picking_prob = [p/sum(new_picking_prob) for p in new_picking_prob]
-        print("new_picking_prob: ", new_picking_prob)
-        train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
-                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True), picking_prob= new_picking_prob, 
-                                            temperature=0.5)
-        @dataset_util.function_on_next(train_dataset)
-        def _NGD_train_forward(next_fn):    
-          with strategy.scope():
-            per_replica_source, per_replica_target = next_fn()
-            per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-                _accumulate_NGD_gradients, args=(per_replica_source, per_replica_target))
-            # TODO: these reductions could be delayed until _step is called.
-            loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-            num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-          return loss, num_examples
-        NGD_train_data_flow = iter(_NGD_train_forward())
+        if config.get("dynamic_domain_batch",False):
+          ##### check overfitting
+          for i in range(len(domain)):
+            if new_picking_prob[i] > 2*datasets_size[i]/float(sum(datasets_size)) and last_eval[i] > eval_scores[i]:
+              overfitting[i] = True
+              print("Domain %d overfitted"%i)
+            else:
+              overfitting[i] = False
+            last_eval[i] = eval_scores[i]
+          target_scores = config.get("eval_target_scores",None)
+          achivement_percentage = [1-e/float(t) for e,t in zip(eval_scores, target_scores)]
+          new_picking_prob = [p/sum(achivement_percentage) for p in achivement_percentage]
+          new_picking_prob = [p if not overfitted else p/3.0 for p, overfitted, data_size in zip(new_picking_prob, overfitting, datasets_size)]
+          new_picking_prob = [p/sum(new_picking_prob) for p in new_picking_prob]
+          print("new_picking_prob: ", new_picking_prob)
+          train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                              maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                              multi_domain=config.get("multi_domain", True), picking_prob= new_picking_prob, 
+                                              temperature=0.5)
+          @dataset_util.function_on_next(train_dataset)
+          def _NGD_train_forward(next_fn):    
+            with strategy.scope():
+              per_replica_source, per_replica_target = next_fn()
+              per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+                  _accumulate_NGD_gradients, args=(per_replica_source, per_replica_target))
+              # TODO: these reductions could be delayed until _step is called.
+              loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+              num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+            return loss, num_examples
+          NGD_train_data_flow = iter(_NGD_train_forward())
       if step > train_steps:
         break
 
@@ -9557,11 +9558,7 @@ def train_L2W(config,
   train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
-  
-  meta_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
-                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0), 
-                                            pick_in_order=True)
+
   dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
@@ -9763,8 +9760,6 @@ def train_L2W(config,
 
   with _summary_writer.as_default():
     while True:
-      src, tgt = next(meta_data_flow)
-      print(src)
       #####Training batch
       # loss, _domain, num_examples = next(train_data_flow)    
       # _loss.append(loss.numpy())
