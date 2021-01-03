@@ -9758,8 +9758,9 @@ def train_L2W(config,
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
 
-  with _summary_writer.as_default():
-    while True:
+  # with _summary_writer.as_default():
+  #   while True:
+      
       #####Training batch
       # loss, _domain, num_examples = next(train_data_flow)    
       # _loss.append(loss.numpy())
