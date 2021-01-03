@@ -8589,11 +8589,7 @@ def train_NGD(config,
         _number_examples.append(num_examples)
       _step()  
       step = optimizer.iterations.numpy()
-      # if step % report_every == 0:
-      #   for h, n_h, var in zip(hessian_moving_stats, normalized_hessian_moving_stats, model.trainable_variables):
-      #       #print("hessian %s: "%var.name, h)
-      #       print("normalized hessian %s: "%var.name, tf.reduce_sum(tf.square(n_h)))
-      #   #break
+      
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
