@@ -9590,6 +9590,7 @@ def train_L2W(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
+    sub_gradient_accumulator = optimizer_util.GradientAccumulator()
     dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     train_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
@@ -9697,6 +9698,26 @@ def train_L2W(config,
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
+  @tf.function(experimental_relax_shapes=True)
+  def _accumulate_dev_train_gradients(source, target):
+      outputs, _ = model(
+          source,
+          labels=target,
+          training=True,
+          step=optimizer.iterations)
+      loss = model.compute_loss(outputs, target, training=True)
+
+      if isinstance(loss, tuple):
+        training_loss = loss[0] / loss[1]
+        reported_loss = loss[0] / loss[2]
+      else:
+        training_loss, reported_loss = loss, loss
+      
+      variables = model.trainable_variables    
+      gradients = optimizer.get_gradients(training_loss, variables)
+      sub_gradient_accumulator(gradients)
+      return loss
+  
   def _reset_dev_train_gradients():
     [dev_gradient_accumulator.reset() for dev_gradient_accumulator in dev_gradient_accumulators]
     [train_gradient_accumulator.reset() for train_gradient_accumulator in train_gradient_accumulators]
@@ -9744,71 +9765,8 @@ def train_L2W(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  #dev_iterators = [iter(dev_dataset) for dev_dataset in dev_datasets]
-  #train_iterators = [iter(train_dataset) for train_dataset in train_datasets]
-  dev_data_flows = []
-  train_data_flows = []
-
-  for i, dev_dataset in enumerate(dev_datasets):
-    def _accumulate_dev_train_gradients(source, target):
-      outputs, _ = model(
-          source,
-          labels=target,
-          training=True,
-          step=optimizer.iterations)
-      loss = model.compute_loss(outputs, target, training=True)
-
-      if isinstance(loss, tuple):
-        training_loss = loss[0] / loss[1]
-        reported_loss = loss[0] / loss[2]
-      else:
-        training_loss, reported_loss = loss, loss
-      
-      variables = model.trainable_variables    
-      gradients = optimizer.get_gradients(training_loss, variables)
-      dev_gradient_accumulators[i](gradients)
-      return loss
-    @dataset_util.function_on_next(dev_dataset)
-    def _forward(next_fn):    
-      with strategy.scope():
-        per_replica_source, per_replica_target = next_fn()
-        per_replica_loss = strategy.experimental_run_v2(
-            _accumulate_dev_train_gradients, args=(per_replica_source, per_replica_target))
-        # TODO: these reductions could be delayed until _step is called.
-        loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-      return loss, num_examples
-    dev_data_flows.append(iter(_forward()))
-
-  for i, train_dataset in enumerate(train_datasets):
-    def _accumulate_dev_train_gradients(source, target):
-      outputs, _ = model(
-          source,
-          labels=target,
-          training=True,
-          step=optimizer.iterations)
-      loss = model.compute_loss(outputs, target, training=True)
-
-      if isinstance(loss, tuple):
-        training_loss = loss[0] / loss[1]
-        reported_loss = loss[0] / loss[2]
-      else:
-        training_loss, reported_loss = loss, loss
-      
-      variables = model.trainable_variables    
-      gradients = optimizer.get_gradients(training_loss, variables)
-      train_gradient_accumulators[i](gradients)
-      return loss
-
-    @dataset_util.function_on_next(train_dataset)
-    def _forward(next_fn):    
-      with strategy.scope():
-        per_replica_source, per_replica_target = next_fn()
-        per_replica_loss = strategy.experimental_run_v2(
-            _accumulate_dev_train_gradients, args=(per_replica_source, per_replica_target))
-        # TODO: these reductions could be delayed until _step is called.
-        loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-      return loss
-    train_data_flows.append(iter(_forward()))
+  dev_iterators = [iter(dev_dataset) for dev_dataset in dev_datasets]
+  train_iterators = [iter(train_dataset) for train_dataset in train_datasets]
  
   _, _ = next(train_data_flow)
 
@@ -9864,20 +9822,20 @@ def train_L2W(config,
       if step % redistribute_every == 0 and step > config.get("warm_start",5000):
         # compute domain rewards
         rewards = [0.0] * len(domain)
-        for i in range(len(domain)):
-          #with strategy.scope():
-          for _ in range(10):
-            _ = next(dev_data_flows[i])
-              #src, tgt = next(dev_iter)
-              #strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt, dev_gradient_accumulators[i]))
+        for i, dev_iter in enumerate(dev_iterators):
+          with strategy.scope():
+            for _ in range(10):
+              src, tgt = next(dev_iter)
+              strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+            dev_gradient_accumulator[i](sub_gradient_accumulator.gradients)
             #gradients = _accumulate_dev_train_gradients(src, tgt)
             #dev_gradient_accumulators[i](gradients)
-        for i in range(len(domain)):
-          #with strategy.scope():
-          for _ in range(10):
-            _ = next(train_data_flows[i])
-              # src, tgt = next(train_iter)
-              # strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt, dev_gradient_accumulators[i]))
+        for i, train_iter in enumerate(train_iterators):
+          with strategy.scope():
+            for _ in range(10):
+              src, tgt = next(train_iter)
+              strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+            train_gradient_accumulator[i](sub_gradient_accumulator.gradients)
             #gradients = _accumulate_dev_train_gradients(src, tgt)
             #train_gradient_accumulators[i](gradients)
         for i in range(len(domain)):
