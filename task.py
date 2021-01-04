@@ -9795,7 +9795,7 @@ def train_L2W(config,
       
       if step % redistribute_every == 0:
         # compute domain rewards
-        rewards = []
+        rewards = [0.0] * len(domain)
         for i, dev_iter in enumerate(dev_iterators):
           #with strategy.scope():
           src, tgt = next(dev_iter)
@@ -9818,7 +9818,7 @@ def train_L2W(config,
               _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
             _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10)
           _reward /= len(domain)
-          rewards.append(_reward)
+          rewards[i] = _reward
         domain_rewards.assign(tf.constant(rewards))
         # compute new domain distribution
         print("domain rewards", domain_rewards)
