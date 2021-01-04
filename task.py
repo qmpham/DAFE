@@ -9574,6 +9574,7 @@ def train_L2W(config,
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
   print("domain_rewards: ", domain_rewards)
   def update_sampling_distribution(logits):
+    logits = logits.numpy()
     for i, l in enumerate(logits):
         if logits[i] < 0:
             logits[i] = 0
