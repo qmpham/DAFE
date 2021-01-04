@@ -9824,9 +9824,10 @@ def train_L2W(config,
         # compute new domain distribution
         print("domain rewards", domain_rewards)
         with strategy.scope():
-          domain_logits = tf.Variable([1.0]*len(domain), trainable=True, synchronization=tf.VariableSynchronization.ON_READ,
+          domain_logits = tf.Variable([1.0]*len(domain), trainable=True, synchronization=tf.VariableSynchronization.AUTO,
           aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA)
           sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
+          sampler_optimizer._create_slots(domain_logits)
         with tf.GradientTape() as tape:
           _actor_loss = - tf.reduce_sum(tf.nn.softmax(domain_logits) * tf.nn.log_softmax(domain_logits) * domain_rewards)
           d_logits_grad = tape.gradient(_actor_loss, domain_logits)
