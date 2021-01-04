@@ -9827,12 +9827,12 @@ def train_L2W(config,
           domain_logits = tf.Variable([1.0]*len(domain), trainable=True, synchronization=tf.VariableSynchronization.ON_READ,
           aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA)
           sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
-          with tf.GradientTape() as tape:
-            _actor_loss = - tf.reduce_sum(tf.nn.softmax(domain_logits) * tf.nn.log_softmax(domain_logits) * domain_rewards)
-            d_logits_grad = tape.gradient(_actor_loss, domain_logits)
-
-          for _ in range(config.get("domain_sampler_optim_step", 30)):
-            sampler_optimizer.apply_gradients([(d_logits_grad, domain_logits)])
+        with tf.GradientTape() as tape:
+          _actor_loss = - tf.reduce_sum(tf.nn.softmax(domain_logits) * tf.nn.log_softmax(domain_logits) * domain_rewards)
+          d_logits_grad = tape.gradient(_actor_loss, domain_logits)
+          
+        for _ in range(config.get("domain_sampler_optim_step", 30)):
+          sampler_optimizer.apply_gradients([(d_logits_grad, domain_logits)])
 
         new_picking_prob = update_sampling_distribution(domain_logits)
         # create new training course with updated domain distribution
