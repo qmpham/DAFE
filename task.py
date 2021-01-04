@@ -9832,7 +9832,7 @@ def train_L2W(config,
         #sampler_optimizer._create_slots(trainable_vars)
       
         with tf.GradientTape() as tape:
-          _actor_loss = - tf.reduce_sum(tf.nn.softmax(domain_logits) * tf.nn.log_softmax(domain_logits) * domain_rewards)
+          _actor_loss = - tf.reduce_sum(tf.nn.log_softmax(domain_logits) * domain_rewards)
           d_logits_grad = tape.gradient(_actor_loss, domain_logits)
         
         for _ in range(config.get("domain_sampler_optim_step", 30)):
