@@ -9557,12 +9557,12 @@ def train_L2W(config,
   #                                           multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
 
   print("maximum_length", maximum_length)
-  train_datasets = [] 
+  train_datasets_p = [] 
   datasets_size = [count_lines(src) for src in source_file]
   picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
   print("initial domain picking probability: ", picking_prob)
   for i,src,tgt in zip(domain, source_file, target_file):
-    train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+    train_datasets_p.append(model.examples_inputter.make_training_dataset(src, tgt,
             batch_size=batch_train_size,
             batch_type=batch_type,
             domain=i,
@@ -9571,7 +9571,7 @@ def train_L2W(config,
             length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
             maximum_features_length=maximum_length,
             maximum_labels_length=maximum_length))
-  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
+  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets_p, weights=picking_prob)
   with strategy.scope():
     base_dataset = train_dataset
     train_dataset = strategy.experimental_distribute_datasets_from_function(
@@ -9859,7 +9859,7 @@ def train_L2W(config,
 
         new_picking_prob = update_sampling_distribution(domain_logits)
         # create new training course with updated domain distribution
-        train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=new_picking_prob)
+        train_dataset = tf.data.experimental.sample_from_datasets(train_datasets_p, weights=new_picking_prob)
         with strategy.scope():
           base_dataset = train_dataset
           train_dataset = strategy.experimental_distribute_datasets_from_function(
