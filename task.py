@@ -9568,7 +9568,7 @@ def train_L2W(config,
             domain=i,
             single_pass=False,
             shuffle_buffer_size=shuffle_buffer_size,
-            length_bucket_width=None,  # Bucketize sequences by the same length for efficiency.
+            length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
             maximum_features_length=maximum_length,
             maximum_labels_length=maximum_length))
   train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
