@@ -9532,6 +9532,7 @@ def train_L2W(config,
     train_steps = config.get("train_steps")
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
+  redistribute_every = config.get("redistribute_every",2000)
   #####
   if checkpoint_manager.latest_checkpoint is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
@@ -9555,6 +9556,11 @@ def train_L2W(config,
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
 
+  train_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
+                                            for domain, source_file, target_file in zip(config.get("domain"), config.get("src"), config.get("tgt"))]
+
   dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
@@ -9563,8 +9569,21 @@ def train_L2W(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
-    meta_gradient_accumulator = optimizer_util.GradientAccumulator() 
-  
+    dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in range(domain)]
+    train_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in range(domain)]
+    domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
+
+  def update_sampling_distribution(logits):
+    for i, l in enumerate(logits):
+        if logits[i] < 0:
+            logits[i] = 0
+    if sum(logits) == 0:
+        logits = [0.1 for _ in range(len(logits))]
+    p = np.array(logits) / sum(logits)
+    print("new domain probs")
+    print(p)
+    return p
+
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
@@ -9578,10 +9597,7 @@ def train_L2W(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    if config.get("multi_domain", True):
-      _domain = source["domain"][0]
-    else:
-      _domain = 0
+    
     if config.get("apply_importance_weight", False):
       print("apply_importance_weight")
       training_loss = training_loss #* importance_weights[_domain]
@@ -9655,9 +9671,10 @@ def train_L2W(config,
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples, _domain
+    return reported_loss, num_examples
 
-  def _accumulate_meta_gradients(source, target):
+  @tf.function
+  def _accumulate_dev_train_gradients(source, target):
     outputs, _ = model(
         source,
         labels=target,
@@ -9673,7 +9690,11 @@ def train_L2W(config,
     
     variables = model.trainable_variables    
     gradients = optimizer.get_gradients(training_loss, variables)
-    meta_gradient_accumulator(gradients)
+    return gradients
+
+  def _reset_dev_train_gradients():
+    [dev_gradient_accumulator.reset() for dev_gradient_accumulator in dev_gradient_accumulators]
+    [train_gradient_accumulator.reset() for train_gradient_accumulator in train_gradient_accumulators]
 
   def _apply_gradients():
     variables = model.trainable_variables
@@ -9689,31 +9710,30 @@ def train_L2W(config,
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples, per_replica_domain = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-      _domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)      
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, _domain, num_examples
+    return loss, num_examples
   
   @tf.function
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
 
-  @dataset_util.function_on_next(meta_dataset)
-  def _meta_forward(next_fn):    
+  @tf.function
+  def _reset_dev_train_grad_accum_step():
     with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-    return per_replica_source, per_replica_target
+      _reset_dev_train_gradients()
 
   # Runs the training loop.
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  meta_data_flow = iter(_meta_forward())
-  _, _, _ = next(train_data_flow)
+  dev_iterators = [iter(dev_dataset) for dev_dataset in dev_datasets]
+  train_iterators = [iter(train_dataset) for train_dataset in train_datasets]
+  _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
@@ -9723,6 +9743,7 @@ def train_L2W(config,
   if config.get("reset_step",None):
     print("start from %d-th step"%config.get("reset_step",150000))
     optimizer.iterations.assign(config.get("reset_step",150000))
+  
   if step <= 1:
     initializer = config.get("initializer","default")
     if initializer == "default":
@@ -9754,45 +9775,103 @@ def train_L2W(config,
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
 
-  # with _summary_writer.as_default():
-  #   while True:
+  with _summary_writer.as_default():
+    while True:
       
-      #####Training batch
-      # loss, _domain, num_examples = next(train_data_flow)    
-      # _loss.append(loss.numpy())
-      # _number_examples.append(num_examples.numpy())
-      # _step()  
-      # step = optimizer.iterations.numpy()
+      ####Training batch
+      loss, num_examples = next(train_data_flow)    
+      _loss.append(loss.numpy())
+      _number_examples.append(num_examples.numpy())
+      _step()  
+      step = optimizer.iterations.numpy()
       
-      # if step % report_every == 0:
-      #   elapsed = time.time() - start
-      #   tf.get_logger().info(
-      #     "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
-      #     step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
-      #   _loss = []
-      #   _number_examples = []
-      #   start = time.time()
-      # if step % save_every == 0:
-      #   tf.get_logger().info("Saving checkpoint for step %d", step)
-      #   checkpoint_manager.save(checkpoint_number=step)
-      # if step % eval_every == 0:
-      #   checkpoint_path = checkpoint_manager.latest_checkpoint
-      #   tf.summary.experimental.set_step(step)
-      #   output_files = []
-      #   for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-      #     output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-      #     score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-      #     tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
-      #     output_files.append(output_file)
-      #   ##### BLEU on concat dev set.
-      #   output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
-      #   score = scorer(ref_eval_concat, output_file_concat)
-      #   print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
-      #   tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
-      #   #############################
-      # tf.summary.flush()
-      # if step > train_steps:
-      #   break
+      if step % redistribute_every == 0:
+        # compute domain rewards
+        rewards = []
+        for i, dev_iter in enumerate(dev_iterators):
+          with strategy.scope():
+            src, tgt = next(dev_iter)
+            gradients = _accumulate_dev_train_gradients(src, tgt)
+            dev_gradient_accumulators[i](gradients)
+        for i, train_iter in enumerate(train_iterators):
+          with strategy.scope():
+            src, tgt = next(train_iter)
+            gradients = _accumulate_dev_train_gradients(src, tgt)
+            train_gradient_accumulators[i](gradients)
+        for i in range(domain):
+          _reward = 0.0
+          for j in range(domain):
+            _sum = 0.0
+            _dev_norm = 0.0
+            _tr_norm = 0.0
+            for dev_grad,tr_grad in zip(dev_gradient_accumulators[j].gradients,train_gradient_accumulators[i].gradients):
+              _sum += tf.reduce_sum(dev_grad * tr_grad)
+              _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+              _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+            _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10)
+          _reward /= len(domain)
+          rewards.append(_reward)
+        domain_rewards.assign(tf.constant(rewards))
+        # compute new domain distribution
+        print("domain rewards", domain_rewards)
+        with strategy.scope():
+          domain_logits = tf.Variable([1.0]*len(domain), trainable=True, synchronization=tf.VariableSynchronization.ON_READ,
+          aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA)
+        _actor_loss = - tf.reduce_sum(tf.nn.softmax(domain_logits) * tf.nn.log_softmax(domain_logits) * domain_rewards)
+        sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
+        for _ in range(config.get("domain_sampler_optim_step", 30)):
+          d_logits_grad = sampler_optimizer.get_gradients(_actor_loss, domain_logits)
+          sampler_optimizer.apply_gradients([(d_logits_grad, domain_logits)])
+        new_picking_prob = update_sampling_distribution(domain_logits)
+        # create new training course with updated domain distribution
+        train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob=new_picking_prob, temperature=1.0)
+        @dataset_util.function_on_next(train_dataset)
+        def _train_forward(next_fn):    
+          with strategy.scope():
+            per_replica_source, per_replica_target = next_fn()
+            per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+                _accumulate_gradients, args=(per_replica_source, per_replica_target))
+            # TODO: these reductions could be delayed until _step is called.
+            loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+            num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+          return loss, num_examples
+        train_data_flow = iter(_train_forward())
+        # reset train dev gradient accumulations to zero
+        with strategy.scope():
+          _reset_dev_train_grad_accum_step()
+
+
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+          "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
+          step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+        _loss = []
+        _number_examples = []
+        start = time.time()
+      if step % save_every == 0:
+        tf.get_logger().info("Saving checkpoint for step %d", step)
+        checkpoint_manager.save(checkpoint_number=step)
+      if step % eval_every == 0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        output_files = []
+        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+          output_files.append(output_file)
+        ##### BLEU on concat dev set.
+        output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
+        score = scorer(ref_eval_concat, output_file_concat)
+        print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
+        tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
+        #############################
+      tf.summary.flush()
+      if step > train_steps:
+        break
 
 
 
