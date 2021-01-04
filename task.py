@@ -9799,14 +9799,16 @@ def train_L2W(config,
         rewards = [0.0] * len(domain)
         for i, dev_iter in enumerate(dev_iterators):
           #with strategy.scope():
-          src, tgt = next(dev_iter)
-          gradients = _accumulate_dev_train_gradients(src, tgt)
-          dev_gradient_accumulators[i](gradients)
+          for _ in range(10):
+            src, tgt = next(dev_iter)
+            gradients = _accumulate_dev_train_gradients(src, tgt)
+            dev_gradient_accumulators[i](gradients)
         for i, train_iter in enumerate(train_iterators):
           #with strategy.scope():
-          src, tgt = next(train_iter)
-          gradients = _accumulate_dev_train_gradients(src, tgt)
-          train_gradient_accumulators[i](gradients)
+          for _ in range(10):
+            src, tgt = next(train_iter)
+            gradients = _accumulate_dev_train_gradients(src, tgt)
+            train_gradient_accumulators[i](gradients)
         for i in range(len(domain)):
           _reward = 0.0
           for j in range(len(domain)):
@@ -9820,7 +9822,6 @@ def train_L2W(config,
             _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10)
           _reward /= len(domain)
           rewards[i] = _reward.numpy()
-        print(rewards)
         domain_rewards.assign(tf.constant(rewards))
         # compute new domain distribution
         print("domain rewards", domain_rewards)
