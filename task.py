@@ -9569,8 +9569,8 @@ def train_L2W(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
-    dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in range(domain)]
-    train_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in range(domain)]
+    dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
+    train_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
 
   def update_sampling_distribution(logits):
@@ -9727,6 +9727,14 @@ def train_L2W(config,
     with strategy.scope():
       _reset_dev_train_gradients()
 
+  def _set_weight(v, w):
+    v.assign(tf.cast(w,v.dtype))
+
+  @tf.function
+  def weight_reset(snapshots):
+    for snap, var in zip(snapshots, model.trainable_variables):
+      _set_weight(var, snap)
+
   # Runs the training loop.
   import time
   start = time.time()  
@@ -9798,9 +9806,9 @@ def train_L2W(config,
             src, tgt = next(train_iter)
             gradients = _accumulate_dev_train_gradients(src, tgt)
             train_gradient_accumulators[i](gradients)
-        for i in range(domain):
+        for i in range(len(domain)):
           _reward = 0.0
-          for j in range(domain):
+          for j in range(len(domain)):
             _sum = 0.0
             _dev_norm = 0.0
             _tr_norm = 0.0
