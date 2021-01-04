@@ -9797,15 +9797,15 @@ def train_L2W(config,
         # compute domain rewards
         rewards = []
         for i, dev_iter in enumerate(dev_iterators):
-          with strategy.scope():
-            src, tgt = next(dev_iter)
-            gradients = _accumulate_dev_train_gradients(src, tgt)
-            dev_gradient_accumulators[i](gradients)
+          #with strategy.scope():
+          src, tgt = next(dev_iter)
+          gradients = _accumulate_dev_train_gradients(src, tgt)
+          dev_gradient_accumulators[i](gradients)
         for i, train_iter in enumerate(train_iterators):
-          with strategy.scope():
-            src, tgt = next(train_iter)
-            gradients = _accumulate_dev_train_gradients(src, tgt)
-            train_gradient_accumulators[i](gradients)
+          #with strategy.scope():
+          src, tgt = next(train_iter)
+          gradients = _accumulate_dev_train_gradients(src, tgt)
+          train_gradient_accumulators[i](gradients)
         for i in range(len(domain)):
           _reward = 0.0
           for j in range(len(domain)):
@@ -9826,11 +9826,11 @@ def train_L2W(config,
           domain_logits = tf.Variable([1.0]*len(domain), trainable=True, synchronization=tf.VariableSynchronization.ON_READ,
           aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA)
         _actor_loss = - tf.reduce_sum(tf.nn.softmax(domain_logits) * tf.nn.log_softmax(domain_logits) * domain_rewards)
-        with strategy.scope():
-          sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
-          for _ in range(config.get("domain_sampler_optim_step", 30)):
-            d_logits_grad = sampler_optimizer.get_gradients(_actor_loss, domain_logits)
-            sampler_optimizer.apply_gradients([(d_logits_grad, domain_logits)])
+        #with strategy.scope():
+        sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
+        for _ in range(config.get("domain_sampler_optim_step", 30)):
+          d_logits_grad = sampler_optimizer.get_gradients(_actor_loss, domain_logits)
+          sampler_optimizer.apply_gradients([(d_logits_grad, domain_logits)])
 
         new_picking_prob = update_sampling_distribution(domain_logits)
         # create new training course with updated domain distribution
