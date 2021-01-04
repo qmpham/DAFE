@@ -9815,7 +9815,7 @@ def train_L2W(config,
       _step()  
       step = optimizer.iterations.numpy()
       
-      if step % redistribute_every == 0:
+      if step % redistribute_every == 0 and step > config.get("warm_start",5000):
         # compute domain rewards
         rewards = [0.0] * len(domain)
         for i, dev_iter in enumerate(dev_iterators):
