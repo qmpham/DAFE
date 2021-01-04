@@ -9572,7 +9572,7 @@ def train_L2W(config,
     dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     train_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
-
+  print("domain_rewards: ", domain_rewards)
   def update_sampling_distribution(logits):
     for i, l in enumerate(logits):
         if logits[i] < 0:
