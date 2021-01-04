@@ -9673,7 +9673,7 @@ def train_L2W(config,
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
-  @tf.function
+  @tf.function(experimental_relax_shapes=True)
   def _accumulate_dev_train_gradients(source, target):
     outputs, _ = model(
         source,
