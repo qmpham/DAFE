@@ -9859,7 +9859,7 @@ def train_L2W(config,
 
         new_picking_prob = update_sampling_distribution(domain_logits)
         # create new training course with updated domain distribution
-        train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
+        train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=new_picking_prob)
         with strategy.scope():
           base_dataset = train_dataset
           train_dataset = strategy.experimental_distribute_datasets_from_function(
@@ -9878,7 +9878,6 @@ def train_L2W(config,
         # reset train dev gradient accumulations to zero
         with strategy.scope():
           _reset_dev_train_grad_accum_step()
-
 
       if step % report_every == 0:
         elapsed = time.time() - start
