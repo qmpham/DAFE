@@ -9818,7 +9818,7 @@ def train_L2W(config,
               _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
             _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10)
           _reward /= len(domain)
-          rewards[i] = _reward
+          rewards[i] = _reward.numpy()
         print(rewards)
         domain_rewards.assign(tf.constant(rewards))
         # compute new domain distribution
