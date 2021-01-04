@@ -9827,7 +9827,7 @@ def train_L2W(config,
         with strategy.scope():
           domain_logits = tf.Variable([1.0]*len(domain), trainable=True)
           trainable_vars = []
-          trainable_vars.append(domain_lists)
+          trainable_vars.append(domain_logits)
           sampler_optimizer._create_slots(trainable_vars)
         with tf.GradientTape() as tape:
           _actor_loss = - tf.reduce_sum(tf.nn.softmax(domain_logits) * tf.nn.log_softmax(domain_logits) * domain_rewards)
