@@ -9551,11 +9551,32 @@ def train_L2W(config,
   domain = config.get("domain",None)
   
   print("There are %d in-domain corpora"%len(source_file))
-  
-  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
-                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
+  ###############
+  # train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+  #                                           maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+  #                                           multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
 
+  print("maximum_length", maximum_length)
+  train_datasets = [] 
+  datasets_size = [count_lines(src) for src in source_file]
+  picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+  print("initial domain picking probability: ", picking_prob)
+  for i,src,tgt in zip(domain, source_file, target_file):
+    train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+            batch_size=batch_train_size,
+            batch_type=batch_type,
+            domain=i,
+            single_pass=False,
+            shuffle_buffer_size=shuffle_buffer_size,
+            length_bucket_width=None,  # Bucketize sequences by the same length for efficiency.
+            maximum_features_length=maximum_length,
+            maximum_labels_length=maximum_length))
+  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
+  with strategy.scope():
+    base_dataset = train_dataset
+    train_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)  
+  #############
   train_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
@@ -9828,9 +9849,6 @@ def train_L2W(config,
         sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
         #with strategy.scope():
         domain_logits = tf.Variable([1.0]*len(domain), trainable=True)
-        #trainable_vars = []
-        #trainable_vars.append(domain_logits)
-        #sampler_optimizer._create_slots(trainable_vars)
       
         with tf.GradientTape() as tape:
           _actor_loss = - tf.reduce_sum(tf.nn.log_softmax(domain_logits) * domain_rewards)
@@ -9841,9 +9859,11 @@ def train_L2W(config,
 
         new_picking_prob = update_sampling_distribution(domain_logits)
         # create new training course with updated domain distribution
-        train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
-                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True), picking_prob=new_picking_prob, temperature=1.0)
+        train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
+        with strategy.scope():
+          base_dataset = train_dataset
+          train_dataset = strategy.experimental_distribute_datasets_from_function(
+                lambda _: base_dataset)
         @dataset_util.function_on_next(train_dataset)
         def _train_forward(next_fn):    
           with strategy.scope():
