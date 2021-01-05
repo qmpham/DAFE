@@ -9827,6 +9827,7 @@ def train_L2W(config,
               src, tgt = next(dev_iter)
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
             dev_gradient_accumulators[i](sub_gradient_accumulator.gradients)
+            strategy.experimental_run_v2(sub_gradient_accumulator.reset())
             #gradients = _accumulate_dev_train_gradients(src, tgt)
             #dev_gradient_accumulators[i](gradients)
         for i, train_iter in enumerate(train_iterators):
@@ -9835,6 +9836,7 @@ def train_L2W(config,
               src, tgt = next(train_iter)
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
             train_gradient_accumulators[i](sub_gradient_accumulator.gradients)
+            strategy.experimental_run_v2(sub_gradient_accumulator.reset())
             #gradients = _accumulate_dev_train_gradients(src, tgt)
             #train_gradient_accumulators[i](gradients)
         for i in range(len(domain)):
