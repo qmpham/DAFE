@@ -9699,6 +9699,9 @@ def train_L2W(config,
     return reported_loss, num_examples
 
   def _accumulate_dev_train_gradients(source, target):
+    with tf.GradientTape() as tape:
+      variables = model.trainable_variables    
+      tape.watch(variables)
       outputs, _ = model(
           source,
           labels=target,
@@ -9711,9 +9714,8 @@ def train_L2W(config,
         reported_loss = loss[0] / loss[2]
       else:
         training_loss, reported_loss = loss, loss
-      
-      variables = model.trainable_variables    
-      gradients = optimizer.get_gradients(training_loss, variables)
+        
+      gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
       return loss
   
