@@ -9838,8 +9838,7 @@ def train_L2W(config,
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
             dev_gradient_accumulators[i](sub_gradient_accumulator.gradients)
             strategy.experimental_run_v2(sub_gradient_accumulator.reset)
-            #gradients = _accumulate_dev_train_gradients(src, tgt)
-            #dev_gradient_accumulators[i](gradients)
+            
         for i, train_iter in enumerate(train_iterators):
           with strategy.scope():
             for _ in range(10):
@@ -9847,8 +9846,7 @@ def train_L2W(config,
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
             train_gradient_accumulators[i](sub_gradient_accumulator.gradients)
             strategy.experimental_run_v2(sub_gradient_accumulator.reset)
-            #gradients = _accumulate_dev_train_gradients(src, tgt)
-            #train_gradient_accumulators[i](gradients)
+            
         for i in range(len(domain)):
           _reward = 0.0
           for j in range(len(domain)):
@@ -9866,7 +9864,6 @@ def train_L2W(config,
         # compute new domain distribution
         print("domain rewards", domain_rewards)
         sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
-        #with strategy.scope():
         domain_logits = tf.Variable([1.0]*len(domain), trainable=True)
       
         with tf.GradientTape() as tape:
@@ -9895,8 +9892,7 @@ def train_L2W(config,
           return loss, num_examples
         train_data_flow = iter(_train_forward())
         # reset train dev gradient accumulations to zero
-        with strategy.scope():
-          _reset_dev_train_grad_accum_step()
+        _reset_dev_train_grad_accum_step()
 
       if step % report_every == 0:
         elapsed = time.time() - start
