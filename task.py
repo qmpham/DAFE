@@ -9714,7 +9714,7 @@ def train_L2W(config,
         reported_loss = loss[0] / loss[2]
       else:
         training_loss, reported_loss = loss, loss
-        
+
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
       return loss
@@ -9722,6 +9722,9 @@ def train_L2W(config,
   def _reset_dev_train_gradients():
     [dev_gradient_accumulator.reset() for dev_gradient_accumulator in dev_gradient_accumulators]
     [train_gradient_accumulator.reset() for train_gradient_accumulator in train_gradient_accumulators]
+
+  def _reset_sub_gradients():
+    sub_gradient_accumulator.reset()
 
   def _apply_gradients():
     variables = model.trainable_variables
@@ -9753,6 +9756,11 @@ def train_L2W(config,
   def _reset_dev_train_grad_accum_step():
     with strategy.scope():
       _reset_dev_train_gradients()
+
+  @tf.function
+  def _reset_sub_grad_accum_step():
+    with strategy.scope():
+      _reset_sub_gradients()
 
   def _set_weight(v, w):
     v.assign(tf.cast(w,v.dtype))
@@ -9829,7 +9837,7 @@ def train_L2W(config,
               src, tgt = next(dev_iter)
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
             dev_gradient_accumulators[i](sub_gradient_accumulator.gradients)
-            strategy.experimental_run_v2(sub_gradient_accumulator.reset())
+            strategy.experimental_run_v2(sub_gradient_accumulator.reset)
             #gradients = _accumulate_dev_train_gradients(src, tgt)
             #dev_gradient_accumulators[i](gradients)
         for i, train_iter in enumerate(train_iterators):
@@ -9838,7 +9846,7 @@ def train_L2W(config,
               src, tgt = next(train_iter)
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
             train_gradient_accumulators[i](sub_gradient_accumulator.gradients)
-            strategy.experimental_run_v2(sub_gradient_accumulator.reset())
+            strategy.experimental_run_v2(sub_gradient_accumulator.reset)
             #gradients = _accumulate_dev_train_gradients(src, tgt)
             #train_gradient_accumulators[i](gradients)
         for i in range(len(domain)):
