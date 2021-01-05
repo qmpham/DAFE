@@ -9698,8 +9698,11 @@ def train_L2W(config,
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
-  @tf.function(experimental_relax_shapes=True)
+  #@tf.function(experimental_relax_shapes=True)
   def _accumulate_dev_train_gradients(source, target):
+    variables = model.trainable_variables 
+    with tf.GradientTape() as tape:
+      tape.watch(variables)
       outputs, _ = model(
           source,
           labels=target,
@@ -9712,9 +9715,8 @@ def train_L2W(config,
         reported_loss = loss[0] / loss[2]
       else:
         training_loss, reported_loss = loss, loss
-      
-      variables = model.trainable_variables    
-      gradients = optimizer.get_gradients(training_loss, variables)
+
+      gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
       return loss
   
