@@ -9577,12 +9577,12 @@ def train_L2W(config,
     train_dataset = strategy.experimental_distribute_datasets_from_function(
           lambda _: base_dataset)  
   #############
-  train_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size/2, batch_type, shuffle_buffer_size, 
+  train_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
                                             for domain, source_file, target_file in zip(config.get("domain"), config.get("src"), config.get("tgt"))]
 
-  dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size/2, batch_type, shuffle_buffer_size, 
+  dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
                                             for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref"))]
