@@ -9856,7 +9856,6 @@ def train_L2W(config,
             _dev_norm = 0.0
             _tr_norm = 0.0
             for dev_grad,tr_grad in zip(dev_gradient_accumulators[j].gradients,train_gradient_accumulators[i].gradients):
-              print("dev_grad: ", dev_grad)
               _sum += tf.reduce_sum(dev_grad * tr_grad)
               _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
               _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
