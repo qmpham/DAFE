@@ -9880,7 +9880,7 @@ def train_L2W(config,
           _reward /= len(domain)
           rewards[i] = _reward.numpy()
         for i in range(len(domain)):
-          tf.summary.scalar("reward_%d"%i, rewards[i], description="reward of using training set %d eme"%(i,len(domain)))
+          tf.summary.scalar("reward_%d"%i, rewards[i], description="reward of using training set %d eme"%(i))
         tf.summary.flush()
         domain_rewards.assign(tf.constant(rewards))
         # compute new domain distribution
