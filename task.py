@@ -9853,9 +9853,9 @@ def train_L2W(config,
             for _ in range(10):
               src, tgt = next(train_iter)
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-              train_gradient_accumulators[i](sub_gradient_accumulator.gradients)
+            train_gradient_accumulators[i](sub_gradient_accumulator.gradients)
             strategy.experimental_run_v2(_apply_dev_train_gradients)
-            strategy.experimental_run_v2(sub_gradient_accumulator.reset)
+            #strategy.experimental_run_v2(sub_gradient_accumulator.reset)
           optimizer.iterations.assign(saved_step)
           for j, dev_iter in enumerate(dev_iterators):
             with strategy.scope():
