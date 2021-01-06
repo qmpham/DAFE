@@ -9735,6 +9735,16 @@ def train_L2W(config,
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
+  
+  def _apply_dev_train_gradients():
+    variables = model.trainable_variables
+    grads_and_vars = []
+    for gradient, variable in zip(sub_gradient_accumulator.gradients, variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(sub_gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    sub_gradient_accumulator.reset()
  
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
@@ -9751,6 +9761,11 @@ def train_L2W(config,
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
+
+  @tf.function
+  def _dev_train_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_dev_train_gradients)
 
   @tf.function
   def _reset_dev_train_grad_accum_step():
