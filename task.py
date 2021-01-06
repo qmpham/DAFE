@@ -9847,7 +9847,7 @@ def train_L2W(config,
         # compute domain rewards
         rewards = [0.0] * len(domain)
         snapshots = [v.value() for v in model.trainable_variables]
-            
+        saved_step = optimizer.iterations.numpy()
         for i, train_iter in enumerate(train_iterators):
           with strategy.scope():
             for _ in range(10):
@@ -9856,7 +9856,7 @@ def train_L2W(config,
               train_gradient_accumulators[i](sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(_apply_dev_train_gradients)
             strategy.experimental_run_v2(sub_gradient_accumulator.reset)
-
+          optimizer.iterations.assign(saved_step)
           for j, dev_iter in enumerate(dev_iterators):
             with strategy.scope():
               for _ in range(10):
