@@ -9831,23 +9831,25 @@ def train_L2W(config,
       if step % redistribute_every == 0 and step > config.get("warm_start",5000):
         # compute domain rewards
         rewards = [0.0] * len(domain)
-        for i, dev_iter in enumerate(dev_iterators):
-          with strategy.scope():
-            for _ in range(10):
-              src, tgt = next(dev_iter)
-              strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-            dev_gradient_accumulators[i](sub_gradient_accumulator.gradients)
-            strategy.experimental_run_v2(sub_gradient_accumulator.reset)
+        snapshots = [v.value() for v in model.trainable_variables]
             
         for i, train_iter in enumerate(train_iterators):
           with strategy.scope():
             for _ in range(10):
               src, tgt = next(train_iter)
-              strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-            train_gradient_accumulators[i](sub_gradient_accumulator.gradients)
-            strategy.experimental_run_v2(sub_gradient_accumulator.reset)
-            
-        for i in range(len(domain)):
+              strategy.experimental_run_v2(_accumulate_gradients, args=(src, tgt))
+              train_gradient_accumulators[i](gradient_accumulator.gradients)
+              strategy.experimental_run_v2(_apply_gradients)
+            strategy.experimental_run_v2(gradient_accumulator.reset)
+
+          for j, dev_iter in enumerate(dev_iterators):
+            with strategy.scope():
+              for _ in range(10):
+                src, tgt = next(dev_iter)
+                strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+              dev_gradient_accumulators[j](sub_gradient_accumulator.gradients)
+              strategy.experimental_run_v2(sub_gradient_accumulator.reset)
+          weight_reset(snapshots)
           _reward = 0.0
           for j in range(len(domain)):
             _sum = 0.0
@@ -9860,6 +9862,7 @@ def train_L2W(config,
             _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10)
           _reward /= len(domain)
           rewards[i] = _reward.numpy()
+        
         domain_rewards.assign(tf.constant(rewards))
         # compute new domain distribution
         print("domain rewards", domain_rewards)
