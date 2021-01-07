@@ -9859,7 +9859,7 @@ def train_L2W(config,
         for i, train_iter in enumerate(train_iterators):
           _reward = 0.0
           with strategy.scope():
-            for _ in range(config.get("dev_batch_per_run_num",10)):
+            for _ in range(config.get("train_batch_per_run_num",10)):
               src, tgt = next(train_iter)
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
             train_gradient_accumulator(sub_gradient_accumulator.gradients)
@@ -9869,7 +9869,7 @@ def train_L2W(config,
               _sum = 0.0
               _dev_norm = 0.0
               _tr_norm = 0.0
-              for _ in range(config.get("train_batch_per_run_num",10)):
+              for _ in range(config.get("dev_batch_per_run_num",10)):
                 src, tgt = next(dev_iter)
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
@@ -9883,6 +9883,9 @@ def train_L2W(config,
               strategy.experimental_run_v2(dev_gradient_accumulator.reset)
             # reset train dev gradient accumulations to zero
             strategy.experimental_run_v2(train_gradient_accumulator.reset)
+            print(sub_gradient_accumulator.gradients[0])
+            print(train_gradient_accumulator.gradients[0])
+            print(dev_gradient_accumulator.gradients[0])
           #_reward /= len(domain)
           rewards[i] = _reward.numpy()
           # reset model parameters
