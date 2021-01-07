@@ -9856,7 +9856,7 @@ def train_L2W(config,
         #######
         for i, train_iter in enumerate(train_iterators):
           with strategy.scope():
-            for _ in range(config.get("dev_train_batch_num",10)):
+            for _ in range(config.get("dev_batch_per_run_num",10)):
               src, tgt = next(train_iter)
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
             train_gradient_accumulators[i](sub_gradient_accumulator.gradients)
@@ -9865,7 +9865,7 @@ def train_L2W(config,
           optimizer.iterations.assign(saved_step)
           for j, dev_iter in enumerate(dev_iterators):
             with strategy.scope():
-              for _ in range(config.get("dev_train_batch_num",10)):
+              for _ in range(config.get("train_batch_per_run_num",10)):
                 src, tgt = next(dev_iter)
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               dev_gradient_accumulators[j](sub_gradient_accumulator.gradients)
