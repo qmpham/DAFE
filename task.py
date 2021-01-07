@@ -9596,9 +9596,10 @@ def train_L2W(config,
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     sub_gradient_accumulator = optimizer_util.GradientAccumulator()
-    dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
+    #dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     #train_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
-    train_gradient_accumulators = optimizer_util.GradientAccumulator()
+    dev_gradient_accumulator = optimizer_util.GradientAccumulator()
+    train_gradient_accumulator = optimizer_util.GradientAccumulator()
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     #domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
   print("domain_rewards: ", domain_rewards)
@@ -9726,8 +9727,8 @@ def train_L2W(config,
       return loss
   
   def _reset_dev_train_gradients():
-    [dev_gradient_accumulator.reset() for dev_gradient_accumulator in dev_gradient_accumulators]
-    [train_gradient_accumulator.reset() for train_gradient_accumulator in train_gradient_accumulators]
+    dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
+    train_gradient_accumulator.reset() #for train_gradient_accumulator in train_gradient_accumulators]
 
   def _reset_sub_gradients():
     sub_gradient_accumulator.reset()
@@ -9856,38 +9857,36 @@ def train_L2W(config,
         saved_step = optimizer.iterations.numpy()
         #######
         for i, train_iter in enumerate(train_iterators):
+          _reward = 0.0
           with strategy.scope():
             for _ in range(config.get("dev_batch_per_run_num",10)):
               src, tgt = next(train_iter)
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-            train_gradient_accumulators(sub_gradient_accumulator.gradients)
+            train_gradient_accumulator(sub_gradient_accumulator.gradients)
             strategy.experimental_run_v2(_apply_dev_train_gradients)
             strategy.experimental_run_v2(sub_gradient_accumulator.reset)
             for j, dev_iter in enumerate(dev_iterators):
+              _sum = 0.0
+              _dev_norm = 0.0
+              _tr_norm = 0.0
               for _ in range(config.get("train_batch_per_run_num",10)):
                 src, tgt = next(dev_iter)
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-              dev_gradient_accumulators[j](sub_gradient_accumulator.gradients)
-              strategy.experimental_run_v2(sub_gradient_accumulator.reset)
-        #######
-          weight_reset(snapshots)
-          optimizer.iterations.assign(saved_step)
-        #######
-          _reward = 0.0
-          for j in range(len(eval_domain)):
-            _sum = 0.0
-            _dev_norm = 0.0
-            _tr_norm = 0.0
-            for dev_grad,tr_grad in zip(dev_gradient_accumulators[j].gradients,train_gradient_accumulators.gradients):
-              _sum += tf.reduce_sum(dev_grad * tr_grad)
-              _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-              _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-            _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
+              dev_gradient_accumulator(sub_gradient_accumulator.gradients)
+              strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
+              for dev_grad, tr_grad in zip(dev_gradient_accumulator.gradients, train_gradient_accumulator.gradients):
+                _sum += tf.reduce_sum(dev_grad * tr_grad)
+                _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+              _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
+              # reset dev gradient accumulations to zero
+              strategy.experimental_run_v2(dev_gradient_accumulator.reset)
+            # reset train dev gradient accumulations to zero
+            strategy.experimental_run_v2(train_gradient_accumulator.reset)
           #_reward /= len(domain)
           rewards[i] = _reward.numpy()
-          with strategy.scope():
-            strategy.experimental_run_v2(train_gradient_accumulators.reset)
-
+          # reset model parameters
+          weight_reset(snapshots)
         domain_rewards.assign(tf.constant(rewards))
         # compute new domain distribution
         print("domain rewards", domain_rewards)
@@ -9924,8 +9923,10 @@ def train_L2W(config,
             num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
           return loss, num_examples
         train_data_flow = iter(_train_forward())
-        # reset train dev gradient accumulations to zero
-        _reset_dev_train_grad_accum_step()
+        #######
+        weight_reset(snapshots)
+        optimizer.iterations.assign(saved_step)
+        #######
 
       if step % report_every == 0:
         elapsed = time.time() - start
