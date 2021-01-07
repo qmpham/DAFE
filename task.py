@@ -9881,11 +9881,11 @@ def train_L2W(config,
               _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
               # reset dev gradient accumulations to zero
               strategy.experimental_run_v2(dev_gradient_accumulator.reset)
+              #print(dev_gradient_accumulator.gradients[0])
             # reset train dev gradient accumulations to zero
             strategy.experimental_run_v2(train_gradient_accumulator.reset)
-            print(sub_gradient_accumulator.gradients[0])
-            print(train_gradient_accumulator.gradients[0])
-            print(dev_gradient_accumulator.gradients[0])
+            #print(sub_gradient_accumulator.gradients[0])
+            #print(train_gradient_accumulator.gradients[0])
           #_reward /= len(domain)
           rewards[i] = _reward.numpy()
           # reset model parameters
