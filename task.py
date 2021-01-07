@@ -9880,6 +9880,7 @@ def train_L2W(config,
           _reward /= len(domain)
           rewards[i] = _reward.numpy()
         for i in range(len(domain)):
+          tf.summary.experimental.set_step(saved_step)
           tf.summary.scalar("reward_%d"%i, rewards[i], description="reward of using training set %d eme"%(i))
         tf.summary.flush()
         domain_rewards.assign(tf.constant(rewards))
@@ -9897,6 +9898,7 @@ def train_L2W(config,
 
         new_picking_prob = update_sampling_distribution(domain_logits)
         for i in range(len(domain)):
+          tf.summary.experimental.set_step(saved_step)
           tf.summary.scalar("domain_prob_%d"%i, new_picking_prob[i], description="probability of using training set %d"%(i))
         tf.summary.flush()
         # create new training course with updated domain distribution
