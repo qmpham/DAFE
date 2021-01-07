@@ -9549,7 +9549,7 @@ def train_L2W(config,
   source_file = config["src"]
   target_file = config["tgt"]
   domain = config.get("domain",None)
-  domain_importances = config.get("domain_importances",[1.0]*len(domain))
+  domain_importances = config.get("domain_importances",[1.0/len(domain)]*len(domain))
   print("There are %d in-domain corpora"%len(source_file))
   ###############
   # train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
