@@ -9594,7 +9594,7 @@ def train_L2W(config,
     dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     train_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
-    domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
+    #domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
   def update_sampling_distribution(logits):
@@ -9876,9 +9876,10 @@ def train_L2W(config,
               _sum += tf.reduce_sum(dev_grad * tr_grad)
               _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
               _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-            _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10)
-          _reward /= len(domain)
+            _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
+          #_reward /= len(domain)
           rewards[i] = _reward.numpy()
+
         domain_rewards.assign(tf.constant(rewards))
         # compute new domain distribution
         print("domain rewards", domain_rewards)
