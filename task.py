@@ -9549,9 +9549,10 @@ def train_L2W(config,
   source_file = config["src"]
   target_file = config["tgt"]
   domain = config.get("domain",None)
-  
+  eval_domain = config.get("eval_domain")
+
   if not config.get("domain_importances",None):
-    domain_importances = [1.0/len(domain)]*len(domain)
+    domain_importances = [1.0/len(eval_domain)]*len(eval_domain)
   else:
     domain_importances = config.get("domain_importances")
   print("There are %d in-domain corpora"%len(source_file))
@@ -9872,7 +9873,7 @@ def train_L2W(config,
         #######
           weight_reset(snapshots)
           _reward = 0.0
-          for j in range(len(domain)):
+          for j in range(len(eval_domain)):
             _sum = 0.0
             _dev_norm = 0.0
             _tr_norm = 0.0
