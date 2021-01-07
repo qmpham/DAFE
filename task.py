@@ -9879,10 +9879,6 @@ def train_L2W(config,
             _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10)
           _reward /= len(domain)
           rewards[i] = _reward.numpy()
-        for i in range(len(domain)):
-          tf.summary.experimental.set_step(saved_step)
-          tf.summary.scalar("reward_%d"%i, rewards[i], description="reward of using training set %d eme"%(i))
-        tf.summary.flush()
         domain_rewards.assign(tf.constant(rewards))
         # compute new domain distribution
         print("domain rewards", domain_rewards)
@@ -9897,8 +9893,9 @@ def train_L2W(config,
           sampler_optimizer.apply_gradients([(d_logits_grad, domain_logits)])
 
         new_picking_prob = update_sampling_distribution(domain_logits)
+        tf.summary.experimental.set_step(saved_step)
         for i in range(len(domain)):
-          tf.summary.experimental.set_step(saved_step)
+          tf.summary.scalar("reward_%d"%i, rewards[i], description="reward of using training set %d"%(i))
           tf.summary.scalar("domain_prob_%d"%i, new_picking_prob[i], description="probability of using training set %d"%(i))
         tf.summary.flush()
         # create new training course with updated domain distribution
