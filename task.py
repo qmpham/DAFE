@@ -9751,7 +9751,7 @@ def train_L2W(config,
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(sub_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
-    sub_gradient_accumulator.reset()
+    #sub_gradient_accumulator.reset()
  
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
@@ -9890,6 +9890,7 @@ def train_L2W(config,
           rewards[i] = _reward.numpy()
           # reset model parameters
           weight_reset(snapshots)
+          optimizer.iterations.assign(saved_step)
         domain_rewards.assign(tf.constant(rewards))
         # compute new domain distribution
         print("domain rewards", domain_rewards)
