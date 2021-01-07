@@ -9549,7 +9549,7 @@ def train_L2W(config,
   source_file = config["src"]
   target_file = config["tgt"]
   domain = config.get("domain",None)
-  
+  domain_importances = config.get("domain_importances",[1.0]*len(domain))
   print("There are %d in-domain corpora"%len(source_file))
   ###############
   # train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
@@ -9586,7 +9586,7 @@ def train_L2W(config,
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
                                             for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref"))]
-  #####
+  #############
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
@@ -9594,7 +9594,7 @@ def train_L2W(config,
     dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     train_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
-  
+    domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
   print("domain_rewards: ", domain_rewards)
   
   def update_sampling_distribution(logits):
