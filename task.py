@@ -9602,8 +9602,11 @@ def train_L2W(config,
     train_gradient_accumulator = optimizer_util.GradientAccumulator()
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
+    
     #domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
-  sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
+    sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
+    sampler_vars = [domain_logits]
+    sampler_optimizer._create_slots(sampler_vars)
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
   def update_sampling_distribution(logits):
