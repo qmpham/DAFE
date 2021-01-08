@@ -9786,7 +9786,7 @@ def train_L2W(config,
   @tf.function
   def _sampler_flow():
     with strategy.scope():
-      loss = strategy.experimental_run_v2(_sampler_loss)
+      per_replica_loss = strategy.experimental_run_v2(_sampler_loss)
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
     return loss
 
