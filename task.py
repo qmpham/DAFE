@@ -9601,7 +9601,9 @@ def train_L2W(config,
     dev_gradient_accumulator = optimizer_util.GradientAccumulator()
     train_gradient_accumulator = optimizer_util.GradientAccumulator()
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
+    domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
     #domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
+  sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
   def update_sampling_distribution(logits):
@@ -9894,8 +9896,6 @@ def train_L2W(config,
         domain_rewards.assign(tf.constant(rewards))
         # compute new domain distribution
         print("domain rewards", domain_rewards)
-        sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
-        domain_logits = tf.Variable([1.0]*len(domain), trainable=True)
       
         with tf.GradientTape() as tape:
           _actor_loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
@@ -9903,8 +9903,9 @@ def train_L2W(config,
         
         for _ in range(config.get("domain_sampler_optim_step", 30)):
           sampler_optimizer.apply_gradients([(d_logits_grad, domain_logits)])
-
-        new_picking_prob = update_sampling_distribution(domain_logits)
+        print("domain_logits: ", domain_logits.numpy())
+        probs = tf.nn.softmax(domain_logits)
+        new_picking_prob = update_sampling_distribution(probs)
         tf.summary.experimental.set_step(saved_step)
         for i in range(len(domain)):
           tf.summary.scalar("reward_%d"%i, rewards[i], description="reward of using training set %d"%(i))
