@@ -9602,13 +9602,20 @@ def train_L2W(config,
     train_gradient_accumulator = optimizer_util.GradientAccumulator()
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
-    
+    d_logits_grad_accumulator = optimizer_util.GradientAccumulator()
     #domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
     sampler_vars = [domain_logits]
     sampler_optimizer._create_slots(sampler_vars)
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
+
+  def _sampler_loss():
+    _actor_loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
+    d_logits_grad = sampler_optimizer.get_gradients(_actor_loss, sampler_vars)
+    d_logits_grad_accumulator(d_logits_grad)
+    return _actor_loss
+
   def update_sampling_distribution(logits):
     logits = logits.numpy()
     for i, l in enumerate(logits):
@@ -9756,8 +9763,15 @@ def train_L2W(config,
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(sub_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
-    #sub_gradient_accumulator.reset()
+    sub_gradient_accumulator.reset()
  
+  def _apply_sampler_gradients():
+    grads_and_vars = []
+    scaled_gradient = d_logits_grad_accumulator.gradients[0] / (strategy.num_replicas_in_sync * tf.cast(d_logits_grad_accumulator.step, tf.float32))
+    grads_and_vars.append((scaled_gradient, domain_logits))
+    sampler_optimizer.apply_gradients(grads_and_vars)
+    d_logits_grad_accumulator.reset()
+
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
@@ -9770,6 +9784,14 @@ def train_L2W(config,
     return loss, num_examples
   
   @tf.function
+  def _sampler_flow():
+    with strategy.scope():
+      loss = strategy.experimental_run_v2(_sampler_loss)
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+    return loss
+
+
+  @tf.function
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
@@ -9778,6 +9800,11 @@ def train_L2W(config,
   def _dev_train_step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_dev_train_gradients)
+
+  @tf.function
+  def _sampler_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_sampler_gradients)
 
   @tf.function
   def _reset_dev_train_grad_accum_step():
@@ -9869,7 +9896,6 @@ def train_L2W(config,
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
             train_gradient_accumulator(sub_gradient_accumulator.gradients)
             strategy.experimental_run_v2(_apply_dev_train_gradients)
-            strategy.experimental_run_v2(sub_gradient_accumulator.reset)
             for j, dev_iter in enumerate(dev_iterators):
               _sum = 0.0
               _dev_norm = 0.0
@@ -9899,13 +9925,10 @@ def train_L2W(config,
         domain_rewards.assign(tf.constant(rewards))
         # compute new domain distribution
         print("domain rewards", domain_rewards)
-        with strategy.scope():
-          with tf.GradientTape() as tape:
-            _actor_loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
-            d_logits_grad = tape.gradient(_actor_loss, domain_logits)
-        
-          for _ in range(config.get("domain_sampler_optim_step", 30)):
-            sampler_optimizer.apply_gradients([(d_logits_grad, domain_logits)])
+        for _ in range(config.get("domain_sampler_optim_step", 30)):
+          loss = _sampler_flow()
+          _sampler_step()
+          
         print("domain_logits: ", domain_logits.numpy())
         probs = tf.nn.softmax(domain_logits)
         new_picking_prob = update_sampling_distribution(probs)
