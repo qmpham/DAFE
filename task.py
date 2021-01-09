@@ -9624,13 +9624,13 @@ def train_L2W(config,
   @tf.function
   def _grad_sampler_accum():
     loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
-    grad = optimizer.get_gradients(loss,[domain_logits])
+    grad = sampler_optimizer.get_gradients(loss,[domain_logits])
     grad_domain_logits_accum.assign_add(grad[0])
     return tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * domain_rewards)
 
   @tf.function
   def _sampler_step_1():
-    optimizer.apply_gradients([(grad_domain_logits_accum, domain_logits)])
+    sampler_optimizer.apply_gradients([(grad_domain_logits_accum, domain_logits)])
     grad_domain_logits_accum.assign(tf.zeros_like(domain_logits))
 
   def update_sampling_distribution(logits):
