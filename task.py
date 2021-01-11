@@ -9837,7 +9837,7 @@ def train_L2W(config,
 
   @tf.function
   def weight_reset(snapshots):
-    with strategy.scope():
+    #with strategy.scope():
       for snap, var in zip(snapshots, model.trainable_variables):
         strategy.extended.update(var, _set_weight, args=(snap, ))
 
@@ -9918,6 +9918,7 @@ def train_L2W(config,
           _reward = 0.0
           ##### accumulate gradient over training set of src domain i at theta_t
           weight_reset(snapshots)
+          print("snapshots: ", model.trainable_variables[3].value())
           with strategy.scope():
             for _ in range(config.get("train_batch_per_run_num",10)):
               src, tgt = next(train_iter)
