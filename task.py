@@ -9909,7 +9909,7 @@ def train_L2W(config,
         print("current_probs: ", current_probs)
         #######
         ##### compute theta_t+1
-        for k in np.random.choice(domain,config.get("train_batch_per_run_num",10),p=current_probs): 
+        for k in np.random.choice(domain,config.get("update_theta_train_batch_per_run_num",len(domain)),p=current_probs): 
           src, tgt = next(train_iterators[k])
           strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
         strategy.experimental_run_v2(_apply_dev_train_gradients)
