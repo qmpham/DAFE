@@ -9837,9 +9837,11 @@ def train_L2W(config,
 
   @tf.function
   def weight_reset(snapshots):
-    #with strategy.scope():
-      for snap, var in zip(snapshots, model.trainable_variables):
-        strategy.extended.update(var, _set_weight, args=(snap, ))
+    # with strategy.scope():
+    #   for snap, var in zip(snapshots, model.trainable_variables):
+    #     strategy.extended.update(var, _set_weight, args=(snap, ))
+    for snap, var in zip(snapshots, model.trainable_variables):
+      _set_weight(var, snap)
 
   # Runs the training loop.
   import time
