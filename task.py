@@ -9907,21 +9907,26 @@ def train_L2W(config,
         #######
         current_probs = tf.nn.softmax(domain_logits).numpy()
         print("current_probs: ", current_probs)
+        #######
+        ##### compute theta_t+1
+        for k in np.random.choice(domain,config.get("train_batch_per_run_num",10),p=current_probs): 
+          src, tgt = next(train_iterators[k])
+          strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+        strategy.experimental_run_v2(_apply_dev_train_gradients)
+        snapshots_1 = [v.value() for v in model.trainable_variables]
         for i, train_iter in enumerate(train_iterators):
           _reward = 0.0
+          ##### accumulate gradient over training set of src domain i at theta_t
+          weight_reset(snapshots)
           with strategy.scope():
-            ##### accumulate gradient over training set of src domain i at theta_t
             for _ in range(config.get("train_batch_per_run_num",10)):
               src, tgt = next(train_iter)
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
             train_gradient_accumulator(sub_gradient_accumulator.gradients)
             strategy.experimental_run_v2(sub_gradient_accumulator.reset)
-            ##### compute theta_t+1
-            for k in np.random.choice(domain,config.get("train_batch_per_run_num",10),p=current_probs): 
-              src, tgt = next(train_iterators[k])
-              strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-            strategy.experimental_run_v2(_apply_dev_train_gradients)
-            ##### accumulate gradient over dev set of k tgt domains at theta_t+1
+          ##### accumulate gradient over dev set of k tgt domains at theta_t+1
+          weight_reset(snapshots_1)
+          with strategy.scope():
             for j, dev_iter in enumerate(dev_iterators):
               _sum = 0.0
               _dev_norm = 0.0
