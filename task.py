@@ -9913,11 +9913,13 @@ def train_L2W(config,
           strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
         strategy.experimental_run_v2(_apply_dev_train_gradients)
         snapshots_1 = [v.value() for v in model.trainable_variables]
+        print("snapshots_1: ", model.trainable_variables[3])
+        #####
         for i, train_iter in enumerate(train_iterators):
           _reward = 0.0
           ##### accumulate gradient over training set of src domain i at theta_t
           weight_reset(snapshots)
-          print(model.trainable_variables[3])
+          print("snapshots: ", model.trainable_variables[3])
           with strategy.scope():
             for _ in range(config.get("train_batch_per_run_num",10)):
               src, tgt = next(train_iter)
