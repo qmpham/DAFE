@@ -9906,7 +9906,7 @@ def train_L2W(config,
         saved_step = optimizer.iterations.numpy()
         #######
         current_probs = tf.nn.softmax(domain_logits).numpy()
-        tf.print("current_probs: ", current_probs)
+        print("current_probs: ", current_probs)
         #######
         ##### compute theta_t+1
         for k in np.random.choice(domain,config.get("update_theta_train_batch_per_run_num",len(domain)),p=current_probs): 
@@ -9918,7 +9918,8 @@ def train_L2W(config,
           _reward = 0.0
           ##### accumulate gradient over training set of src domain i at theta_t
           weight_reset(snapshots)
-          print("snapshots: ", model.trainable_variables[3].value())
+          with strategy.scope():
+            strategy.experimental_run_v2(lambda : tf.print("snapshots: ", model.trainable_variables[3].value()))
           with strategy.scope():
             for _ in range(config.get("train_batch_per_run_num",10)):
               src, tgt = next(train_iter)
