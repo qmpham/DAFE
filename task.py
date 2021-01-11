@@ -9921,7 +9921,7 @@ def train_L2W(config,
           ##### accumulate gradient over training set of src domain i at theta_t
           weight_reset(snapshots)
           with strategy.scope():
-            strategy.experimental_run_v2(lambda : tf.print("snapshots: ", model.trainable_variables[3].value()))
+            strategy.experimental_run_v2(lambda : tf.print("snapshots: ", model.trainable_variables[3].read_value()))
           with strategy.scope():
             for _ in range(config.get("train_batch_per_run_num",10)):
               src, tgt = next(train_iter)
