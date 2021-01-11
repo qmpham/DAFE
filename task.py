@@ -9906,7 +9906,7 @@ def train_L2W(config,
         saved_step = optimizer.iterations.numpy()
         #######
         current_probs = tf.nn.softmax(domain_logits).numpy()
-        print("current_probs: ", current_probs)
+        tf.print("current_probs: ", current_probs)
         #######
         ##### compute theta_t+1
         for k in np.random.choice(domain,config.get("update_theta_train_batch_per_run_num",len(domain)),p=current_probs): 
