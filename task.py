@@ -9831,14 +9831,15 @@ def train_L2W(config,
   def _reset_sub_grad_accum_step():
     with strategy.scope():
       _reset_sub_gradients()
-
+  
   def _set_weight(v, w):
     v.assign(tf.cast(w,v.dtype))
 
   @tf.function
   def weight_reset(snapshots):
-    for snap, var in zip(snapshots, model.trainable_variables):
-      _set_weight(var, snap)
+    with strategy.scope():
+      for snap, var in zip(snapshots, model.trainable_variables):
+        strategy.extended.update(var, _set_weight, args=(snap, ))
 
   # Runs the training loop.
   import time
