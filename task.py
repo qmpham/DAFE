@@ -9534,13 +9534,14 @@ def train_L2W(config,
     batch_type = config.get("batch_type")
   redistribute_every = config.get("redistribute_every",2000)
   #####
-  if checkpoint_manager.latest_checkpoint is not None:
-    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  if checkpoint_path is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+    checkpoint.restore(checkpoint_path)
   else:
-    if checkpoint_path is not None:
-      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
-      checkpoint.restore(checkpoint_path)
+    if checkpoint_manager.latest_checkpoint is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+      checkpoint.restore(checkpoint_manager.latest_checkpoint)    
+      
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
