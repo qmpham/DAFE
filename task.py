@@ -8199,7 +8199,7 @@ def train_NGD(config,
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), 
                                             temperature=config.get("temperature",1.0))
-  hessian_datasets = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_hessian_size, "examples", shuffle_buffer_size, 
+  hessian_datasets = create_trainining_dataset(strategy, model, domain, config.get("hessian_src", source_file), config.get("hessian_tgt", target_file), batch_hessian_size, "examples", shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, 
                                             temperature=config.get("temperature",1.0), pick_in_order=True)
