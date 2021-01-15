@@ -9541,7 +9541,6 @@ def train_L2W(config,
     if checkpoint_manager.latest_checkpoint is not None:
       tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
       checkpoint.restore(checkpoint_manager.latest_checkpoint)    
-      
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -9551,7 +9550,10 @@ def train_L2W(config,
   target_file = config["tgt"]
   domain = config.get("domain",None)
   eval_domain = config.get("eval_domain")
-
+  ###### early stopping criterion
+  current_max_eval_bleu = 0.0
+  descending_streak = 0
+  ######
   if not config.get("domain_importances",None):
     domain_importances = [1.0/len(eval_domain)]*len(eval_domain)
   else:
@@ -9622,7 +9624,6 @@ def train_L2W(config,
     d_logits_grad = sampler_optimizer.get_gradients(_actor_loss, sampler_vars)
     d_logits_grad_accumulator(d_logits_grad)
     return _actor_loss
-
   
   @tf.function
   def _grad_sampler_accum():
@@ -10039,17 +10040,26 @@ def train_L2W(config,
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         output_files = []
+        new_bleu = 0.0
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
           output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
           score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
           tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
           output_files.append(output_file)
+          new_bleu += score * domain_importances[i]
         ##### BLEU on concat dev set.
         output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
         score = scorer(ref_eval_concat, output_file_concat)
         print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
         tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
         #############################
+        if new_bleu >= current_max_eval_bleu:
+          current_max_eval_bleu = new_bleu
+          descending_streak = 0
+        else:
+          descending_streak += 1
+      if descending_streak >= 5:
+        break
       tf.summary.flush()
       if step > train_steps:
         break
