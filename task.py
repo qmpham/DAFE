@@ -10881,7 +10881,7 @@ def train_L2W_v1(config,
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples, domain
+    return reported_loss, num_examples
 
   def _accumulate_dev_train_gradients(source, target):
     with tf.GradientTape() as tape:
