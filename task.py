@@ -9976,7 +9976,7 @@ def train_L2W(config,
                 _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                 _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
               _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
-              print("reward of using training set %d to improve dev set %d"%(i,j))
+              print("reward of using training set %d to improve dev set %d: %f"%(i,j,_reward))
               # reset dev gradient accumulations to zero
               strategy.experimental_run_v2(dev_gradient_accumulator.reset)
               #print(dev_gradient_accumulator.gradients[0])
