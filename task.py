@@ -11362,6 +11362,7 @@ def train_L2W_v2(config,
     #domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
     d_logits_grad_accumulator = optimizer_util.GradientAccumulator()
     domain_weights = tf.Variable([1.0]*len(domain), trainable=True)
+    _picking_prob = tf.Variable(picking_prob, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     #domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     #sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
     #sampler_vars = [domain_logits]
@@ -11370,6 +11371,7 @@ def train_L2W_v2(config,
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
   sampler_vars = [domain_logits]
+  domain_weights.assign(domain_weights/_picking_prob)
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
 
@@ -11613,6 +11615,7 @@ def train_L2W_v2(config,
     print("domain_logits: ", domain_logits.numpy())
     probs = tf.nn.softmax(domain_logits)
     domain_weights.assign(probs/tf.reduce_mean(probs))
+    domain_weights.assign(domain_weights/_picking_prob)
     new_picking_prob = update_sampling_distribution(probs)
     tf.summary.experimental.set_step(saved_step)
     for i in range(len(domain)):
@@ -11718,6 +11721,7 @@ def train_L2W_v2(config,
         print("domain_logits: ", domain_logits.numpy())
         probs = tf.nn.softmax(domain_logits)
         domain_weights.assign(probs/tf.reduce_mean(probs))
+        domain_weights.assign(domain_weights/_picking_prob)
         new_picking_prob = update_sampling_distribution(probs)
         tf.summary.experimental.set_step(saved_step)
         for i in range(len(domain)):
