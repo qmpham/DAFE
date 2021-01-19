@@ -9967,7 +9967,7 @@ def train_L2W(config,
               _tr_norm = 0.0
               for _ in range(config.get("dev_batch_per_run_num",10)):
                 src, tgt = next(dev_iter)
-                print("domain of dev set %d is %d"%(i,src["domain"].values[0].numpy()[0]))
+                print("domain of dev set %d is %d"%(j,src["domain"].values[0].numpy()[0]))
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
