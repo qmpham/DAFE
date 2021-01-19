@@ -9833,6 +9833,7 @@ def train_L2W(config,
       with strategy.scope():
         for _ in range(config.get("train_batch_per_run_num",10)):
           src, tgt = next(train_iter)
+          print(src.values)
           strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
         train_gradient_accumulator(sub_gradient_accumulator.gradients)
         strategy.experimental_run_v2(sub_gradient_accumulator.reset)
