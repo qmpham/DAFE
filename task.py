@@ -9607,7 +9607,7 @@ def train_L2W(config,
     train_gradient_accumulator = optimizer_util.GradientAccumulator()
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     #domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
-    d_logits_grad_accumulator = optimizer_util.GradientAccumulator()
+    #d_logits_grad_accumulator = optimizer_util.GradientAccumulator()
     #domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     #sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
     #sampler_vars = [domain_logits]
@@ -9615,22 +9615,16 @@ def train_L2W(config,
   domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
-  sampler_vars = [domain_logits]
+  #sampler_vars = [domain_logits]
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
-
-  def _sampler_loss():
-    _actor_loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards) 
-    if config.get("sampler_entropy_constraint",False):
-      print("sampler_entropy_constraint_weight",config.get("sampler_entropy_constraint_weight",1e-3))
-      _actor_loss +=  config.get("sampler_entropy_constraint_weight",1e-3)* tf.nn.log_softmax(domain_logits)
-    d_logits_grad = sampler_optimizer.get_gradients(_actor_loss, sampler_vars)
-    d_logits_grad_accumulator(d_logits_grad)
-    return _actor_loss
   
   @tf.function
   def _grad_sampler_accum():
     loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
+    if config.get("sampler_entropy_constraint",False):
+      print("sampler_entropy_constraint_weight",config.get("sampler_entropy_constraint_weight",1e-3))
+      loss +=  config.get("sampler_entropy_constraint_weight",1e-3)* tf.nn.log_softmax(domain_logits)
     grad = sampler_optimizer.get_gradients(loss,[domain_logits])
     grad_domain_logits_accum.assign_add(grad[0])
     return tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * domain_rewards)
@@ -9796,13 +9790,6 @@ def train_L2W(config,
     optimizer.apply_gradients(grads_and_vars)
     sub_gradient_accumulator.reset()
  
-  def _apply_sampler_gradients():
-    grads_and_vars = []
-    scaled_gradient = d_logits_grad_accumulator.gradients[0] / (strategy.num_replicas_in_sync * tf.cast(d_logits_grad_accumulator.step, tf.float32))
-    grads_and_vars.append((scaled_gradient, domain_logits))
-    sampler_optimizer.apply_gradients(grads_and_vars)
-    d_logits_grad_accumulator.reset()
-
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
@@ -9813,13 +9800,6 @@ def train_L2W(config,
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
     return loss, num_examples
-  
-  @tf.function
-  def _sampler_flow():
-    with strategy.scope():
-      per_replica_loss = strategy.experimental_run_v2(_sampler_loss)
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-    return loss
 
   @tf.function
   def _step():
@@ -9830,11 +9810,6 @@ def train_L2W(config,
   def _dev_train_step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_dev_train_gradients)
-
-  @tf.function
-  def _sampler_step():
-    with strategy.scope():
-      strategy.experimental_run_v2(_apply_sampler_gradients)
 
   @tf.function
   def _reset_dev_train_grad_accum_step():
