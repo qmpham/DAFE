@@ -9674,7 +9674,7 @@ def train_L2W(config,
             layer_activity_regularization_losses.append(loss_)
         layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
         if len(layer_activity_regularization_losses)>0:
-          print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+          #print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
       else:
         layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
@@ -9682,10 +9682,10 @@ def train_L2W(config,
         d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
         d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
         d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
-        print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
-        print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
-        print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
-        print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
+        # print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+        # print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
+        # print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
+        # print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
         if isinstance(layer_activity_regularization_loss_scale, list):
           domain = source["domain"][0]
           layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
@@ -9696,8 +9696,8 @@ def train_L2W(config,
           output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
           output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
         regularization_losses = model.losses
-        print("model_name_scope", model.name_scope())
-        print(regularization_losses)
+        # print("model_name_scope", model.name_scope())
+        # print(regularization_losses)
         layer_activity_regularization_losses = []
         output_activity_regularization_losses = []
         d_classification_gate_losses = []
@@ -9716,19 +9716,19 @@ def train_L2W(config,
           elif "ADAP_" in loss_.name:
             layer_activity_regularization_losses.append(loss_)
 
-        print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
-        print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
-        print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
-        print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
-        print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
+        # print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
+        # print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
+        # print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
+        # print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
+        # print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
         if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
 
         if len(output_activity_regularization_losses)>0 and output_activity_regularization_loss_scale>0:
           training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
 
-        if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
-          training_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
+        # if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
+        #   training_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
 
         if len(d_classifier_activity_regularization_losses)>0 and d_classifier_activity_regularization_loss_scale>0:
           training_loss += d_classifier_activity_regularization_loss_scale * tf.add_n(d_classifier_activity_regularization_losses)
@@ -10048,7 +10048,7 @@ def train_L2W(config,
                 _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                 _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
               _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
-              print("reward of using training set %d to improve dev set %d: %f"%(i,j, _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]))
+              #print("reward of using training set %d to improve dev set %d: %f"%(i,j, _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]))
               # reset dev gradient accumulations to zero
               strategy.experimental_run_v2(dev_gradient_accumulator.reset)
               #print(dev_gradient_accumulator.gradients[0])
