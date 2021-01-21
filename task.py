@@ -10632,7 +10632,7 @@ def train_NGD_L2W(config,
     for i in range(hessian_accum_step):
       next(_hessian_accumulator_flow)
     _hessian_stats_update_step()
-    print("normalized_hessian_moving_stats: [0]", normalized_hessian_moving_stats[0].numpy())
+    print("normalized_hessian_moving_stats: [3]", normalized_hessian_moving_stats[3].numpy())
   with _summary_writer.as_default():
     while True:
       #####Training batch
