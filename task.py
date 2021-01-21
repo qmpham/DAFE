@@ -10252,7 +10252,6 @@ def train_NGD_L2W(config,
   domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
-  sampler_vars = [domain_logits]
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
   
