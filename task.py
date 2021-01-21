@@ -10166,7 +10166,10 @@ def train_NGD_L2W(config,
   target_file = config["tgt"]
   domain = config.get("domain",None)
   eval_domain = config.get("eval_domain")
-
+  ###### early stopping criterion
+  current_max_eval_bleu = 0.0
+  descending_streak = 0
+  ######
   if not config.get("domain_importances",None):
     domain_importances = [1.0/len(eval_domain)]*len(eval_domain)
   else:
@@ -10206,7 +10209,8 @@ def train_NGD_L2W(config,
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
                                             for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref"))]
   #############
-  hessian_datasets = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_hessian_size, "examples", shuffle_buffer_size, 
+  hessian_datasets = create_trainining_dataset(strategy, model, domain, config.get("hessian_src", source_file), 
+                                            config.get("hessian_ref", target_file), batch_hessian_size, "examples", shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, 
                                             temperature=config.get("temperature",1.0), pick_in_order=True)
@@ -10251,11 +10255,7 @@ def train_NGD_L2W(config,
   sampler_vars = [domain_logits]
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
-  def _sampler_loss():
-    _actor_loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
-    d_logits_grad = sampler_optimizer.get_gradients(_actor_loss, sampler_vars)
-    d_logits_grad_accumulator(d_logits_grad)
-    return _actor_loss
+  
   @tf.function
   def _grad_sampler_accum():
     loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
@@ -10516,13 +10516,6 @@ def train_NGD_L2W(config,
     d_logits_grad_accumulator.reset()
   
   @tf.function
-  def _sampler_flow():
-    with strategy.scope():
-      per_replica_loss = strategy.experimental_run_v2(_sampler_loss)
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-    return loss
-
-  @tf.function
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
@@ -10759,18 +10752,26 @@ def train_NGD_L2W(config,
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         output_files = []
+        new_bleu = 0.0
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
             output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
             score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
             tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
             output_files.append(output_file)
+            new_bleu += score * domain_importances[i]
         ##### BLEU on concat dev set.
         output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
         score = scorer(ref_eval_concat, output_file_concat)
         print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
         tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
         #############################
-      
+        if new_bleu >= current_max_eval_bleu:
+          current_max_eval_bleu = new_bleu
+          descending_streak = 0
+        else:
+          descending_streak += 1
+      if descending_streak >= 5:
+        break
       if step > train_steps:
         break
 
