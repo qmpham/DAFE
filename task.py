@@ -10628,7 +10628,11 @@ def train_NGD_L2W(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-  
+  if step >= config.get("NGD_warm_start",0):
+    for i in range(hessian_accum_step):
+      next(_hessian_accumulator_flow)
+    _hessian_stats_update_step()
+    print("normalized_hessian_moving_stats: [0]", normalized_hessian_moving_stats[0].numpy())
   with _summary_writer.as_default():
     while True:
       #####Training batch
