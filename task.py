@@ -9625,7 +9625,7 @@ def train_L2W(config,
     loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
     if config.get("sampler_entropy_constraint",False):
       print("sampler_entropy_constraint_weight",config.get("sampler_entropy_constraint_weight",1e-3))
-      loss +=  tf.reduce_sum(config.get("sampler_entropy_constraint_weight",1e-3)* tf.nn.log_softmax(domain_logits))
+      loss -=  tf.reduce_sum(config.get("sampler_entropy_constraint_weight",1e-3)* tf.nn.log_softmax(domain_logits))
     grad = sampler_optimizer.get_gradients(loss,[domain_logits])
     grad_domain_logits_accum.assign_add(grad[0])
     return tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * domain_rewards)
