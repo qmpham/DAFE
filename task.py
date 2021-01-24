@@ -1805,7 +1805,10 @@ def train(config,
       checkpoint.restore(checkpoint_path)
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
-  #####
+  ###### early stopping criterion
+  current_max_eval_bleu = 0.0
+  descending_streak = 0
+  ######
   batch_train_size = config["batch_train_size"]  
   batch_type = batch_type
   source_file = config["src"]
@@ -2313,6 +2316,7 @@ def train(config,
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         output_files = []
+        new_bleu = 0.0
         if experiment=="residualv28":
           for src, ref, prob, i in zip(config["eval_src"],config["eval_ref"],config["eval_prob"], config["eval_domain"]):
             output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
@@ -2328,8 +2332,16 @@ def train(config,
         output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
         score = scorer(ref_eval_concat, output_file_concat)
         print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
+        new_bleu = score
         tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
         #############################
+        if new_bleu >= current_max_eval_bleu:
+          current_max_eval_bleu = new_bleu
+          descending_streak = 0
+        else:
+          descending_streak += 1
+      if descending_streak >= 5:
+        break
       tf.summary.flush()
       if step > train_steps:
         break
