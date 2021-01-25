@@ -11346,7 +11346,7 @@ def train_L2W_v1(config,
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
-              for dev_grad, tr_grad in zip(dev_gradient_accumulator.gradients, train_gradient_accumulator.gradients):
+              for dev_grad, tr_grad in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients):
                 _sum += tf.reduce_sum(dev_grad * tr_grad)
                 _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                 _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
@@ -11367,8 +11367,6 @@ def train_L2W_v1(config,
         # compute new domain distribution
         print("domain rewards", domain_rewards)
         for _ in range(config.get("domain_sampler_optim_step", 30)):
-          #loss = _sampler_flow()
-          #_sampler_step()
           _ = _grad_sampler_accum()
           _sampler_step_1()
           
