@@ -10948,6 +10948,8 @@ def train_L2W_v1(config,
     domain_importances = config.get("domain_importances")
   print("There are %d in-domain corpora"%len(source_file))
   ###############
+  print("cosine_reward: ",config.get("cosine_reward",True))
+  ###############
   # train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
   #                                           maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
   #                                           multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
@@ -11006,12 +11008,6 @@ def train_L2W_v1(config,
   sampler_vars = [domain_logits]
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
-
-  def _sampler_loss():
-    _actor_loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
-    d_logits_grad = sampler_optimizer.get_gradients(_actor_loss, sampler_vars)
-    d_logits_grad_accumulator(d_logits_grad)
-    return _actor_loss
   
   @tf.function
   def _grad_sampler_accum():
