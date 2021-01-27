@@ -1334,7 +1334,7 @@ def main():
       print("translating %s in domain %d"%(src_file, domain))
       print("output_file: ", output_file)
       task.translate(src_file, None, model, checkpoint_manager,
-              checkpoint, int(domain), output_file, length_penalty=0.6, experiment=experiment)
+              checkpoint, int(domain), output_file, length_penalty=0.6, checkpoint_path=args.ckpt, experiment=experiment)
   elif args.run == "translatev2":
     model.create_variables()
     print("translate in domain %d"%(int(args.domain)))
