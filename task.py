@@ -10853,17 +10853,30 @@ def train_NGD_L2W(config,
           base_dataset = train_dataset
           train_dataset = strategy.experimental_distribute_datasets_from_function(
                 lambda _: base_dataset)
-        @dataset_util.function_on_next(train_dataset)
-        def _train_forward(next_fn):    
-          with strategy.scope():
-            per_replica_source, per_replica_target = next_fn()
-            per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-                _accumulate_gradients, args=(per_replica_source, per_replica_target))
-            # TODO: these reductions could be delayed until _step is called.
-            loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-            num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-          return loss, num_examples
-        train_data_flow = iter(_train_forward())
+        if step < config.get("NGD_warm_start",0):
+          @dataset_util.function_on_next(train_dataset)
+          def _train_forward(next_fn):    
+            with strategy.scope():
+              per_replica_source, per_replica_target = next_fn()
+              per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+                  _accumulate_gradients, args=(per_replica_source, per_replica_target))
+              # TODO: these reductions could be delayed until _step is called.
+              loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+              num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+            return loss, num_examples
+          train_data_flow = iter(_train_forward())
+        else:
+          @dataset_util.function_on_next(train_dataset)
+          def _NGD_train_forward(next_fn):    
+            with strategy.scope():
+              per_replica_source, per_replica_target = next_fn()
+              per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+                  _accumulate_NGD_gradients, args=(per_replica_source, per_replica_target))
+              # TODO: these reductions could be delayed until _step is called.
+              loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+              num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+            return loss, num_examples
+          NGD_train_data_flow = iter(_NGD_train_forward())
         #######
         weight_reset(snapshots)
         optimizer.iterations.assign(saved_step)
@@ -12667,17 +12680,30 @@ def train_NGD_L2W_v1(config,
           base_dataset = train_dataset
           train_dataset = strategy.experimental_distribute_datasets_from_function(
                 lambda _: base_dataset)
-        @dataset_util.function_on_next(train_dataset)
-        def _train_forward(next_fn):    
-          with strategy.scope():
-            per_replica_source, per_replica_target = next_fn()
-            per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-                _accumulate_gradients, args=(per_replica_source, per_replica_target))
-            # TODO: these reductions could be delayed until _step is called.
-            loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-            num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-          return loss, num_examples
-        train_data_flow = iter(_train_forward())
+        if step < config.get("NGD_warm_start",0):
+          @dataset_util.function_on_next(train_dataset)
+          def _train_forward(next_fn):    
+            with strategy.scope():
+              per_replica_source, per_replica_target = next_fn()
+              per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+                  _accumulate_gradients, args=(per_replica_source, per_replica_target))
+              # TODO: these reductions could be delayed until _step is called.
+              loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+              num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+            return loss, num_examples
+          train_data_flow = iter(_train_forward())
+        else:
+          @dataset_util.function_on_next(train_dataset)
+          def _NGD_train_forward(next_fn):    
+            with strategy.scope():
+              per_replica_source, per_replica_target = next_fn()
+              per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+                  _accumulate_NGD_gradients, args=(per_replica_source, per_replica_target))
+              # TODO: these reductions could be delayed until _step is called.
+              loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+              num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+            return loss, num_examples
+          NGD_train_data_flow = iter(_NGD_train_forward())
         #######
         weight_reset(snapshots)
         optimizer.iterations.assign(saved_step)
