@@ -13029,14 +13029,16 @@ def debug_L2W_v1(config,
                 _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                 _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
             if config.get("cosine_reward",True):
-              _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
+              _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
             else:
-              _reward += _sum * learning_rate(saved_step) * domain_importances[j]
+              _reward_ij = _sum * learning_rate(saved_step) * domain_importances[j]
+            _reward += _reward_ij
+            print("reward of training set %d to dev set %d: %f"%(i,j,_reward_ij))
             # reset dev gradient accumulations to zero
             strategy.experimental_run_v2(dev_gradient_accumulator.reset)
             #print(dev_gradient_accumulator.gradients[0])
           # reset train dev gradient accumulations to zero
-            print("reward of training set %d to dev set %d: %f"%(i,j,_reward.numpy()))
+            
           strategy.experimental_run_v2(train_gradient_accumulator.reset)
 
         rewards[i] = _reward.numpy()
