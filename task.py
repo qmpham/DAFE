@@ -12991,14 +12991,6 @@ def debug_L2W_v1(config,
     print("current_probs: ", current_probs)
     #######
     
-  if score_type == "sacreBLEU":
-    print("using sacreBLEU")
-    scorer = BLEUScorer()
-  elif score_type == "MultiBLEU":
-    print("using MultiBLEU")
-    scorer = MultiBLEUScorer()
-  ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-
   with _summary_writer.as_default():
     while True:
       # compute domain rewards
