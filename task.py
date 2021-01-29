@@ -12801,29 +12801,7 @@ def debug_L2W_v1(config,
   # train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
   #                                           maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
   #                                           multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
-
-  print("maximum_length", maximum_length)
-  train_datasets_p = [] 
-  datasets_size = [count_lines(src) for src in source_file]
-  picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
-  if config.get("picking_prob",None):
-    picking_prob = config.get("picking_prob",None)
-  print("initial domain picking probability: ", picking_prob)
-  for i,src,tgt in zip(domain, source_file, target_file):
-    train_datasets_p.append(model.examples_inputter.make_training_dataset(src, tgt,
-            batch_size=batch_train_size,
-            batch_type=batch_type,
-            domain=i,
-            single_pass=False,
-            shuffle_buffer_size=shuffle_buffer_size,
-            length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
-            maximum_features_length=maximum_length,
-            maximum_labels_length=maximum_length))
-  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets_p, weights=picking_prob)
-  with strategy.scope():
-    base_dataset = train_dataset
-    train_dataset = strategy.experimental_distribute_datasets_from_function(
-          lambda _: base_dataset)  
+   
   #############
   train_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
@@ -12952,30 +12930,7 @@ def debug_L2W_v1(config,
       grads_and_vars.append((scaled_gradient, variable))
     optimizer.apply_gradients(grads_and_vars)
     sub_gradient_accumulator.reset()
- 
-  def _apply_sampler_gradients():
-    grads_and_vars = []
-    scaled_gradient = d_logits_grad_accumulator.gradients[0] / (strategy.num_replicas_in_sync * tf.cast(d_logits_grad_accumulator.step, tf.float32))
-    grads_and_vars.append((scaled_gradient, domain_logits))
-    sampler_optimizer.apply_gradients(grads_and_vars)
-    d_logits_grad_accumulator.reset()
-
-  @dataset_util.function_on_next(train_dataset)
-  def _train_forward(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
-      # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, num_examples
   
-  @tf.function
-  def _step():
-    with strategy.scope():
-      strategy.experimental_run_v2(_apply_gradients)
-
   @tf.function
   def _dev_train_step():
     with strategy.scope():
