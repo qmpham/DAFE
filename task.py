@@ -12805,7 +12805,7 @@ def debug_L2W_v1(config,
   #############
   train_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
+                                            multi_domain=config.get("multi_domain", True), picking_prob=None, single_pass=config.get("single_pass",False), temperature=config.get("temperature",1.0))
                                             for domain, source_file, target_file in zip(config.get("domain"), config.get("src"), config.get("tgt"))]
 
   dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
@@ -12991,66 +12991,72 @@ def debug_L2W_v1(config,
     print("current_probs: ", current_probs)
     #######
     
-  with _summary_writer.as_default():
-    while True:
-      # compute domain rewards
-      rewards = [0.0] * len(domain)
-      snapshots = [v.value() for v in model.trainable_variables]
-      saved_step = optimizer.iterations.numpy()
-      #######
-      current_probs = tf.nn.softmax(domain_logits).numpy()
-      print("current_probs: ", current_probs)
-      #######        
-      for i, train_iter in enumerate(train_iterators):
-        _reward = 0.0
-        weight_reset(snapshots)
-        with strategy.scope():
-          ##### compute theta_t+1
-          for _ in range(config.get("train_batch_per_run_num",10)): 
-            src, tgt = next(train_iterators[i])
-            strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-          train_gradient_accumulator(sub_gradient_accumulator.gradients)
-          strategy.experimental_run_v2(_apply_dev_train_gradients)
-          #strategy.experimental_run_v2(sub_gradient_accumulator.reset)
-        ##### accumulate gradient over dev set of k tgt domains at theta_t+1
-        with strategy.scope():
-          for j, dev_iter in enumerate(dev_iterators):
-            _sum = 0.0
-            _dev_norm = 0.0
-            _tr_norm = 0.0
-            for _ in range(config.get("dev_batch_per_run_num",10)):
-              src, tgt = next(dev_iter)
-              strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-            dev_gradient_accumulator(sub_gradient_accumulator.gradients)
-            strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
-            for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
-              if "ADAP_" not in var.name:
-                _sum += tf.reduce_sum(dev_grad * tr_grad)
-                _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-                _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-            if config.get("cosine_reward",True):
-              _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
-            else:
-              _reward_ij = _sum * learning_rate(saved_step) * domain_importances[j]
-            _reward += _reward_ij
-            print("reward of training set %d to dev set %d: %f"%(i,j,_reward_ij))
-            # reset dev gradient accumulations to zero
-            strategy.experimental_run_v2(dev_gradient_accumulator.reset)
-            #print(dev_gradient_accumulator.gradients[0])
-          # reset train dev gradient accumulations to zero
-            
-          strategy.experimental_run_v2(train_gradient_accumulator.reset)
+  with _summary_writer.as_default(): 
+      while True:
+        try:
+          # compute domain rewards
+          rewards = [0.0] * len(domain)
+          snapshots = [v.value() for v in model.trainable_variables]
+          saved_step = optimizer.iterations.numpy()
+          #######
+          current_probs = tf.nn.softmax(domain_logits).numpy()
+          print("current_probs: ", current_probs)
+          #######        
+          total_reward = 0
+          count = 0
+          for i, train_iter in enumerate(train_iterators):
+            _reward = 0.0
+            weight_reset(snapshots)
+            with strategy.scope():
+              ##### compute theta_t+1
+              for _ in range(config.get("train_batch_per_run_num",10)): 
+                src, tgt = next(train_iterators[i])
+                strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+              train_gradient_accumulator(sub_gradient_accumulator.gradients)
+              strategy.experimental_run_v2(_apply_dev_train_gradients)
+              #strategy.experimental_run_v2(sub_gradient_accumulator.reset)
+            ##### accumulate gradient over dev set of k tgt domains at theta_t+1
+            with strategy.scope():
+              for j, dev_iter in enumerate(dev_iterators):
+                _sum = 0.0
+                _dev_norm = 0.0
+                _tr_norm = 0.0
+                for _ in range(config.get("dev_batch_per_run_num",10)):
+                  src, tgt = next(dev_iter)
+                  strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+                dev_gradient_accumulator(sub_gradient_accumulator.gradients)
+                strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
+                for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
+                  if "ADAP_" not in var.name:
+                    _sum += tf.reduce_sum(dev_grad * tr_grad)
+                    _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                    _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                if config.get("cosine_reward",True):
+                  _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
+                else:
+                  _reward_ij = _sum * learning_rate(saved_step) * domain_importances[j]
+                _reward += _reward_ij
+                total_reward += _reward_ij
+                count +=1
+                print("reward of training set %d to dev set %d: %f"%(i,j,_reward_ij))
+                # reset dev gradient accumulations to zero
+                strategy.experimental_run_v2(dev_gradient_accumulator.reset)
+                #print(dev_gradient_accumulator.gradients[0])
+              # reset train dev gradient accumulations to zero
+                
+              strategy.experimental_run_v2(train_gradient_accumulator.reset)
 
-        rewards[i] = _reward.numpy()
-        
-        # reset model parameters
-        weight_reset(snapshots)
-        optimizer.iterations.assign(saved_step)
-      #######
-      weight_reset(snapshots)
-      optimizer.iterations.assign(saved_step)
-      #######
-      
+            rewards[i] = _reward.numpy()
+            
+            # reset model parameters
+            weight_reset(snapshots)
+            optimizer.iterations.assign(saved_step)
+          #######
+          weight_reset(snapshots)
+          optimizer.iterations.assign(saved_step)
+          #######
+        except tf.errors.OutOfRangeError:
+          print("average reward: ", total_reward/count)
 
 
 
