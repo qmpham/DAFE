@@ -11357,6 +11357,7 @@ def train_L2W_v1(config,
               _sum = 0.0
               _dev_norm = 0.0
               _tr_norm = 0.0
+              count = 0
               for _ in range(config.get("dev_batch_per_run_num",10)):
                 src, tgt = next(dev_iter)
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
@@ -11367,6 +11368,8 @@ def train_L2W_v1(config,
                   _sum += tf.reduce_sum(dev_grad * tr_grad)
                   _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                   _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                  count +=1
+              print("number_of_parameters_in_reward: %d"%(count))
               if config.get("cosine_reward",True):
                 _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
               else:
