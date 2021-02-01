@@ -11369,7 +11369,7 @@ def train_L2W_v1(config,
                   _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                   _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
                   count +=1
-              print("number_of_parameters_in_reward: %d"%(count))
+              #print("number_of_parameters_in_reward: %d"%(count))
               if config.get("cosine_reward",True):
                 _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
               else:
