@@ -11363,7 +11363,7 @@ def train_L2W_v1(config,
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
               for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
-                if var.name not in config.get("param_to_exclude_from_reward",[]): #True:#"ADAP_" not in var.name:
+                if sum([substring not in var.name for substring in config.get("param_to_exclude_from_reward",["hello"])])>0: #True:#"ADAP_" not in var.name:
                   _sum += tf.reduce_sum(dev_grad * tr_grad)
                   _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                   _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
