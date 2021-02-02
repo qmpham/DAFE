@@ -11317,7 +11317,13 @@ def train_L2W_v1(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-
+  ########
+  excluded_params = []
+  for var in model.trainable_variables:
+    if tf.shape(var)[-1].numpy()==31266 or tf.shape(var)[0].numpy()==31266:
+      print(var.name)
+      excluded_params.append(var.name)
+  ########
   with _summary_writer.as_default():
     while True:
       ####Training batch
@@ -11357,18 +11363,18 @@ def train_L2W_v1(config,
               _sum = 0.0
               _dev_norm = 0.0
               _tr_norm = 0.0
-              count = 0
+              #count = 0
               for _ in range(config.get("dev_batch_per_run_num",10)):
                 src, tgt = next(dev_iter)
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
               for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
-                if sum([substring not in var.name for substring in config.get("param_to_exclude_from_reward",["hello"])])>0: #True:#"ADAP_" not in var.name:
+                if var.name not in excluded_params: #sum([substring not in var.name for substring in config.get("param_to_exclude_from_reward",["hello"])])>0: #True:#"ADAP_" not in var.name:
                   _sum += tf.reduce_sum(dev_grad * tr_grad)
                   _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                   _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-                  count +=1
+                  #count +=1
               #print("number_of_parameters_in_reward: %d"%(count))
               if config.get("cosine_reward",True):
                 _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
@@ -12747,7 +12753,6 @@ def train_NGD_L2W_v1(config,
         break
       if step > train_steps:
         break
-
 
 def debug_L2W_v1(config,
           optimizer,          
