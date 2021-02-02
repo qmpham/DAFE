@@ -12970,10 +12970,11 @@ def debug_L2W_v1(config,
   _number_examples = []
   step = optimizer.iterations.numpy()
   
+  excluded_params = []
   for var in model.trainable_variables:
-    if tf.shape(var)[-1].numpy()==31266:
+    if tf.shape(var)[-1].numpy()==31266 or tf.shape(var)[0].numpy()==31266:
       print(var.name)
-  
+      excluded_params.append(var.name)
   if step <= 1:
     initializer = config.get("initializer","default")
     if initializer == "default":
@@ -13027,18 +13028,25 @@ def debug_L2W_v1(config,
                 _sum = 0.0
                 _dev_norm = 0.0
                 _tr_norm = 0.0
+                _sum_1 = 0.0
+                _sum_2 = 0.0
                 for _ in range(config.get("dev_batch_per_run_num",10)):
                   src, tgt = next(dev_iter)
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
                 dev_gradient_accumulator(sub_gradient_accumulator.gradients)
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
                 for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
-                  if "ADAP_" not in var.name:
-                    _sum += tf.reduce_sum(dev_grad * tr_grad)
+                  if var.name in excluded_params:#"ADAP_" not in var.name:
+                    _sum_1 += tf.reduce_sum(dev_grad * tr_grad)
                     _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                     _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-                  if "embedding" in var.name:
-                    overlapped = (dev_grad/tf.abs(dev_grad) * tr_grad/tf.abs(tr_grad))
+                  else:
+                    _sum_2 += tf.reduce_sum(dev_grad * tr_grad)
+                    _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                    _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                print("excluded_rewards: %f"%(_sum_1.numpy()))
+                print("included_rewards: %f"%(_sum_2.numpy()))
+                _sum = _sum_1 + _sum_2
                 if config.get("cosine_reward",True):
                   _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
                 else:
