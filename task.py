@@ -12970,6 +12970,9 @@ def debug_L2W_v1(config,
   _number_examples = []
   step = optimizer.iterations.numpy()
   
+  for var in model.trainable_variables:
+    print(var.name)
+    print(tf.shape(var))
   
   if step <= 1:
     initializer = config.get("initializer","default")
