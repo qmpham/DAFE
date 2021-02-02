@@ -11373,7 +11373,7 @@ def train_L2W_v1(config,
               if config.get("cosine_reward",True):
                 _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
               else:
-                _reward += _sum * learning_rate(saved_step) * domain_importances[j]
+                _reward += _sum * domain_importances[j] #_sum * learning_rate(saved_step) * domain_importances[j]
               # reset dev gradient accumulations to zero
               strategy.experimental_run_v2(dev_gradient_accumulator.reset)
               #print(dev_gradient_accumulator.gradients[0])
@@ -13034,6 +13034,8 @@ def debug_L2W_v1(config,
                     _sum += tf.reduce_sum(dev_grad * tr_grad)
                     _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                     _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                  if "embedding" in var.name:
+                    overlapped = (dev_grad/tf.abs(dev_grad) * tr_grad/tf.abs(tr_grad))
                 if config.get("cosine_reward",True):
                   _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
                 else:
