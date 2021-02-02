@@ -11518,6 +11518,8 @@ def train_L2W_v2(config,
     domain_importances = config.get("domain_importances")
   print("There are %d in-domain corpora"%len(source_file))
   ###############
+  print("cosine_reward: ",config.get("cosine_reward",True))
+  ###############
   # train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
   #                                           maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
   #                                           multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
@@ -11566,8 +11568,6 @@ def train_L2W_v2(config,
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     #domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
     d_logits_grad_accumulator = optimizer_util.GradientAccumulator()
-    domain_weights = tf.Variable([1.0]*len(domain), trainable=True)
-    _picking_prob = tf.Variable(picking_prob, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     #domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     #sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
     #sampler_vars = [domain_logits]
@@ -11576,19 +11576,15 @@ def train_L2W_v2(config,
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
   sampler_vars = [domain_logits]
-  domain_weights.assign(domain_weights/_picking_prob)
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
-
-  def _sampler_loss():
-    _actor_loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
-    d_logits_grad = sampler_optimizer.get_gradients(_actor_loss, sampler_vars)
-    d_logits_grad_accumulator(d_logits_grad)
-    return _actor_loss
   
   @tf.function
   def _grad_sampler_accum():
     loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
+    if config.get("sampler_entropy_constraint",False):
+      print("sampler_entropy_constraint_weight",config.get("sampler_entropy_constraint_weight",1e-3))
+      loss +=  tf.reduce_sum(config.get("sampler_entropy_constraint_weight",1e-3) * tf.nn.log_softmax(domain_logits) * tf.nn.softmax(domain_logits))
     grad = sampler_optimizer.get_gradients(loss,[domain_logits])
     grad_domain_logits_accum.assign_add(grad[0])
     return tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * domain_rewards)
@@ -11623,7 +11619,7 @@ def train_L2W_v2(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    training_loss *= domain_weights[domain]
+    
     variables = model.trainable_variables
     #print("var numb: ", len(variables))
     """ for var in variables:
@@ -11650,10 +11646,15 @@ def train_L2W_v2(config,
         reported_loss = loss[0] / loss[2]
       else:
         training_loss, reported_loss = loss, loss
+
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
       return loss
   
+  def _reset_dev_train_gradients():
+    dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
+    [train_gradient_accumulator.reset() for train_gradient_accumulator in train_gradient_accumulators]
+
   def _apply_gradients():
     variables = model.trainable_variables
     grads_and_vars = []
@@ -11713,6 +11714,11 @@ def train_L2W_v2(config,
   def _sampler_step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_sampler_gradients)
+
+  @tf.function
+  def _reset_dev_train_grad_accum_step():
+    with strategy.scope():
+      _reset_dev_train_gradients()
   
   def _set_weight(v, w):
     v.assign(tf.cast(w,v.dtype))
@@ -11737,6 +11743,13 @@ def train_L2W_v2(config,
   _loss = []  
   _number_examples = []
   step = optimizer.iterations.numpy()
+  ########
+  excluded_params = []
+  for var in model.trainable_variables:
+    if tf.shape(var)[-1].numpy()==31266 or tf.shape(var)[0].numpy()==31266:
+      print(var.name)
+      excluded_params.append(var.name)
+  ########
   if config.get("reset_step",None):
     print("start from %d-th step"%config.get("reset_step",150000))
     optimizer.iterations.assign(config.get("reset_step",150000))
@@ -11763,24 +11776,18 @@ def train_L2W_v2(config,
     current_probs = tf.nn.softmax(domain_logits).numpy()
     print("current_probs: ", current_probs)
     #######
-    ##### compute theta_t+1
-    for k in np.random.choice(domain,config.get("update_theta_train_batch_per_run_num",len(domain)),p=current_probs): 
-      src, tgt = next(train_iterators[k])
-      strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-    strategy.experimental_run_v2(_apply_dev_train_gradients)
-    snapshots_1 = [v.value() for v in model.trainable_variables]
     for i, train_iter in enumerate(train_iterators):
       _reward = 0.0
-      ##### accumulate gradient over training set of src domain i at theta_t
       weight_reset(snapshots)
       with strategy.scope():
-        for _ in range(config.get("train_batch_per_run_num",10)):
-          src, tgt = next(train_iter)
+        ##### compute theta_t+1
+        for _ in range(config.get("train_batch_per_run_num",10)): 
+          src, tgt = next(train_iterators[i])
           strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-        train_gradient_accumulator(sub_gradient_accumulator.gradients)
+          train_gradient_accumulator(sub_gradient_accumulator.gradients)
+          strategy.experimental_run_v2(_apply_dev_train_gradients)
         strategy.experimental_run_v2(sub_gradient_accumulator.reset)
       ##### accumulate gradient over dev set of k tgt domains at theta_t+1
-      weight_reset(snapshots_1)
       with strategy.scope():
         for j, dev_iter in enumerate(dev_iterators):
           _sum = 0.0
@@ -11792,10 +11799,16 @@ def train_L2W_v2(config,
           dev_gradient_accumulator(sub_gradient_accumulator.gradients)
           strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
           for dev_grad, tr_grad in zip(dev_gradient_accumulator.gradients, train_gradient_accumulator.gradients):
-            _sum += tf.reduce_sum(dev_grad * tr_grad)
-            _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-            _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-          _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
+            if var.name not in excluded_params: #sum([substring not in var.name for substring in config.get("param_to_exclude_from_reward",["hello"])])>0: #True:#"ADAP_" not in var.name:
+                  _sum += tf.reduce_sum(dev_grad * tr_grad)
+                  _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                  _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                  #count +=1
+          #print("number_of_parameters_in_reward: %d"%(count))
+          if config.get("cosine_reward",True):
+            _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
+          else:
+            _reward += _sum * domain_importances[j]
           # reset dev gradient accumulations to zero
           strategy.experimental_run_v2(dev_gradient_accumulator.reset)
           #print(dev_gradient_accumulator.gradients[0])
@@ -11812,15 +11825,11 @@ def train_L2W_v2(config,
     # compute new domain distribution
     print("domain rewards", domain_rewards)
     for _ in range(config.get("domain_sampler_optim_step", 30)):
-      #loss = _sampler_flow()
-      #_sampler_step()
       _ = _grad_sampler_accum()
       _sampler_step_1()
       
     print("domain_logits: ", domain_logits.numpy())
     probs = tf.nn.softmax(domain_logits)
-    domain_weights.assign(probs/tf.reduce_mean(probs))
-    domain_weights.assign(domain_weights/_picking_prob)
     new_picking_prob = update_sampling_distribution(probs)
     tf.summary.experimental.set_step(saved_step)
     for i in range(len(domain)):
@@ -11828,6 +11837,23 @@ def train_L2W_v2(config,
       tf.summary.scalar("domain_prob_%d"%i, new_picking_prob[i], description="probability of using training set %d"%(i))
     tf.summary.flush()
     # create new training course with updated domain distribution
+    train_dataset = tf.data.experimental.sample_from_datasets(train_datasets_p, weights=new_picking_prob)
+    with strategy.scope():
+      base_dataset = train_dataset
+      train_dataset = strategy.experimental_distribute_datasets_from_function(
+            lambda _: base_dataset)
+    @dataset_util.function_on_next(train_dataset)
+    def _train_forward(next_fn):    
+      with strategy.scope():
+        per_replica_source, per_replica_target = next_fn()
+        per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+            _accumulate_gradients, args=(per_replica_source, per_replica_target))
+        # TODO: these reductions could be delayed until _step is called.
+        loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+        num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+      return loss, num_examples
+    train_data_flow = iter(_train_forward())
+    #######
     weight_reset(snapshots)
     optimizer.iterations.assign(saved_step)
     #######
@@ -11850,7 +11876,7 @@ def train_L2W_v2(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-
+  
   with _summary_writer.as_default():
     while True:
       ####Training batch
@@ -11868,40 +11894,41 @@ def train_L2W_v2(config,
         #######
         current_probs = tf.nn.softmax(domain_logits).numpy()
         print("current_probs: ", current_probs)
-        #######
-        ##### compute theta_t+1
-        for k in np.random.choice(domain,config.get("update_theta_train_batch_per_run_num",len(domain)),p=current_probs): 
-          src, tgt = next(train_iterators[k])
-          strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-        strategy.experimental_run_v2(_apply_dev_train_gradients)
-        snapshots_1 = [v.value() for v in model.trainable_variables]
+        #######        
         for i, train_iter in enumerate(train_iterators):
           _reward = 0.0
-          ##### accumulate gradient over training set of src domain i at theta_t
           weight_reset(snapshots)
           with strategy.scope():
-            for _ in range(config.get("train_batch_per_run_num",10)):
-              src, tgt = next(train_iter)
+            ##### compute theta_t+1
+            for _ in range(config.get("train_batch_per_run_num",10)): 
+              src, tgt = next(train_iterators[i])
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-            train_gradient_accumulator(sub_gradient_accumulator.gradients)
+              train_gradient_accumulator(sub_gradient_accumulator.gradients)
+              strategy.experimental_run_v2(_apply_dev_train_gradients)
             strategy.experimental_run_v2(sub_gradient_accumulator.reset)
           ##### accumulate gradient over dev set of k tgt domains at theta_t+1
-          weight_reset(snapshots_1)
           with strategy.scope():
             for j, dev_iter in enumerate(dev_iterators):
               _sum = 0.0
               _dev_norm = 0.0
               _tr_norm = 0.0
+              #count = 0
               for _ in range(config.get("dev_batch_per_run_num",10)):
                 src, tgt = next(dev_iter)
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
-              for dev_grad, tr_grad in zip(dev_gradient_accumulator.gradients, train_gradient_accumulator.gradients):
-                _sum += tf.reduce_sum(dev_grad * tr_grad)
-                _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-                _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-              _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
+              for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
+                if var.name not in excluded_params: #sum([substring not in var.name for substring in config.get("param_to_exclude_from_reward",["hello"])])>0: #True:#"ADAP_" not in var.name:
+                  _sum += tf.reduce_sum(dev_grad * tr_grad)
+                  _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                  _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                  #count +=1
+              #print("number_of_parameters_in_reward: %d"%(count))
+              if config.get("cosine_reward",True):
+                _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
+              else:
+                _reward += _sum * domain_importances[j] #_sum * learning_rate(saved_step) * domain_importances[j]
               # reset dev gradient accumulations to zero
               strategy.experimental_run_v2(dev_gradient_accumulator.reset)
               #print(dev_gradient_accumulator.gradients[0])
@@ -11918,21 +11945,34 @@ def train_L2W_v2(config,
         # compute new domain distribution
         print("domain rewards", domain_rewards)
         for _ in range(config.get("domain_sampler_optim_step", 30)):
-          #loss = _sampler_flow()
-          #_sampler_step()
           _ = _grad_sampler_accum()
           _sampler_step_1()
           
         print("domain_logits: ", domain_logits.numpy())
         probs = tf.nn.softmax(domain_logits)
-        domain_weights.assign(probs/tf.reduce_mean(probs))
-        domain_weights.assign(domain_weights/_picking_prob)
         new_picking_prob = update_sampling_distribution(probs)
         tf.summary.experimental.set_step(saved_step)
         for i in range(len(domain)):
           tf.summary.scalar("reward_%d"%i, rewards[i], description="reward of using training set %d"%(i))
           tf.summary.scalar("domain_prob_%d"%i, new_picking_prob[i], description="probability of using training set %d"%(i))
         tf.summary.flush()
+        # create new training course with updated domain distribution
+        train_dataset = tf.data.experimental.sample_from_datasets(train_datasets_p, weights=new_picking_prob)
+        with strategy.scope():
+          base_dataset = train_dataset
+          train_dataset = strategy.experimental_distribute_datasets_from_function(
+                lambda _: base_dataset)
+        @dataset_util.function_on_next(train_dataset)
+        def _train_forward(next_fn):    
+          with strategy.scope():
+            per_replica_source, per_replica_target = next_fn()
+            per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+                _accumulate_gradients, args=(per_replica_source, per_replica_target))
+            # TODO: these reductions could be delayed until _step is called.
+            loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+            num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+          return loss, num_examples
+        train_data_flow = iter(_train_forward())
         #######
         weight_reset(snapshots)
         optimizer.iterations.assign(saved_step)
