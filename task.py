@@ -13030,6 +13030,10 @@ def debug_L2W_v1(config,
                 _tr_norm = 0.0
                 _sum_1 = 0.0
                 _sum_2 = 0.0
+                _dev_norm_1 = 0.0
+                _tr_norm_1 = 0.0
+                _dev_norm_2 = 0.0
+                _tr_norm_2 = 0.0
                 for _ in range(config.get("dev_batch_per_run_num",10)):
                   src, tgt = next(dev_iter)
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
@@ -13040,12 +13044,18 @@ def debug_L2W_v1(config,
                     _sum_1 += tf.reduce_sum(dev_grad * tr_grad)
                     _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                     _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                    _dev_norm_1 += tf.reduce_sum(dev_grad * dev_grad)
+                    _tr_norm_1 += tf.reduce_sum(tr_grad * tr_grad)
                   else:
                     _sum_2 += tf.reduce_sum(dev_grad * tr_grad)
                     _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                     _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                    _dev_norm_2 += tf.reduce_sum(dev_grad * dev_grad)
+                    _tr_norm_2 += tf.reduce_sum(tr_grad * tr_grad)
                 print("excluded_rewards: %f"%(_sum_1.numpy()))
                 print("included_rewards: %f"%(_sum_2.numpy()))
+                print("excluded_norms: %f, %f"%(_dev_norm_1.numpy(),_tr_norm_1.numpy()))
+                print("included_norms: %f, %f"%(_dev_norm_2.numpy(),_tr_norm_2.numpy()))
                 _sum = _sum_1 + _sum_2
                 if config.get("cosine_reward",True):
                   _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
