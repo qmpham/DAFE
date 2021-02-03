@@ -12011,9 +12011,9 @@ def train_L2W_v2(config,
           descending_streak = 0
         else:
           descending_streak += 1
-      if descending_streak >= 5:
-        break
       tf.summary.flush()
+      if config.get("early_stopping",True) and descending_streak >= 5:
+        break
       if step > train_steps:
         break
 
