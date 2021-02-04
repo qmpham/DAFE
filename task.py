@@ -13043,8 +13043,13 @@ def debug_L2W_v1(config,
     print("current_probs: ", current_probs)
     #######
     
+  domain_num = len(domain)
+  excluded_reward_acc = np.zeros((domain_num, domain_num))
+  excluded_norm_acc = np.zeros((domain_num, domain_num))
+  included_reward_acc = np.zeros((domain_num, domain_num))
+  included_norm_acc = np.zeros((domain_num, domain_num))
   with _summary_writer.as_default(): 
-      while True:
+      for _ in range(1000):#while True:
         try:
           # compute domain rewards
           rewards = [0.0] * len(domain)
@@ -13102,6 +13107,10 @@ def debug_L2W_v1(config,
                 print("excluded_norms: %f, %f"%(_dev_norm_1.numpy(),_tr_norm_1.numpy()))
                 print("included_norms: %f, %f"%(_dev_norm_2.numpy(),_tr_norm_2.numpy()))
                 _sum = _sum_1 + _sum_2
+                excluded_reward_acc[i,j] += np.abs(_sum_1)
+                excluded_norm_acc[i,j] += np.abs(_dev_norm_1.numpy()+_tr_norm_1.numpy())
+                included_reward_acc[i,j] += np.abs(_sum_2)
+                included_norm_acc[i,j] += np.abs(_dev_norm_2.numpy()+_tr_norm_2.numpy())
                 if config.get("cosine_reward",True):
                   _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
                 else:
@@ -13129,6 +13138,10 @@ def debug_L2W_v1(config,
         except tf.errors.OutOfRangeError:
           print("average reward: ", total_reward/count)
 
+  print("excluded_reward_acc: ", excluded_reward_acc)
+  print("excluded_norm_acc: ", excluded_norm_acc)
+  print("included_reward_acc: ", included_reward_acc)
+  print("included_norm_acc: ", included_norm_acc)
 
 
 
