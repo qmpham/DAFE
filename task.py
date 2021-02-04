@@ -13049,7 +13049,7 @@ def debug_L2W_v1(config,
   included_reward_acc = np.zeros((domain_num, domain_num))
   included_norm_acc = np.zeros((domain_num, domain_num))
   with _summary_writer.as_default(): 
-      for _ in range(1000):#while True:
+      for _ in range(50):#while True:
         try:
           # compute domain rewards
           rewards = [0.0] * len(domain)
