@@ -10938,6 +10938,7 @@ def train_L2W_v1(config,
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
   redistribute_every = config.get("redistribute_every",2000)
+  inner_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr",0.001))
   #####
   if checkpoint_path is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
@@ -11119,7 +11120,7 @@ def train_L2W_v1(config,
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(sub_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
-    optimizer.apply_gradients(grads_and_vars)
+    inner_optimizer.apply_gradients(grads_and_vars)
     sub_gradient_accumulator.reset()
  
   def _apply_sampler_gradients():
