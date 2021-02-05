@@ -10938,7 +10938,10 @@ def train_L2W_v1(config,
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
   redistribute_every = config.get("redistribute_every",2000)
-  inner_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr",0.001))
+  if config.get("use_meta_optimizer",False):
+    inner_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr",0.001))
+  else:
+    inner_optimizer = optimizer
   #####
   if checkpoint_path is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
