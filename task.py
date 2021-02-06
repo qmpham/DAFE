@@ -13052,6 +13052,7 @@ def debug_L2W_v1(config,
   excluded_norm_acc = np.zeros((domain_num, domain_num))
   included_reward_acc = np.zeros((domain_num, domain_num))
   included_norm_acc = np.zeros((domain_num, domain_num))
+  reward_acc = np.zeros((domain_num, domain_num))
   with _summary_writer.as_default(): 
       for _ in range(10):#while True:
         try:
@@ -13122,6 +13123,7 @@ def debug_L2W_v1(config,
                 _reward += _reward_ij
                 total_reward += _reward_ij
                 count +=1
+                reward_acc[i,j] += _reward_ij
                 print("reward of training set %d to dev set %d: %f"%(i,j,_reward_ij))
                 # reset dev gradient accumulations to zero
                 strategy.experimental_run_v2(dev_gradient_accumulator.reset)
@@ -13142,10 +13144,16 @@ def debug_L2W_v1(config,
         except tf.errors.OutOfRangeError:
           print("average reward: ", total_reward/count)
 
-  print("excluded_reward_acc: ", excluded_reward_acc)
-  print("excluded_norm_acc: ", excluded_norm_acc)
-  print("included_reward_acc: ", included_reward_acc)
-  print("included_norm_acc: ", included_norm_acc)
+  print("excluded_reward_acc: ")
+  print(excluded_reward_acc)
+  print("excluded_norm_acc: ")
+  print(excluded_norm_acc)
+  print("included_reward_acc: ")
+  print(included_reward_acc)
+  print("included_norm_acc: ")
+  print(included_norm_acc)
+  print("reward_acc: ")
+  print(reward_acc)
 
 
 
