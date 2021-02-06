@@ -13111,9 +13111,9 @@ def debug_L2W_v1(config,
                 print("excluded_norms: %f, %f"%(_dev_norm_1.numpy(),_tr_norm_1.numpy()))
                 print("included_norms: %f, %f"%(_dev_norm_2.numpy(),_tr_norm_2.numpy()))
                 _sum = _sum_1 + _sum_2
-                excluded_reward_acc[i,j] += np.abs(_sum_1)
+                excluded_reward_acc[i,j] += _sum_1
                 excluded_norm_acc[i,j] += np.abs(_dev_norm_1.numpy()+_tr_norm_1.numpy())
-                included_reward_acc[i,j] += np.abs(_sum_2)
+                included_reward_acc[i,j] += _sum_2
                 included_norm_acc[i,j] += np.abs(_dev_norm_2.numpy()+_tr_norm_2.numpy())
                 if config.get("cosine_reward",True):
                   _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
