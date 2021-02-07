@@ -13154,6 +13154,8 @@ def debug_L2W_v1(config,
   print(included_norm_acc)
   print("reward_acc: ")
   print(reward_acc)
+  print("reduced_reward_acc: ")
+  print(np.sum(reward_acc, axis=1))
 
 
 
