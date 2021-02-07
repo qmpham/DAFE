@@ -13104,6 +13104,7 @@ def debug_L2W_v1(config,
                     _dev_norm_1 += tf.reduce_sum(dev_grad * dev_grad)
                     _tr_norm_1 += tf.reduce_sum(tr_grad * tr_grad)
                   else:
+                    tr_grad = var.value() - snapshot
                     _sum_2 += tf.reduce_sum(dev_grad * tr_grad)
                     _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                     _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
