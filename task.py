@@ -12966,7 +12966,7 @@ def debug_L2W_v1(config,
 
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
-      return loss
+      return training_loss
   
   def _reset_dev_train_gradients():
     dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
