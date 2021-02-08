@@ -13100,7 +13100,7 @@ def debug_L2W_v1(config,
                 _tr_norm_2 = 0.0
                 loss_1 = 0.0
                 loss_2 = 0.0
-                epsilon = 1e-10
+                epsilon = 1e-12
                 snapshots_t1 = [v.value() for v in model.trainable_variables]
                 for _ in range(config.get("dev_batch_per_run_num",10)):
                   src, tgt = next(dev_iter)
