@@ -11495,6 +11495,10 @@ def train_L2W_v2(config,
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
   redistribute_every = config.get("redistribute_every",2000)
+  if config.get("use_meta_optimizer",False):
+    inner_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr",0.001))
+  else:
+    inner_optimizer = optimizer
   #####
   if checkpoint_path is not None:
     tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
@@ -11676,7 +11680,7 @@ def train_L2W_v2(config,
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(sub_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
-    optimizer.apply_gradients(grads_and_vars)
+    inner_optimizer.apply_gradients(grads_and_vars)
     sub_gradient_accumulator.reset()
  
   def _apply_sampler_gradients():
@@ -11924,7 +11928,7 @@ def train_L2W_v2(config,
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
               for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
                 if var.name not in excluded_params: #sum([substring not in var.name for substring in config.get("param_to_exclude_from_reward",["hello"])])>0: #True:#"ADAP_" not in var.name:
-                  tr_grad = var.value() - snapshot
+                  #tr_grad = var.value() - snapshot
                   _sum += tf.reduce_sum(dev_grad * tr_grad)
                   _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                   _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
@@ -13097,14 +13101,14 @@ def debug_L2W_v1(config,
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
                 for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
                   if var.name in excluded_params:#"ADAP_" not in var.name:
-                    tr_grad = var.value() - snapshot
+                    #tr_grad = var.value() - snapshot
                     _sum_1 += tf.reduce_sum(dev_grad * tr_grad)
                     _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                     _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
                     _dev_norm_1 += tf.reduce_sum(dev_grad * dev_grad)
                     _tr_norm_1 += tf.reduce_sum(tr_grad * tr_grad)
                   else:
-                    tr_grad = var.value() - snapshot
+                    #tr_grad = var.value() - snapshot
                     _sum_2 += tf.reduce_sum(dev_grad * tr_grad)
                     _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                     _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
