@@ -9774,7 +9774,7 @@ def train_L2W(config,
 
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
-      return loss
+      return training_loss
   
   def _reset_dev_train_gradients():
     dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
@@ -11100,7 +11100,7 @@ def train_L2W_v1(config,
 
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
-      return loss
+      return training_loss
   
   def _reset_dev_train_gradients():
     dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
@@ -11657,7 +11657,7 @@ def train_L2W_v2(config,
 
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
-      return loss
+      return training_loss
   
   def _reset_dev_train_gradients():
     dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
@@ -13098,61 +13098,50 @@ def debug_L2W_v1(config,
                 _tr_norm_1 = 0.0
                 _dev_norm_2 = 0.0
                 _tr_norm_2 = 0.0
-                loss_1 = 0.0
-                loss_2 = 0.0
-                epsilon = 1e-12
-                snapshots_t1 = [v.value() for v in model.trainable_variables]
                 for _ in range(config.get("dev_batch_per_run_num",10)):
                   src, tgt = next(dev_iter)
-                  loss_1 += strategy.reduce(tf.distribute.ReduceOp.MEAN, strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt)), None)
-                  snapshots_temp = [v.value() - grad.value() * epsilon / (strategy.num_replicas_in_sync * tf.cast(sub_gradient_accumulator.step, tf.float32)) for v,grad in zip(model.trainable_variables, train_gradient_accumulator._gradients)]
-                  weight_reset(snapshots_temp)
-                  loss_2 += strategy.reduce(tf.distribute.ReduceOp.MEAN, strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt)), None)
-                  weight_reset(snapshots_t1)
-                _reward_ij = (loss_2-loss_1)/(epsilon * float(config.get("dev_batch_per_run_num",10))) * domain_importances[j]
-                #dev_gradient_accumulator(sub_gradient_accumulator.gradients)
-                #strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
-              #   for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
-              #     if var.name in excluded_params:#"ADAP_" not in var.name:
-              #       #tr_grad = var.value() - snapshot
-              #       _sum_1 += tf.reduce_sum(dev_grad * tr_grad)
-              #       _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-              #       _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-              #       _dev_norm_1 += tf.reduce_sum(dev_grad * dev_grad)
-              #       _tr_norm_1 += tf.reduce_sum(tr_grad * tr_grad)
-              #     else:
-              #       #tr_grad = var.value() - snapshot
-              #       _sum_2 += tf.reduce_sum(dev_grad * tr_grad)
-              #       _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-              #       _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-              #       _dev_norm_2 += tf.reduce_sum(dev_grad * dev_grad)
-              #       _tr_norm_2 += tf.reduce_sum(tr_grad * tr_grad)
-              #   print("excluded_rewards: %f"%(_sum_1.numpy()))
-              #   print("included_rewards: %f"%(_sum_2.numpy()))
-              #   print("excluded_norms: %f, %f"%(_dev_norm_1.numpy(),_tr_norm_1.numpy()))
-              #   print("included_norms: %f, %f"%(_dev_norm_2.numpy(),_tr_norm_2.numpy()))
-              #   _sum = _sum_1 + _sum_2
-              #   excluded_reward_acc[i,j] += _sum_1
-              #   excluded_norm_acc[i,j] += np.abs(_dev_norm_1.numpy()+_tr_norm_1.numpy())
-              #   included_reward_acc[i,j] += _sum_2
-              #   included_norm_acc[i,j] += np.abs(_dev_norm_2.numpy()+_tr_norm_2.numpy())
-              #   if config.get("cosine_reward",True):
-              #     _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
-              #   else:
-              #     _reward_ij = _sum * learning_rate(saved_step) * domain_importances[j]
-              #   _reward += _reward_ij
+                  strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+                dev_gradient_accumulator(sub_gradient_accumulator.gradients)
+                strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
+                for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
+                  if var.name in excluded_params:#"ADAP_" not in var.name:
+                    _sum_1 += tf.reduce_sum(dev_grad * tr_grad)
+                    _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                    _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                    _dev_norm_1 += tf.reduce_sum(dev_grad * dev_grad)
+                    _tr_norm_1 += tf.reduce_sum(tr_grad * tr_grad)
+                  else:
+                    _sum_2 += tf.reduce_sum(dev_grad * tr_grad)
+                    _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                    _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                    _dev_norm_2 += tf.reduce_sum(dev_grad * dev_grad)
+                    _tr_norm_2 += tf.reduce_sum(tr_grad * tr_grad)
+                print("excluded_rewards: %f"%(_sum_1.numpy()))
+                print("included_rewards: %f"%(_sum_2.numpy()))
+                print("excluded_norms: %f, %f"%(_dev_norm_1.numpy(),_tr_norm_1.numpy()))
+                print("included_norms: %f, %f"%(_dev_norm_2.numpy(),_tr_norm_2.numpy()))
+                _sum = _sum_1 + _sum_2
+                excluded_reward_acc[i,j] += _sum_1
+                excluded_norm_acc[i,j] += np.abs(_dev_norm_1.numpy()+_tr_norm_1.numpy())
+                included_reward_acc[i,j] += _sum_2
+                included_norm_acc[i,j] += np.abs(_dev_norm_2.numpy()+_tr_norm_2.numpy())
+                if config.get("cosine_reward",True):
+                  _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
+                else:
+                  _reward_ij = _sum * learning_rate(saved_step) * domain_importances[j]
+                _reward += _reward_ij
                 total_reward += _reward_ij
                 count +=1
                 reward_acc[i,j] += _reward_ij
                 print("reward of training set %d to dev set %d: %f"%(i,j,_reward_ij))
-              #   # reset dev gradient accumulations to zero
-              #   strategy.experimental_run_v2(dev_gradient_accumulator.reset)
-              #   #print(dev_gradient_accumulator.gradients[0])
-              # # reset train dev gradient accumulations to zero
+                # reset dev gradient accumulations to zero
+                strategy.experimental_run_v2(dev_gradient_accumulator.reset)
+                #print(dev_gradient_accumulator.gradients[0])
+              # reset train dev gradient accumulations to zero
                 
-              # strategy.experimental_run_v2(train_gradient_accumulator.reset)
+              strategy.experimental_run_v2(train_gradient_accumulator.reset)
 
-            #rewards[i] = _reward.numpy()
+            rewards[i] = _reward.numpy()
             
             # reset model parameters
             weight_reset(snapshots)
@@ -13164,14 +13153,14 @@ def debug_L2W_v1(config,
         except tf.errors.OutOfRangeError:
           print("average reward: ", total_reward/count)
 
-  # print("excluded_reward_acc: ")
-  # print(excluded_reward_acc)
-  # print("excluded_norm_acc: ")
-  # print(excluded_norm_acc)
-  # print("included_reward_acc: ")
-  # print(included_reward_acc)
-  # print("included_norm_acc: ")
-  # print(included_norm_acc)
+  print("excluded_reward_acc: ")
+  print(excluded_reward_acc)
+  print("excluded_norm_acc: ")
+  print(excluded_norm_acc)
+  print("included_reward_acc: ")
+  print(included_reward_acc)
+  print("included_norm_acc: ")
+  print(included_norm_acc)
   print("reward_acc: ")
   print(reward_acc)
   print("reduced_reward_acc: ")
