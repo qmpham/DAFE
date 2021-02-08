@@ -13105,7 +13105,7 @@ def debug_L2W_v1(config,
                 for _ in range(config.get("dev_batch_per_run_num",10)):
                   src, tgt = next(dev_iter)
                   loss_1 += strategy.reduce(tf.distribute.ReduceOp.MEAN, strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt)), None)
-                  snapshots_temp = [v.value() - grad.value() * epsilon for v,grad in zip(model.trainable_variables, train_gradient_accumulator)]
+                  snapshots_temp = [v.value() - grad.value() * epsilon / (strategy.num_replicas_in_sync * tf.cast(sub_gradient_accumulator.step, tf.float32)) for v,grad in zip(model.trainable_variables, train_gradient_accumulator._gradients)]
                   weight_reset(snapshots_temp)
                   loss_2 += strategy.reduce(tf.distribute.ReduceOp.MEAN, strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt)), None)
                   weight_reset(snapshots_t1)
