@@ -11575,9 +11575,10 @@ def train_L2W_v2(config,
               length_bucket_width=config.get("length_bucket_width",1),  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=None,
               maximum_labels_length=None)
-    dev_dataset = dev_dataset.window(4)
     with strategy.scope():
-      dev_dataset = strategy.experimental_distribute_dataset(dev_dataset)
+      base_dataset = dev_dataset
+      dev_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)
     dev_datasets.append(dev_dataset)
   #############
   with strategy.scope():
