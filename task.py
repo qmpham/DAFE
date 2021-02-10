@@ -11572,9 +11572,9 @@ def train_L2W_v2(config,
               domain=i,
               single_pass=False,
               shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
-              maximum_features_length=maximum_length,
-              maximum_labels_length=maximum_length)
+              length_bucket_width=config.get("length_bucket_width",1),  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=None,
+              maximum_labels_length=None)
     with strategy.scope():
       dev_dataset = strategy.experimental_distribute_dataset(dev_dataset)
     dev_datasets.append(dev_dataset)
