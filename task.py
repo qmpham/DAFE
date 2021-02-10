@@ -11577,6 +11577,7 @@ def train_L2W_v2(config,
               maximum_labels_length=maximum_length)
     with strategy.scope():
       dev_dataset = strategy.experimental_distribute_dataset(dev_dataset)
+    dev_datasets.append(dev_dataset)
   #############
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
