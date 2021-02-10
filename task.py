@@ -11568,7 +11568,7 @@ def train_L2W_v2(config,
   for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref")):
     dev_dataset = model.examples_inputter.make_training_dataset(src, tgt,
               batch_size=100,
-              batch_type="example",
+              batch_type="examples",
               domain=i,
               single_pass=False,
               shuffle_buffer_size=shuffle_buffer_size,
