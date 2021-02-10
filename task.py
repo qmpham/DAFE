@@ -13061,9 +13061,9 @@ def debug_L2W_v1(config,
   excluded_norm_acc = np.zeros((domain_num, domain_num))
   included_reward_acc = np.zeros((domain_num, domain_num))
   included_norm_acc = np.zeros((domain_num, domain_num))
-  reward_acc = np.zeros((domain_num, domain_num))
+  reward_acc = np.zeros((domain_num, domain_num, 10))
   with _summary_writer.as_default(): 
-      for _ in range(10):#while True:
+      for it in range(10):#while True:
         try:
           # compute domain rewards
           rewards = [0.0] * len(domain)
@@ -13132,7 +13132,7 @@ def debug_L2W_v1(config,
                 _reward += _reward_ij
                 total_reward += _reward_ij
                 count +=1
-                reward_acc[i,j] += _reward_ij
+                reward_acc[i,j, it] += _reward_ij
                 print("reward of training set %d to dev set %d: %f"%(i,j,_reward_ij))
                 # reset dev gradient accumulations to zero
                 strategy.experimental_run_v2(dev_gradient_accumulator.reset)
@@ -13163,8 +13163,11 @@ def debug_L2W_v1(config,
   print(included_norm_acc)
   print("reward_acc: ")
   print(reward_acc)
-  print("reduced_reward_acc: ")
-  print(np.sum(reward_acc, axis=1))
+  #print("reduced_reward_acc: ")
+  #print(np.sum(reward_acc, axis=1))
+  print(np.var(reward_acc,axis=2))
+  print(np.mean(reward_acc,axis=2))
+  print(np.sum(np.mean(reward_acc,axis=2), axis=1))
 
 
 
