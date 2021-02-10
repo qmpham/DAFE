@@ -11567,7 +11567,7 @@ def train_L2W_v2(config,
   dev_datasets = []
   for d, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref")):
     dev_dataset = model.examples_inputter.make_training_dataset(source_file, target_file,
-              batch_size=100,
+              batch_size=25,
               batch_type="examples",
               domain=d,
               single_pass=False,
@@ -11575,6 +11575,7 @@ def train_L2W_v2(config,
               length_bucket_width=config.get("length_bucket_width",1),  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=None,
               maximum_labels_length=None)
+    dev_dataset = dev_dataset.window(4)
     with strategy.scope():
       dev_dataset = strategy.experimental_distribute_dataset(dev_dataset)
     dev_datasets.append(dev_dataset)
