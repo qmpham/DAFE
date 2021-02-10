@@ -11560,10 +11560,23 @@ def train_L2W_v2(config,
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
                                             for domain, source_file, target_file in zip(config.get("domain"), config.get("src"), config.get("tgt"))]
 
-  dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
-                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
-                                            for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref"))]
+  # dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
+  #                                           maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+  #                                           multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
+  #                                           for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref"))]
+  dev_datasets = []
+  for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref")):
+    dev_dataset = model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size=100,
+              batch_type="example",
+              domain=i,
+              single_pass=False,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length)
+    with strategy.scope():
+      dev_dataset = strategy.experimental_distribute_dataset(dev_dataset)
   #############
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
