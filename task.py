@@ -11576,9 +11576,9 @@ def train_L2W_v2(config,
               maximum_features_length=None,
               maximum_labels_length=None)
     with strategy.scope():
-      base_dataset = dev_dataset
+      base_dataset_ = dev_dataset
       dev_dataset = strategy.experimental_distribute_datasets_from_function(
-          lambda _: base_dataset)
+          lambda _: base_dataset_)
     dev_datasets.append(dev_dataset)
   #############
   with strategy.scope():
