@@ -11596,6 +11596,7 @@ def train_L2W_v2(config,
     #sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
     #sampler_vars = [domain_logits]
     #sampler_optimizer._create_slots(sampler_vars)
+  print("actor_parameterization: ",config.get("actor_parameterization","softmax"))
   if config.get("actor_parameterization","softmax") =="softmax":
     domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
   elif config.get("actor_parameterization","softmax") =="linear":
