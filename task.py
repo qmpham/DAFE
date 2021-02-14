@@ -11596,9 +11596,9 @@ def train_L2W_v2(config,
     #sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
     #sampler_vars = [domain_logits]
     #sampler_optimizer._create_slots(sampler_vars)
-  if config.get("actor_parametrization","softmax") =="softmax":
+  if config.get("actor_parameterization","softmax") =="softmax":
     domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
-  elif config.get("actor_parametrization","softmax") =="linear":
+  elif config.get("actor_parameterization","softmax") =="linear":
     domain_logits = tf.Variable([1.0/len(domain)]*len(domain), trainable=True)
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
@@ -11608,9 +11608,9 @@ def train_L2W_v2(config,
   
   @tf.function
   def _grad_sampler_accum():
-    if config.get("actor_parametrization","softmax") =="softmax":
+    if config.get("actor_parameterization","softmax") =="softmax":
       loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
-    elif config.get("actor_parametrization","softmax") =="linear":
+    elif config.get("actor_parameterization","softmax") =="linear":
       loss = - tf.reduce_sum(domain_logits * domain_rewards)
     if config.get("sampler_entropy_constraint",False):
       print("sampler_entropy_constraint_weight",config.get("sampler_entropy_constraint_weight",1e-3))
@@ -11622,6 +11622,9 @@ def train_L2W_v2(config,
   @tf.function
   def _sampler_step_1():
     sampler_optimizer.apply_gradients([(grad_domain_logits_accum, domain_logits)])
+    if config.get("actor_parameterization","softmax") =="linear":
+      domain_logits.assign(domain_logits - tf.reduce_min(domain_logits))
+      domain_logits.assign(domain_logits/tf.reduce_sum(domain_logits))
     grad_domain_logits_accum.assign(tf.zeros_like(domain_logits))
 
   def update_sampling_distribution(logits):
