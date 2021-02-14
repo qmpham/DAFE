@@ -11596,7 +11596,10 @@ def train_L2W_v2(config,
     #sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
     #sampler_vars = [domain_logits]
     #sampler_optimizer._create_slots(sampler_vars)
-  domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
+  if config.get("actor_parametrization","softmax") =="softmax":
+    domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
+  elif config.get("actor_parametrization","softmax") =="linear":
+    domain_logits = tf.Variable([1.0/len(domain)]*len(domain), trainable=True)
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
   sampler_vars = [domain_logits]
