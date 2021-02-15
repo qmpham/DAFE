@@ -11985,7 +11985,10 @@ def train_L2W_v2(config,
           _sampler_step_1()
           
         print("domain_logits: ", domain_logits.numpy())
-        probs = tf.nn.softmax(domain_logits)
+        if config.get("actor_parameterization","softmax") =="softmax":
+          probs = tf.nn.softmax(domain_logits)
+        elif config.get("actor_parameterization","softmax") =="linear":
+          probs = domain_logits
         new_picking_prob = update_sampling_distribution(probs)
         tf.summary.experimental.set_step(saved_step)
         for i in range(len(domain)):
