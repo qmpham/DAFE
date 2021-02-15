@@ -11924,7 +11924,7 @@ def train_L2W_v2(config,
         if config.get("actor_parameterization","softmax") =="softmax":
           current_probs = tf.nn.softmax(domain_logits).numpy()
         elif config.get("actor_parameterization","softmax") =="linear":
-          prcurrent_probsobs = domain_logits.numpy()
+          current_probs = domain_logits.numpy()
         print("current_probs: ", current_probs)
         #######        
         for i, train_iter in enumerate(train_iterators):
