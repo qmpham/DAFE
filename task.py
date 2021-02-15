@@ -11602,7 +11602,7 @@ def train_L2W_v2(config,
   elif config.get("actor_parameterization","softmax") =="linear":
     domain_logits = tf.Variable([1.0/len(domain)]*len(domain), trainable=True)
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
-  sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
+  sampler_optimizer = tf.keras.optimizers.SGD(learning_rate=config.get("sampler_optim_lr",0.01)) #tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
   sampler_vars = [domain_logits]
   print("init domain_logits: ", domain_logits)
   print("domain_rewards: ", domain_rewards)
@@ -11921,7 +11921,10 @@ def train_L2W_v2(config,
         snapshots = [v.value() for v in model.trainable_variables]
         saved_step = optimizer.iterations.numpy()
         #######
-        current_probs = tf.nn.softmax(domain_logits).numpy()
+        if config.get("actor_parameterization","softmax") =="softmax":
+          current_probs = tf.nn.softmax(domain_logits).numpy()
+        elif config.get("actor_parameterization","softmax") =="linear":
+          prcurrent_probsobs = domain_logits.numpy()
         print("current_probs: ", current_probs)
         #######        
         for i, train_iter in enumerate(train_iterators):
