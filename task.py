@@ -11624,10 +11624,10 @@ def train_L2W_v2(config,
   @tf.function
   def _sampler_step_1():
     sampler_optimizer.apply_gradients([(grad_domain_logits_accum, domain_logits)])
-    # if config.get("actor_parameterization","softmax") =="linear":
-    #   #domain_logits.assign(domain_logits - tf.reduce_min(domain_logits))
-    #   domain_logits.assign(tf.clip_by_value(domain_logits, clip_value_min=0.0, clip_value_max=10.0))
-    #   domain_logits.assign(domain_logits/tf.reduce_sum(domain_logits))
+    if config.get("actor_parameterization","softmax") =="linear":
+      #domain_logits.assign(domain_logits - tf.reduce_min(domain_logits))
+      domain_logits.assign(tf.clip_by_value(domain_logits, clip_value_min=0.0, clip_value_max=10.0))
+      domain_logits.assign(domain_logits/tf.reduce_sum(domain_logits))
     grad_domain_logits_accum.assign(tf.zeros_like(domain_logits))
 
   def update_sampling_distribution(logits):
