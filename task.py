@@ -13309,7 +13309,7 @@ def debug_L2W_v2(config,
   for _ in range(10):
     for i in range(len(domain)):
       src, tgt = next(dev_iterators[i])
-      print("src: ", src)
+      print(src["length"].values)
 
 
 
