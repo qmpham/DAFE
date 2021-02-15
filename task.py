@@ -11571,7 +11571,7 @@ def train_L2W_v2(config,
               batch_type="examples",
               domain=d,
               single_pass=False,
-              shuffle_buffer_size=None,
+              shuffle_buffer_size=shuffle_buffer_size,
               length_bucket_width=config.get("length_bucket_width",1),  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=None,
               maximum_labels_length=None)
