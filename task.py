@@ -13294,7 +13294,7 @@ def debug_L2W_v2(config,
               batch_size=25,
               batch_type="examples",
               domain=d,
-              single_pass=False,
+              single_pass=True,
               shuffle_buffer_size=None,
               length_bucket_width=config.get("length_bucket_width",1),  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=None,
