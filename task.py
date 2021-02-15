@@ -13311,7 +13311,7 @@ def debug_L2W_v2(config,
     for i in range(len(domain)):
       src, tgt = next(dev_iterators[i])
       print(src["length"].values)
-      sent_nums[i] += sum(src["length"].values)
+      sent_nums[i] += sum([len(lengths.numpy()) for lengths in src["length"].values])
   print("sent_nums: ",sent_nums)
 
 
