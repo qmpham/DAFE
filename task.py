@@ -13196,13 +13196,120 @@ def debug_L2W_v1(config,
   print(np.mean(reward_acc,axis=2))
   print(np.sum(np.mean(reward_acc,axis=2), axis=1))
 
+def debug_L2W_v2(config,
+          optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          adapter_optimizer=None,
+          checkpoint_path=None,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
+  redistribute_every = config.get("redistribute_every",2000)
+  if config.get("use_meta_optimizer",False):
+    inner_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr",0.001))
+  else:
+    inner_optimizer = optimizer
+  #####
+  if checkpoint_path is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+    checkpoint.restore(checkpoint_path)
+  else:
+    if checkpoint_manager.latest_checkpoint is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+      checkpoint.restore(checkpoint_manager.latest_checkpoint)    
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  #####
+  batch_train_size = config["batch_train_size"]  
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config.get("domain",None)
+  eval_domain = config.get("eval_domain")
+  ###### early stopping criterion
+  current_max_eval_bleu = 0.0
+  descending_streak = 0
+  ######
+  if not config.get("domain_importances",None):
+    domain_importances = [1.0/len(eval_domain)]*len(eval_domain)
+  else:
+    domain_importances = config.get("domain_importances")
+  print("There are %d in-domain corpora"%len(source_file))
+  ###############
+  print("cosine_reward: ",config.get("cosine_reward",True))
+  ###############
+  # train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+  #                                           maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+  #                                           multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
 
+  print("maximum_length", maximum_length)
+  train_datasets_p = [] 
+  datasets_size = [count_lines(src) for src in source_file]
+  picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+  if config.get("picking_prob",None):
+    picking_prob = config.get("picking_prob",None)
+  print("initial domain picking probability: ", picking_prob)
+  for i,src,tgt in zip(domain, source_file, target_file):
+    train_datasets_p.append(model.examples_inputter.make_training_dataset(src, tgt,
+            batch_size=batch_train_size,
+            batch_type=batch_type,
+            domain=i,
+            single_pass=False,
+            shuffle_buffer_size=shuffle_buffer_size,
+            length_bucket_width=1,  # Bucketize sequences by the same length for efficiency.
+            maximum_features_length=maximum_length,
+            maximum_labels_length=maximum_length))
+  train_dataset = tf.data.experimental.sample_from_datasets(train_datasets_p, weights=picking_prob)
+  with strategy.scope():
+    base_dataset = train_dataset
+    train_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)  
+  #############
+  train_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
+                                            for domain, source_file, target_file in zip(config.get("domain"), config.get("src"), config.get("tgt"))]
 
+  # dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
+  #                                           maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+  #                                           multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
+  #                                           for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref"))]
+  dev_datasets = []
+  for d, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref")):
+    dev_dataset = model.examples_inputter.make_training_dataset(source_file, target_file,
+              batch_size=25,
+              batch_type="examples",
+              domain=d,
+              single_pass=False,
+              shuffle_buffer_size=None,
+              length_bucket_width=config.get("length_bucket_width",1),  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=None,
+              maximum_labels_length=None)
+    with strategy.scope():
+      base_dataset_ = dev_dataset
+      dev_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset_)
+    dev_datasets.append(dev_dataset)
 
-
-
-
-
+  dev_iterators = [iter(dev_dataset) for dev_dataset in dev_datasets]
+  for _ in range(10):
+    for i in range(len(domain)):
+      src, tgt = next(dev_iterators[i])
+      print("src: ", src)
 
 
 
