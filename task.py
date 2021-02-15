@@ -11730,13 +11730,6 @@ def train_L2W_v2(config,
     return loss, num_examples
   
   @tf.function
-  def _sampler_flow():
-    with strategy.scope():
-      per_replica_loss = strategy.experimental_run_v2(_sampler_loss)
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-    return loss
-
-  @tf.function
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
