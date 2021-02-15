@@ -13306,11 +13306,13 @@ def debug_L2W_v2(config,
     dev_datasets.append(dev_dataset)
 
   dev_iterators = [iter(dev_dataset) for dev_dataset in dev_datasets]
+  sent_nums = [0.0] * len(domain)
   for _ in range(10):
     for i in range(len(domain)):
       src, tgt = next(dev_iterators[i])
       print(src["length"].values)
-
+      sent_nums[i] += sum(src["length"].values)
+  print("sent_nums: ",sent_nums)
 
 
 
