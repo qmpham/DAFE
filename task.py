@@ -11926,6 +11926,14 @@ def train_L2W_v2(config,
         elif config.get("actor_parameterization","softmax") =="linear":
           current_probs = domain_logits.numpy()
         print("current_probs: ", current_probs)
+        ####### Prepare dev batch
+        dev_batches = []
+        for j, dev_iter in enumerate(dev_iterators):
+          dev_batches_domain_i = []
+          for _ in range(config.get("dev_batch_per_run_num",10)):
+            src, tgt = next(dev_iter)
+            dev_batches_domain_i.append((src,tgt))
+          dev_batches.append(dev_batches_domain_i)
         #######        
         for i, train_iter in enumerate(train_iterators):
           _reward = 0.0
@@ -11945,8 +11953,7 @@ def train_L2W_v2(config,
               _dev_norm = 0.0
               _tr_norm = 0.0
               #count = 0
-              for _ in range(config.get("dev_batch_per_run_num",10)):
-                src, tgt = next(dev_iter)
+              for src, tgt in dev_batches[j]:
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
