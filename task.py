@@ -11982,6 +11982,8 @@ def train_L2W_v2(config,
           weight_reset(snapshots)
           optimizer.iterations.assign(saved_step)
         domain_rewards.assign(tf.constant(rewards))
+        if not config.get("cosine_reward",True):
+          domain_rewards.assign(tf.clip_by_value(domain_rewards, clip_value_min=-1.0, clip_value_max=1.0))
         # compute new domain distribution
         print("domain rewards", domain_rewards)
         for _ in range(config.get("domain_sampler_optim_step", 30)):
