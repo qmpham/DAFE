@@ -13444,7 +13444,7 @@ def debug_L2W_v3(config,
         training=True,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, target, training=True)
-    _domain = source["domain"][0]
+    _domain = tf.reduce_sum(source["domain"])
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
@@ -13457,7 +13457,7 @@ def debug_L2W_v3(config,
       print(var.name) """
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
-    num_examples = tf.reduce_sum(target["length"])
+    num_examples = tf.shape(source["domain"])[0] #tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples, _domain
 
@@ -13522,7 +13522,7 @@ def debug_L2W_v3(config,
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-      _domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)
+      _domain = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_domain, None)
     return loss, num_examples, _domain
   
   @tf.function
@@ -13560,7 +13560,7 @@ def debug_L2W_v3(config,
   train_data_flow = iter(_train_forward())
   dev_iterators = [iter(dev_dataset) for dev_dataset in dev_datasets]
   train_iterators = [iter(train_dataset) for train_dataset in train_datasets]
- 
+  
   _, _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
@@ -13591,8 +13591,11 @@ def debug_L2W_v3(config,
       _loss.append(loss.numpy())
       _number_examples.append(num_examples.numpy())
       _step()  
+      if _domain % num_examples == 0:
+        print("non homogeneous")
+        break
       step = optimizer.iterations.numpy()
-      domain_counts[int(_domain)] += 1.0
+      domain_counts[int(_domain/num_examples)] += 1.0
       if step % report_every == 0:
         print("domain count: ", domain_counts)
         print("domain count in percentage: ",[d/sum(domain_counts) for d in domain_counts])
