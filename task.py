@@ -13579,13 +13579,14 @@ def debug_L2W_v3(config,
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
   domain_counts = [0.0] * len(domain)
+  step = 0
   with _summary_writer.as_default():
     while True:
       ####Training batch
       loss, num_examples, _domain = next(train_data_flow)    
       _loss.append(loss.numpy())
-      _number_examples.append(num_examples.numpy())
-      _step()  
+      _number_examples.append(num_examples.numpy()) 
+      step +=1
       for v in _domain.values:
         domain_counts[int(v.numpy())] +=1
       if step % report_every == 0:
