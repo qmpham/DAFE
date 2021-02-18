@@ -11536,6 +11536,9 @@ def train_L2W_v2(config,
   train_datasets_p = [] 
   datasets_size = [count_lines(src) for src in source_file]
   picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+  temperature=config.get("temperature",1.0)
+  picking_prob = [w ** temperature for w in picking_prob]
+  picking_prob = [w/sum(picking_prob) for w in picking_prob]
   if config.get("picking_prob",None):
     picking_prob = config.get("picking_prob",None)
   print("initial domain picking probability: ", picking_prob)
