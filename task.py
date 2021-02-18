@@ -13586,12 +13586,12 @@ def debug_L2W_v3(config,
       _loss.append(loss.numpy())
       _number_examples.append(num_examples.numpy())
       _step()  
-      print(_domain.values)
-      # domain_counts[int(_domain/num_examples)] += 1.0
-      # if step % report_every == 0:
-      #   print("domain count: ", domain_counts)
-      #   print("domain count in percentage: ",[d/sum(domain_counts) for d in domain_counts])
-      #   domain_counts = [0.0] * len(domain)
+      for v in _domain.values:
+        domain_counts[int(v.numpy())] +=1
+      if step % report_every == 0:
+        print("domain count: ", domain_counts)
+        print("domain count in percentage: ",[d/sum(domain_counts) for d in domain_counts])
+        domain_counts = [0.0] * len(domain)
 
 def train_IW_v0(config,
           optimizer,          
