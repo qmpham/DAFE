@@ -11953,7 +11953,7 @@ def train_L2W_v2(config,
             # TODO: these reductions could be delayed until _step is called.
             loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
             num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-            _domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)
+            _domain = per_replica_domain #strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)
           return loss, num_examples, _domain
         train_data_flow = iter(_train_forward())
         #######
