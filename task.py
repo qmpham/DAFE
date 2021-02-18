@@ -11769,7 +11769,7 @@ def train_L2W_v2(config,
   dev_iterators = [iter(dev_dataset) for dev_dataset in dev_datasets]
   train_iterators = [iter(train_dataset) for train_dataset in train_datasets]
  
-  _, _ = next(train_data_flow)
+  _, _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
