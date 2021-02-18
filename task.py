@@ -11842,7 +11842,7 @@ def train_L2W_v2(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-  domain_counts = [0.0] * len(domain)
+  
   with _summary_writer.as_default():
     while True:
       ####Training batch
@@ -11851,7 +11851,7 @@ def train_L2W_v2(config,
       _number_examples.append(num_examples.numpy())
       _step()  
       step = optimizer.iterations.numpy()
-      domain_counts[int(_domain)] += 1.0
+      
       if step % redistribute_every == 0 and step > config.get("warm_start",5000):
         # compute domain rewards
         rewards = [0.0] * len(domain)
@@ -11959,9 +11959,7 @@ def train_L2W_v2(config,
         #######
         weight_reset(snapshots)
         optimizer.iterations.assign(saved_step)
-        print("domain count: ", domain_counts)
-        print("domain count in percentage: ",[d/sum(domain_counts) for d in domain_counts])
-        domain_counts = [0.0] * len(domain)
+        
         #######
 
       if step % report_every == 0:
