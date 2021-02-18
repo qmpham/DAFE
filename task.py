@@ -13442,7 +13442,7 @@ def debug_L2W_v3(config,
         training=True,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, target, training=True)
-    _domain = tf.reduce_sum(source["domain"])
+    _domain = source["domain"][0]
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
@@ -13450,14 +13450,10 @@ def debug_L2W_v3(config,
       training_loss, reported_loss = loss, loss
     
     variables = model.trainable_variables
-    #print("var numb: ", len(variables))
-    """ for var in variables:
-      print(var.name) """
-    tf.print(source["domain"])
+    
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
-    num_examples = tf.shape(source["domain"])[0] #tf.reduce_sum(target["length"])
-    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
+    num_examples = tf.reduce_sum(target["length"])
     return reported_loss, num_examples, _domain
 
   def _accumulate_dev_train_gradients(source, target):
@@ -13521,7 +13517,7 @@ def debug_L2W_v3(config,
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-      _domain = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_domain, None)
+      _domain = per_replica_domain#strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_domain, None)
     return loss, num_examples, _domain
   
   @tf.function
@@ -13590,15 +13586,12 @@ def debug_L2W_v3(config,
       _loss.append(loss.numpy())
       _number_examples.append(num_examples.numpy())
       _step()  
-      if _domain % num_examples == 0:
-        print("non homogeneous")
-        break
-      step = optimizer.iterations.numpy()
-      domain_counts[int(_domain/num_examples)] += 1.0
-      if step % report_every == 0:
-        print("domain count: ", domain_counts)
-        print("domain count in percentage: ",[d/sum(domain_counts) for d in domain_counts])
-        domain_counts = [0.0] * len(domain)
+      print("_domain")
+      # domain_counts[int(_domain/num_examples)] += 1.0
+      # if step % report_every == 0:
+      #   print("domain count: ", domain_counts)
+      #   print("domain count in percentage: ",[d/sum(domain_counts) for d in domain_counts])
+      #   domain_counts = [0.0] * len(domain)
 
 def train_IW_v0(config,
           optimizer,          
