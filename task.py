@@ -13455,6 +13455,7 @@ def debug_L2W_v3(config,
     #print("var numb: ", len(variables))
     """ for var in variables:
       print(var.name) """
+    tf.print(source["domain"])
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.shape(source["domain"])[0] #tf.reduce_sum(target["length"])
