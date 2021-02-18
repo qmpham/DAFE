@@ -11652,7 +11652,7 @@ def train_L2W_v2(config,
         training=True,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, target, training=True)
-    domain = source["domain"][0]
+    _domain = source["domain"][0]
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
@@ -11667,7 +11667,7 @@ def train_L2W_v2(config,
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples
+    return reported_loss, num_examples, _domain
 
   def _accumulate_dev_train_gradients(source, target):
     with tf.GradientTape() as tape:
@@ -11725,12 +11725,13 @@ def train_L2W_v2(config,
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_num_examples, per_replica_domain = strategy.experimental_run_v2(
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, num_examples
+      _domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)
+    return loss, num_examples, _domain
   
   @tf.function
   def _step():
@@ -11841,16 +11842,16 @@ def train_L2W_v2(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-  
+  domain_counts = [0.0] * len(domain)
   with _summary_writer.as_default():
     while True:
       ####Training batch
-      loss, num_examples = next(train_data_flow)    
+      loss, num_examples, _domain = next(train_data_flow)    
       _loss.append(loss.numpy())
       _number_examples.append(num_examples.numpy())
       _step()  
       step = optimizer.iterations.numpy()
-      
+      domain_counts[int(_domain)] += 1.0
       if step % redistribute_every == 0 and step > config.get("warm_start",5000):
         # compute domain rewards
         rewards = [0.0] * len(domain)
@@ -11957,6 +11958,8 @@ def train_L2W_v2(config,
         #######
         weight_reset(snapshots)
         optimizer.iterations.assign(saved_step)
+        print("domain count in percentage: ",[d/sum(domain_counts) for d in domain_counts])
+        domain_counts = [0.0] * len(domain)
         #######
 
       if step % report_every == 0:
