@@ -13586,7 +13586,7 @@ def debug_L2W_v3(config,
       _loss.append(loss.numpy())
       _number_examples.append(num_examples.numpy())
       _step()  
-      print(_domain)
+      print(_domain.values)
       # domain_counts[int(_domain/num_examples)] += 1.0
       # if step % report_every == 0:
       #   print("domain count: ", domain_counts)
