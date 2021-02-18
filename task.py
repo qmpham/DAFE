@@ -13589,7 +13589,7 @@ def debug_L2W_v3(config,
       step +=1
       for v in _domain.values:
         domain_counts[int(v.numpy())] +=1
-      if step % report_every == 0:
+      if step % redistribute_every == 0:
         print("domain count: ", domain_counts)
         print("domain count in percentage: ",[d/sum(domain_counts) for d in domain_counts])
         domain_counts = [0.0] * len(domain)
