@@ -11660,9 +11660,7 @@ def train_L2W_v2(config,
       training_loss, reported_loss = loss, loss
     
     variables = model.trainable_variables
-    #print("var numb: ", len(variables))
-    """ for var in variables:
-      print(var.name) """
+    
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
@@ -11730,7 +11728,7 @@ def train_L2W_v2(config,
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-      _domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)
+      _domain = per_replica_domain
     return loss, num_examples, _domain
   
   @tf.function
@@ -11842,7 +11840,7 @@ def train_L2W_v2(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-  
+  domain_counts = [0.0] * len(domain)
   with _summary_writer.as_default():
     while True:
       ####Training batch
@@ -11851,7 +11849,9 @@ def train_L2W_v2(config,
       _number_examples.append(num_examples.numpy())
       _step()  
       step = optimizer.iterations.numpy()
-      
+      for v in _domain.values:
+        domain_counts[int(v.numpy())] +=1
+
       if step % redistribute_every == 0 and step > config.get("warm_start",5000):
         # compute domain rewards
         rewards = [0.0] * len(domain)
@@ -11959,7 +11959,9 @@ def train_L2W_v2(config,
         #######
         weight_reset(snapshots)
         optimizer.iterations.assign(saved_step)
-        
+        #print("previous domain count: ", domain_counts)
+        print("previous domain count in percentage: ",[d/sum(domain_counts) for d in domain_counts])
+        domain_counts = [0.0] * len(domain)
         #######
 
       if step % report_every == 0:
