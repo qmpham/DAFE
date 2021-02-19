@@ -11814,12 +11814,13 @@ def train_L2W_v2(config,
     def _train_forward(next_fn):    
       with strategy.scope():
         per_replica_source, per_replica_target = next_fn()
-        per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+        per_replica_loss, per_replica_num_examples, per_replica_domain = strategy.experimental_run_v2(
             _accumulate_gradients, args=(per_replica_source, per_replica_target))
         # TODO: these reductions could be delayed until _step is called.
         loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
         num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-      return loss, num_examples
+        _domain = per_replica_domain
+      return loss, num_examples, _domain
     train_data_flow = iter(_train_forward())
 
   if config.get("continual_learning", False):
