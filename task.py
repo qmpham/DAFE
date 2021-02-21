@@ -13902,7 +13902,7 @@ def train_IW_v0(config,
       probs = domain_logits
     new_picking_prob = update_sampling_distribution(probs)
     domain_weights.assign(new_picking_prob)
-
+    print("domain_weights: ", domain_weights)
   if config.get("continual_learning", False):
     print("Continual Learning needs to load from old model")
     assert config.get("checkpoint_path") != None
