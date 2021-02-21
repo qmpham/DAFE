@@ -14016,6 +14016,7 @@ def train_IW_v0(config,
         new_picking_prob = update_sampling_distribution(probs)
         tf.summary.experimental.set_step(saved_step)
         domain_weights.assign(new_picking_prob)
+        print("domain_weights: ", domain_weights)
         for i in range(len(domain)):
           tf.summary.scalar("reward_%d"%i, rewards[i], description="reward of using training set %d"%(i))
           tf.summary.scalar("domain_prob_%d"%i, new_picking_prob[i], description="probability of using training set %d"%(i))
