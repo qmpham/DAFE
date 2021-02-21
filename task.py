@@ -13774,7 +13774,7 @@ def train_IW_v0(config,
       training_loss, reported_loss = loss, loss
     
     variables = model.trainable_variables
-    tf.cond(tf.math.equal(tf.math.floormod(optimizer.iterations,redistribute_every),0), lambda: tf.print("domain_weights:",domain_weights), lambda: _)
+    #tf.cond(tf.math.equal(tf.math.floormod(optimizer.iterations,redistribute_every),0), lambda: tf.print("domain_weights:",domain_weights), lambda: _)
     gradients = optimizer.get_gradients(training_loss*domain_weights[_domain], variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
