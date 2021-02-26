@@ -12872,9 +12872,10 @@ def train_L2W_v3(config,
                                             for domain, source_file, target_file in zip(config.get("domain"), config.get("src"), config.get("tgt"))]
 
   dev_datasets = []
+  batch_hessian_size = config.get("batch_hessian_size",32)
   for d, _source_file, _target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref")):
     dev_dataset = model.examples_inputter.make_training_dataset(_source_file, _target_file,
-              batch_size=32,
+              batch_size=batch_hessian_size,
               batch_type="examples",
               domain=d,
               single_pass=False,
