@@ -13171,7 +13171,11 @@ def train_L2W_v3(config,
       _number_examples.append(num_examples.numpy())
       _step()  
       step = optimizer.iterations.numpy()
-      for v in _domain.values:
+      if strategy.num_replicas_in_sync > 1:
+        for v in _domain.values:
+          domain_counts[int(v.numpy())] +=1
+      else:
+        v = _domain
         domain_counts[int(v.numpy())] +=1
 
       if step % redistribute_every == 0 and step > config.get("warm_start",5000):
