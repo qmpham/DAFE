@@ -13002,7 +13002,7 @@ def train_L2W_v3(config,
     _dom = source["domain"][0]
     loss = model.compute_individual_loss(outputs, target, training=True)
     def hessian_accum_along_loss(diag_hessian_acc, x):
-      gradients = tape.gradient(x,variables)
+      gradients = optimizer.get_gradients(x,variables) #tape.gradient(x,variables)
       _hessians = []
       for grad in gradients:
         _hessians.append(tf.square(grad))
