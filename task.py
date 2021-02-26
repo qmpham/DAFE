@@ -12989,26 +12989,26 @@ def train_L2W_v3(config,
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
       return training_loss
-  
+  @tf.function
   def _accumulate_diag_hessians(source,target): 
-    with tf.GradientTape(persistent=True) as tape:  
-      variables = model.trainable_variables
-      tape.watch(variables)
-      outputs, _ = model(
-          source,
-          labels=target,
-          training=True,
-          step=optimizer.iterations)
-      _dom = source["domain"][0]
-      loss = model.compute_individual_loss(outputs, target, training=True)
-      def hessian_accum_along_loss(diag_hessian_acc, x):
-        gradients = tape.gradient(x,variables)
-        _hessians = []
-        for grad in gradients:
-          _hessians.append(tf.square(grad))
-        hessian_accumulators(_hessians)
-        return diag_hessian_acc
-      tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
+    #with tf.GradientTape(persistent=True) as tape:  
+    variables = model.trainable_variables
+    #tape.watch(variables)
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    _dom = source["domain"][0]
+    loss = model.compute_individual_loss(outputs, target, training=True)
+    def hessian_accum_along_loss(diag_hessian_acc, x):
+      gradients = tape.gradient(x,variables)
+      _hessians = []
+      for grad in gradients:
+        _hessians.append(tf.square(grad))
+      hessian_accumulators(_hessians)
+      return diag_hessian_acc
+    tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
 
   def _reset_dev_train_gradients():
     dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
