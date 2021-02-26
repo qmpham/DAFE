@@ -12962,110 +12962,6 @@ def train_NGD_L2W_v2(config,
         hessian_accumulators(_hessians)
         return diag_hessian_acc
       tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
-  def _accumulate_NGD_gradients(source, target):
-    outputs, _ = model(
-        source,
-        labels=target,
-        training=True,
-        step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
-
-    if isinstance(loss, tuple):
-      training_loss = loss[0] / loss[1]
-      reported_loss = loss[0] / loss[2]
-    else:
-      training_loss, reported_loss = loss, loss
-    if config.get("ADAP_activity_regularizing",False):
-      layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
-      output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
-      d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
-      d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
-      d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
-      
-      if isinstance(layer_activity_regularization_loss_scale, list):
-        domain = source["domain"][0]
-        layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
-        layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
-        #tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
-      if isinstance(output_activity_regularization_loss_scale, list):
-        domain = source["domain"][0]
-        output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
-        output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
-      regularization_losses = model.losses
-      # print("model_name_scope", model.name_scope())
-      # print(regularization_losses)
-      layer_activity_regularization_losses = []
-      output_activity_regularization_losses = []
-      d_classification_gate_losses = []
-      d_classifier_activity_regularization_losses = []
-      d_classifier_weight_regularization_losses = []
-      for loss_ in regularization_losses:
-        if "multi_adap__dense" in loss_.name:
-          output_activity_regularization_losses.append(loss_)
-        elif "ADAP_gate" in loss_.name: #and "ActivityRegularizer" not in loss_.name and "Regularizer" not in loss_.name
-          if "ActivityRegularizer" in loss_.name:
-            d_classifier_activity_regularization_losses.append(loss_)
-          elif "Regularizer" in loss_.name:
-            d_classifier_weight_regularization_losses.append(loss_)
-          else:
-            d_classification_gate_losses.append(loss_)
-        elif "ADAP_" in loss_.name:
-          layer_activity_regularization_losses.append(loss_)
-
-      if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
-        training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
-
-      if len(output_activity_regularization_losses)>0 and output_activity_regularization_loss_scale>0:
-        training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
-
-      if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
-        training_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses) 
-
-      if len(d_classifier_activity_regularization_losses)>0 and d_classifier_activity_regularization_loss_scale>0:
-        training_loss += d_classifier_activity_regularization_loss_scale * tf.add_n(d_classifier_activity_regularization_losses)
-
-      if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
-        training_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)
-    variables = model.trainable_variables
-    print("var numb: ", len(variables))
-    #for var in variables:
-    #  print(var.name)
-    gradients = optimizer.get_gradients(training_loss, variables)
-    new_gradients = []
-    rescale_sum.assign(0.0)
-    for gradient, hessian_moving_stat, var in zip(gradients, normalized_hessian_moving_stats, variables):
-      if isinstance(gradient,tf.IndexedSlices):
-        if "embedding" in var.name:
-          rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat, gradient.indices) + epsilon)))
-        else:
-          rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient.values)/ epsilon))
-        #tf.print("hessian %s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices), "indices: ", gradient.indices, sep="|")
-        #tf.print("hessian_stat: ", hessian_moving_stat.value())
-        #continue
-      else:
-        rescale_sum.assign_add(tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat + epsilon)))
-        #tf.print("hessian %s: "%var.name, hessian_moving_stat.value())
-    #tf.print("rescale_sum: ", rescale_sum)
-    for gradient, hessian_moving_stat, var in zip(gradients, normalized_hessian_moving_stats, variables):
-      if isinstance(gradient,tf.IndexedSlices):
-        # new_gradients.append(gradient)
-        # new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon) 
-        # * 1 / tf.sqrt(tf.reduce_sum(tf.square(gradient.values)/ (tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices) + epsilon))), 
-        # gradient.indices, dense_shape=gradient.dense_shape))
-        if "embedding" in var.name:
-          new_gradients.append(tf.IndexedSlices(gradient.values / (tf.nn.embedding_lookup(hessian_moving_stat, gradient.indices) + epsilon) 
-         * 1 / tf.sqrt(rescale_sum.value()), 
-         gradient.indices, dense_shape=gradient.dense_shape))
-        else:
-          new_gradients.append(tf.IndexedSlices(gradient.values / epsilon * 1 / tf.sqrt(rescale_sum.value()), 
-         gradient.indices, dense_shape=gradient.dense_shape))
-        # tf.print("hessian_%s: "%var.name, tf.nn.embedding_lookup(hessian_moving_stat.value(), gradient.indices))
-      else:
-        # new_gradients.append(gradient / (hessian_moving_stat.value() +epsilon) * 1 / tf.sqrt(tf.reduce_sum(tf.square(gradient) / (hessian_moving_stat.value()+epsilon))))
-        new_gradients.append(gradient / (hessian_moving_stat + epsilon) * 1 / tf.sqrt(rescale_sum.value()))
-    gradient_accumulator(new_gradients)
-    num_examples = tf.reduce_sum(target["length"])
-    return reported_loss, num_examples
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
@@ -13221,16 +13117,6 @@ def train_NGD_L2W_v2(config,
     
   #########
   @dataset_util.function_on_next(train_dataset)
-  def _NGD_train_forward(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-          _accumulate_NGD_gradients, args=(per_replica_source, per_replica_target))
-      # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, num_examples
-  @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
@@ -13259,8 +13145,6 @@ def train_NGD_L2W_v2(config,
   # Runs the training loop.
   import time
   start = time.time()  
-  NGD_train_data_flow = iter(_NGD_train_forward())
-  _hessian_accumulator_flow = iter(_hessian_acc_forward())
   train_data_flow = iter(_train_forward())
   dev_iterators = [iter(dev_dataset) for dev_dataset in dev_datasets]
   train_iterators = [iter(train_dataset) for train_dataset in train_datasets]
@@ -13280,11 +13164,6 @@ def train_NGD_L2W_v2(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-  if step >= config.get("NGD_warm_start",0):
-    for i in range(hessian_accum_step):
-      next(_hessian_accumulator_flow)
-    _hessian_stats_update_step()
-    print("normalized_hessian_moving_stats: [3]", normalized_hessian_moving_stats[3].numpy())
   if step <= 1:
     initializer = config.get("initializer","default")
     if initializer == "default":
@@ -13325,18 +13204,10 @@ def train_NGD_L2W_v2(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      if step % hessian_update_every == 0 and step >= config.get("NGD_warm_start",0):
-        for i in range(hessian_accum_step):
-          next(_hessian_accumulator_flow)
-        _hessian_stats_update_step()
-      if step >= config.get("NGD_warm_start",0):
-        loss, num_examples = next(NGD_train_data_flow)    
-        _loss.append(loss)
-        _number_examples.append(num_examples)
-      else:
-        loss, num_examples = next(train_data_flow)    
-        _loss.append(loss)
-        _number_examples.append(num_examples)
+      
+      loss, num_examples = next(train_data_flow)    
+      _loss.append(loss)
+      _number_examples.append(num_examples)
       _step()  
       step = optimizer.iterations.numpy()
       
@@ -13376,14 +13247,22 @@ def train_NGD_L2W_v2(config,
               _tr_norm = 0.0
               for _ in range(config.get("dev_batch_per_run_num",10)):
                 src, tgt = next(dev_iter)
+                strategy.experimental_run_v2(_accumulate_diag_hessians,args=(src,tgt))
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
-              strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
-              for dev_grad, tr_grad, var in zip(dev_gradient_accumulator.gradients, train_gradient_accumulator.gradients, model.trainable_variables):
-                if True:#"ADAP_" not in var.name:
-                  _sum += tf.reduce_sum(dev_grad * tr_grad)
-                  _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-                  _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+              strategy.experimental_run_v2(sub_gradient_accumulator.reset) 
+              strategy.experimental_run_v2(hessian_accumulators.reset)
+              for hessian_moving_stat in hessian_accumulators.hessians:
+                hessian_moving_stat.assign(hessian_moving_stat/tf.reduce_sum(hessian_moving_stat))
+              for dev_grad, tr_grad, var, hessian_moving_stat in zip(dev_gradient_accumulator.gradients, train_gradient_accumulator.gradients, model.trainable_variables, hessian_accumulators.hessians):
+                if isinstance(dev_grad,tf.IndexedSlices):
+                  dev_grad = tf.IndexedSlices(dev_grad.values / (tf.nn.embedding_lookup(hessian_moving_stat, dev_grad.indices) + epsilon), 
+                                              dev_grad.indices, dense_shape=dev_grad.dense_shape)
+                else:
+                  dev_grad = dev_grad / (hessian_moving_stat + epsilon)
+                _sum += tf.reduce_sum(dev_grad * tr_grad)
+                _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
               if config.get("cosine_reward",True):
                 _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
               else:
@@ -13421,30 +13300,18 @@ def train_NGD_L2W_v2(config,
           base_dataset = train_dataset
           train_dataset = strategy.experimental_distribute_datasets_from_function(
                 lambda _: base_dataset)
-        if step < config.get("NGD_warm_start",0):
-          @dataset_util.function_on_next(train_dataset)
-          def _train_forward(next_fn):    
-            with strategy.scope():
-              per_replica_source, per_replica_target = next_fn()
-              per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-                  _accumulate_gradients, args=(per_replica_source, per_replica_target))
-              # TODO: these reductions could be delayed until _step is called.
-              loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-              num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-            return loss, num_examples
-          train_data_flow = iter(_train_forward())
-        else:
-          @dataset_util.function_on_next(train_dataset)
-          def _NGD_train_forward(next_fn):    
-            with strategy.scope():
-              per_replica_source, per_replica_target = next_fn()
-              per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-                  _accumulate_NGD_gradients, args=(per_replica_source, per_replica_target))
-              # TODO: these reductions could be delayed until _step is called.
-              loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-              num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-            return loss, num_examples
-          NGD_train_data_flow = iter(_NGD_train_forward())
+        @dataset_util.function_on_next(train_dataset)
+        def _train_forward(next_fn):    
+          with strategy.scope():
+            per_replica_source, per_replica_target = next_fn()
+            per_replica_loss, per_replica_num_examples, per_replica_domain = strategy.experimental_run_v2(
+                _accumulate_gradients, args=(per_replica_source, per_replica_target))
+            # TODO: these reductions could be delayed until _step is called.
+            loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+            num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+            _domain = per_replica_domain #strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)
+          return loss, num_examples, _domain
+        train_data_flow = iter(_train_forward())
         #######
         weight_reset(snapshots)
         optimizer.iterations.assign(saved_step)
@@ -13478,7 +13345,6 @@ def train_NGD_L2W_v2(config,
         break
       if step > train_steps:
         break
-
 
 def debug_L2W_v1(config,
           optimizer,          
