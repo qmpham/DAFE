@@ -13251,8 +13251,8 @@ def train_L2W_v3(config,
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset) 
               strategy.experimental_run_v2(hessian_accumulators.reset)
-              for hessian_moving_stat in hessian_accumulators.hessians:
-                hessian_moving_stat = hessian_moving_stat/tf.reduce_sum(hessian_moving_stat)
+              # for hessian_moving_stat in hessian_accumulators.hessians:
+              #   hessian_moving_stat = hessian_moving_stat/tf.reduce_sum(hessian_moving_stat)
               for dev_grad, tr_grad, var, hessian_moving_stat in zip(dev_gradient_accumulator.gradients, train_gradient_accumulator.gradients, model.trainable_variables, hessian_accumulators.hessians):
                 if isinstance(dev_grad,tf.IndexedSlices):
                   dev_grad = tf.IndexedSlices(dev_grad.values / (tf.nn.embedding_lookup(hessian_moving_stat, dev_grad.indices) + epsilon), 
