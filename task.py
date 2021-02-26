@@ -12784,7 +12784,7 @@ def train_NGD_L2W_v1(config,
       if step > train_steps:
         break
 
-def train_NGD_L2W_v2(config,
+def train_L2W_v3(config,
           optimizer,          
           learning_rate,
           model,  
@@ -13203,8 +13203,7 @@ def train_NGD_L2W_v2(config,
     train_data_flow = iter(_train_forward())
   with _summary_writer.as_default():
     while True:
-      #####Training batch
-      
+      #####Training batch      
       loss, num_examples = next(train_data_flow)    
       _loss.append(loss)
       _number_examples.append(num_examples)
@@ -13247,7 +13246,7 @@ def train_NGD_L2W_v2(config,
               _tr_norm = 0.0
               for _ in range(config.get("dev_batch_per_run_num",10)):
                 src, tgt = next(dev_iter)
-                strategy.experimental_run_v2(_accumulate_diag_hessians,args=(src,tgt))
+                strategy.experimental_run_v2(_accumulate_diag_hessians, args=(src,tgt))
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset) 
