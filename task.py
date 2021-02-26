@@ -12791,6 +12791,7 @@ def train_L2W_v3(config,
           strategy,  
           checkpoint_manager,
           checkpoint,
+          adapter_optimizer=None,
           checkpoint_path=None,
           maximum_length=80,
           batch_size = 2048,
@@ -12805,28 +12806,23 @@ def train_L2W_v3(config,
     train_steps = config.get("train_steps")
   if config.get("batch_type",None)!=None:
     batch_type = config.get("batch_type")
-  if config.get("report_every",None)!=None:
-    report_every = config.get("report_every")
-  hessian_update_every = config.get("hessian_update_every",100)
   redistribute_every = config.get("redistribute_every",2000)
-  #####
-  if checkpoint_manager.latest_checkpoint is not None:
-    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  if config.get("use_meta_optimizer",False):
+    inner_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr",0.001))
   else:
-    if checkpoint_path is not None:
-      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
-      checkpoint.restore(checkpoint_path)
+    inner_optimizer = optimizer
+  #####
+  if checkpoint_path is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+    checkpoint.restore(checkpoint_path)
+  else:
+    if checkpoint_manager.latest_checkpoint is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+      checkpoint.restore(checkpoint_manager.latest_checkpoint)    
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
   batch_train_size = config["batch_train_size"]  
-  batch_hessian_size = config.get("batch_hessian_size",10)
-  print("batch_hessian_size: ", batch_hessian_size, "examples")
-  print("batch_train_size: ", batch_train_size, batch_type)
-  hessian_accum_step = config.get("hessian_accum_step",1)
-  step = optimizer.iterations.numpy()
-  print("current learning rate: ", learning_rate(step))
   batch_type = batch_type
   source_file = config["src"]
   target_file = config["tgt"]
@@ -12842,10 +12838,15 @@ def train_L2W_v3(config,
     domain_importances = config.get("domain_importances")
   print("There are %d in-domain corpora"%len(source_file))
   ###############
+  print("cosine_reward: ",config.get("cosine_reward",True))
+  ###############
   print("maximum_length", maximum_length)
   train_datasets_p = [] 
   datasets_size = [count_lines(src) for src in source_file]
   picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
+  temperature=config.get("temperature",1.0)
+  picking_prob = [w ** temperature for w in picking_prob]
+  picking_prob = [w/sum(picking_prob) for w in picking_prob]
   if config.get("picking_prob",None):
     picking_prob = config.get("picking_prob",None)
   print("initial domain picking probability: ", picking_prob)
@@ -12871,8 +12872,8 @@ def train_L2W_v3(config,
                                             for domain, source_file, target_file in zip(config.get("domain"), config.get("src"), config.get("tgt"))]
 
   dev_datasets = []
-  for d, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref")):
-    dev_dataset = model.examples_inputter.make_training_dataset(source_file, target_file,
+  for d, _source_file, _target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref")):
+    dev_dataset = model.examples_inputter.make_training_dataset(_source_file, _target_file,
               batch_size=32,
               batch_type="examples",
               domain=d,
@@ -12885,58 +12886,54 @@ def train_L2W_v3(config,
       base_dataset_ = dev_dataset
       dev_dataset = strategy.experimental_distribute_datasets_from_function(
           lambda _: base_dataset_)
-    dev_datasets.append(dev_dataset)  
+    dev_datasets.append(dev_dataset)
   #############
-  
-  ### update factore of diag hessians
-  alpha = config.get("hessian_moving_rate",0.1)
-  epsilon = config.get("posterior_weight",1e-8)
-  print("epsilon: ", epsilon)
-  print("hessian_moving_rate: ", alpha)
-  #####from utils.dataprocess import count_lines
-  datasets_size = [count_lines(src) for src in source_file]
-  importance_weights = [data_size/sum(datasets_size) for data_size in datasets_size]
-  temperature=config.get("hessian_temperature",1.0)
-  importance_weights = [w ** (temperature) for w in importance_weights]
-  importance_weights = [w/sum(importance_weights) for w in importance_weights]
-  
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
-    gradient_accumulator = optimizer_util.GradientAccumulator() 
+    gradient_accumulator = optimizer_util.GradientAccumulator()  
     hessian_accumulators = optimizer_util.DiagHessianAccumulator()
-    rescale_sum = tf.Variable(0.0, trainable=False, synchronization=tf.VariableSynchronization.ON_READ)
-    hessian_moving_stats = [tf.Variable(
-            tf.zeros_like(var),
-            trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO) for var in model.trainable_variables]
-    normalized_hessian_moving_stats = [tf.Variable(
-            tf.zeros_like(var),
-            trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO) for var in model.trainable_variables]
-    importance_weights = tf.constant(importance_weights)
-    tf.print("importance_weights: ", importance_weights)
     sub_gradient_accumulator = optimizer_util.GradientAccumulator()
     dev_gradient_accumulator = optimizer_util.GradientAccumulator()
     train_gradient_accumulator = optimizer_util.GradientAccumulator()
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
     d_logits_grad_accumulator = optimizer_util.GradientAccumulator()
-  domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
+  print("actor_parameterization: ",config.get("actor_parameterization","softmax"))
+  if config.get("actor_parameterization","softmax") =="softmax":
+    domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
+  elif config.get("actor_parameterization","softmax") =="linear":
+    domain_logits = tf.Variable(picking_prob, trainable=True)
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
-  sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
+  sampler_optimizer = tf.keras.optimizers.SGD(learning_rate=config.get("sampler_optim_lr",0.01)) #tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
+  sampler_vars = [domain_logits]
+  print("init domain_logits: ", domain_logits)
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
   
   @tf.function
   def _grad_sampler_accum():
-    loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
+    if config.get("actor_parameterization","softmax") =="softmax":
+      loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
+    elif config.get("actor_parameterization","softmax") =="linear":
+      loss = - tf.reduce_sum(domain_logits * domain_rewards)
     if config.get("sampler_entropy_constraint",False):
       print("sampler_entropy_constraint_weight",config.get("sampler_entropy_constraint_weight",1e-3))
-      loss +=  tf.reduce_sum(config.get("sampler_entropy_constraint_weight",1e-3) * tf.nn.log_softmax(domain_logits) * tf.nn.softmax(domain_logits))
+      if config.get("actor_parameterization","softmax") =="softmax":
+        loss +=  tf.reduce_sum(config.get("sampler_entropy_constraint_weight",1e-3) * tf.nn.log_softmax(domain_logits) * tf.nn.softmax(domain_logits))
+      elif config.get("actor_parameterization","softmax") =="linear":
+        loss +=  tf.reduce_sum(config.get("sampler_entropy_constraint_weight",1e-3) * domain_logits * tf.math.log(domain_logits))
     grad = sampler_optimizer.get_gradients(loss,[domain_logits])
     grad_domain_logits_accum.assign_add(grad[0])
     return tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * domain_rewards)
+
   @tf.function
   def _sampler_step_1():
     sampler_optimizer.apply_gradients([(grad_domain_logits_accum, domain_logits)])
+    if config.get("actor_parameterization","softmax") =="linear":
+      #domain_logits.assign(domain_logits - tf.reduce_min(domain_logits))
+      domain_logits.assign(tf.clip_by_value(domain_logits, clip_value_min=0.0, clip_value_max=10.0))
+      domain_logits.assign(domain_logits/tf.reduce_sum(domain_logits))
     grad_domain_logits_accum.assign(tf.zeros_like(domain_logits))
+
   def update_sampling_distribution(logits):
     logits = logits.numpy()
     for i, l in enumerate(logits):
@@ -12948,26 +12945,7 @@ def train_L2W_v3(config,
     print("new domain probs")
     print(p)
     return p
-  #########  
-  def _accumulate_diag_hessians(source,target): 
-    with tf.GradientTape(persistent=True) as tape:  
-      variables = model.trainable_variables
-      tape.watch(variables)
-      outputs, _ = model(
-          source,
-          labels=target,
-          training=True,
-          step=optimizer.iterations)
-      _dom = source["domain"][0]
-      loss = model.compute_individual_loss(outputs, target, training=True)
-      def hessian_accum_along_loss(diag_hessian_acc, x):
-        gradients = tape.gradient(x,variables)
-        _hessians = []
-        for grad in gradients:
-          _hessians.append(tf.square(grad))
-        hessian_accumulators(_hessians)
-        return diag_hessian_acc
-      tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
+
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
@@ -12975,72 +12953,21 @@ def train_L2W_v3(config,
         training=True,
         step=optimizer.iterations)
     loss = model.compute_loss(outputs, target, training=True)
-
+    _domain = source["domain"][0]
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    if config.get("ADAP_activity_regularizing",False):
-      layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
-      output_activity_regularization_loss_scale = config.get("output_activity_regularization_loss_scale",0.001)
-      d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
-      d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
-      d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
-      
-      if isinstance(layer_activity_regularization_loss_scale, list):
-        domain = source["domain"][0]
-        layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
-        layer_activity_regularization_loss_scale = tf.nn.embedding_lookup(layer_activity_regularization_loss_scale, domain)
-        #tf.print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale, "domain: ", domain)
-      if isinstance(output_activity_regularization_loss_scale, list):
-        domain = source["domain"][0]
-        output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
-        output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
-      regularization_losses = model.losses
-      # print("model_name_scope", model.name_scope())
-      # print(regularization_losses)
-      layer_activity_regularization_losses = []
-      output_activity_regularization_losses = []
-      d_classification_gate_losses = []
-      d_classifier_activity_regularization_losses = []
-      d_classifier_weight_regularization_losses = []
-      for loss_ in regularization_losses:
-        if "multi_adap__dense" in loss_.name:
-          output_activity_regularization_losses.append(loss_)
-        elif "ADAP_gate" in loss_.name: #and "ActivityRegularizer" not in loss_.name and "Regularizer" not in loss_.name
-          if "ActivityRegularizer" in loss_.name:
-            d_classifier_activity_regularization_losses.append(loss_)
-          elif "Regularizer" in loss_.name:
-            d_classifier_weight_regularization_losses.append(loss_)
-          else:
-            d_classification_gate_losses.append(loss_)
-        elif "ADAP_" in loss_.name:
-          layer_activity_regularization_losses.append(loss_)
-
-      
-      if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
-        training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
-
-      if len(output_activity_regularization_losses)>0 and output_activity_regularization_loss_scale>0:
-        training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
-
-      if len(d_classification_gate_losses)>0 and d_classification_gate_loss_scale>0:
-        training_loss += d_classification_gate_loss_scale * tf.add_n(d_classification_gate_losses)
-
-      if len(d_classifier_activity_regularization_losses)>0 and d_classifier_activity_regularization_loss_scale>0:
-        training_loss += d_classifier_activity_regularization_loss_scale * tf.add_n(d_classifier_activity_regularization_losses)
-
-      if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
-        training_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)
+    
     variables = model.trainable_variables
-    print("var numb: ", len(variables))
-    #for var in variables:
-    #  print(var.name)
+    
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
-    return reported_loss, num_examples
+    #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
+    return reported_loss, num_examples, _domain
+
   def _accumulate_dev_train_gradients(source, target):
     with tf.GradientTape() as tape:
       variables = model.trainable_variables    
@@ -13060,12 +12987,42 @@ def train_L2W_v3(config,
 
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
-      return loss
+      return training_loss
+  
+  def _accumulate_diag_hessians(source,target): 
+    with tf.GradientTape(persistent=True) as tape:  
+      variables = model.trainable_variables
+      tape.watch(variables)
+      outputs, _ = model(
+          source,
+          labels=target,
+          training=True,
+          step=optimizer.iterations)
+      _dom = source["domain"][0]
+      loss = model.compute_individual_loss(outputs, target, training=True)
+      def hessian_accum_along_loss(diag_hessian_acc, x):
+        gradients = tape.gradient(x,variables)
+        _hessians = []
+        for grad in gradients:
+          _hessians.append(tf.square(grad))
+        hessian_accumulators(_hessians)
+        return diag_hessian_acc
+      tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
+
   def _reset_dev_train_gradients():
     dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
-    train_gradient_accumulator.reset() #for train_gradient_accumulator in train_gradient_accumulators]
-  def _reset_sub_gradients():
-    sub_gradient_accumulator.reset()
+    [train_gradient_accumulator.reset() for train_gradient_accumulator in train_gradient_accumulators]
+
+  def _apply_gradients():
+    variables = model.trainable_variables
+    grads_and_vars = []
+    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+    gradient_accumulator.reset()
+  
   def _apply_dev_train_gradients():
     variables = model.trainable_variables
     grads_and_vars = []
@@ -13073,8 +13030,27 @@ def train_L2W_v3(config,
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(sub_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
-    optimizer.apply_gradients(grads_and_vars)
+    inner_optimizer.apply_gradients(grads_and_vars)
     sub_gradient_accumulator.reset()
+ 
+  def _apply_sampler_gradients():
+    grads_and_vars = []
+    scaled_gradient = d_logits_grad_accumulator.gradients[0] / (strategy.num_replicas_in_sync * tf.cast(d_logits_grad_accumulator.step, tf.float32))
+    grads_and_vars.append((scaled_gradient, domain_logits))
+    sampler_optimizer.apply_gradients(grads_and_vars)
+    d_logits_grad_accumulator.reset()
+
+  @dataset_util.function_on_next(train_dataset)
+  def _train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_num_examples, per_replica_domain = strategy.experimental_run_v2(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+      _domain = per_replica_domain
+    return loss, num_examples, _domain
   
   @tf.function
   def _step():
@@ -13087,14 +13063,14 @@ def train_L2W_v3(config,
       strategy.experimental_run_v2(_apply_dev_train_gradients)
 
   @tf.function
+  def _sampler_step():
+    with strategy.scope():
+      strategy.experimental_run_v2(_apply_sampler_gradients)
+
+  @tf.function
   def _reset_dev_train_grad_accum_step():
     with strategy.scope():
       _reset_dev_train_gradients()
-
-  @tf.function
-  def _reset_sub_grad_accum_step():
-    with strategy.scope():
-      _reset_sub_gradients()
   
   def _set_weight(v, w):
     v.assign(tf.cast(w,v.dtype))
@@ -13105,71 +13081,31 @@ def train_L2W_v3(config,
       for snap, var in zip(snapshots, model.trainable_variables):
         strategy.extended.update(var, _set_weight, args=(snap, ))
 
-  #########
-  def _apply_gradients():
-    variables = model.trainable_variables
-    grads_and_vars = []
-    for gradient, variable in zip(gradient_accumulator.gradients, variables):
-      # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
-      grads_and_vars.append((scaled_gradient, variable))
-    optimizer.apply_gradients(grads_and_vars)
-    gradient_accumulator.reset()
-  def update_hessian_moving_stats():
-    for accum, stat in zip(hessian_accumulators.hessians, hessian_moving_stats):
-      stat.assign(accum / tf.cast(hessian_accum_step * batch_hessian_size, tf.float32))
-    for hessian, normalized_hessian in zip(hessian_moving_stats, normalized_hessian_moving_stats):
-      normalized_hessian.assign(hessian/tf.reduce_sum(hessian))
-    
-  #########
-  @dataset_util.function_on_next(train_dataset)
-  def _train_forward(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
-      # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
-      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, num_examples
-  @dataset_util.function_on_next(hessian_datasets)
-  def _hessian_acc_forward(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      strategy.experimental_run_v2(
-          _accumulate_diag_hessians, args=(per_replica_source, per_replica_target))
-  ##########
-  @tf.function
-  def _step():
-    with strategy.scope():
-      strategy.experimental_run_v2(_apply_gradients)
-  @tf.function
-  def _hessian_stats_update_step():
-    strategy.experimental_run_v2(update_hessian_moving_stats)
-  ##########
-
   # Runs the training loop.
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
   dev_iterators = [iter(dev_dataset) for dev_dataset in dev_datasets]
   train_iterators = [iter(train_dataset) for train_dataset in train_datasets]
-  
-  _, _ = next(train_data_flow)
-  last_eval = [0.0] * len(domain)
+ 
+  _, _, _ = next(train_data_flow)
+
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
   _loss = []  
   _number_examples = []
+  step = optimizer.iterations.numpy()
+  ########
+  excluded_params = []
+  for var in model.trainable_variables:
+    if tf.shape(var)[-1].numpy()==31266 or tf.shape(var)[0].numpy()==31266:
+      print(var.name)
+      excluded_params.append(var.name)
+  ########
+  if config.get("reset_step",None):
+    print("start from %d-th step"%config.get("reset_step",150000))
+    optimizer.iterations.assign(config.get("reset_step",150000))
   
-  score_type = config.get("score_type","MultiBLEU")
-  if score_type == "sacreBLEU":
-    print("using sacreBLEU")
-    scorer = BLEUScorer()
-  elif score_type == "MultiBLEU":
-    print("using MultiBLEU")
-    scorer = MultiBLEUScorer()
-  ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
   if step <= 1:
     initializer = config.get("initializer","default")
     if initializer == "default":
@@ -13207,42 +13143,67 @@ def train_L2W_v3(config,
         _domain = per_replica_domain
       return loss, num_examples, _domain
     train_data_flow = iter(_train_forward())
+
+  if config.get("continual_learning", False):
+    print("Continual Learning needs to load from old model")
+    assert config.get("checkpoint_path") != None
+    checkpoint_path = config.get("checkpoint_path")
+    load_and_update_if_needed_from_ckpt(config["model_dir"],   
+                        checkpoint_path,                        
+                        trackables={"model":model},
+                        vocab_update=True,
+                        model_key="model")
+
+  score_type = config.get("score_type","MultiBLEU")
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
+  domain_counts = [0.0] * len(domain)
   with _summary_writer.as_default():
     while True:
-      #####Training batch      
-      loss, num_examples = next(train_data_flow)    
-      _loss.append(loss)
-      _number_examples.append(num_examples)
+      ####Training batch
+      loss, num_examples, _domain = next(train_data_flow)    
+      _loss.append(loss.numpy())
+      _number_examples.append(num_examples.numpy())
       _step()  
       step = optimizer.iterations.numpy()
-      
-      if step % report_every == 0:
-        elapsed = time.time() - start
-        tf.get_logger().info(
-          "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
-          step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
-        _loss = []
-        _number_examples = []
-        start = time.time()
+      for v in _domain.values:
+        domain_counts[int(v.numpy())] +=1
+
       if step % redistribute_every == 0 and step > config.get("warm_start",5000):
         # compute domain rewards
         rewards = [0.0] * len(domain)
         snapshots = [v.value() for v in model.trainable_variables]
         saved_step = optimizer.iterations.numpy()
         #######
-        current_probs = tf.nn.softmax(domain_logits).numpy()
+        if config.get("actor_parameterization","softmax") =="softmax":
+          current_probs = tf.nn.softmax(domain_logits).numpy()
+        elif config.get("actor_parameterization","softmax") =="linear":
+          current_probs = domain_logits.numpy()
         print("current_probs: ", current_probs)
-        #######
+        ####### Prepare dev batch
+        dev_batches = []
+        for j, dev_iter in enumerate(dev_iterators):
+          dev_batches_domain_i = []
+          for _ in range(config.get("dev_batch_per_run_num",10)):
+            src, tgt = next(dev_iter)
+            dev_batches_domain_i.append((src,tgt))
+          dev_batches.append(dev_batches_domain_i)
+        #######        
         for i, train_iter in enumerate(train_iterators):
           _reward = 0.0
-          ##### accumulate gradient over training set of src domain i at theta_t
           weight_reset(snapshots)
           with strategy.scope():
-            for _ in range(config.get("train_batch_per_run_num",10)):
-              src, tgt = next(train_iter)
+            ##### compute theta_t+1
+            for _ in range(config.get("train_batch_per_run_num",10)): 
+              src, tgt = next(train_iterators[i])
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-            train_gradient_accumulator(sub_gradient_accumulator.gradients)
-
+              train_gradient_accumulator(sub_gradient_accumulator.gradients)
+              strategy.experimental_run_v2(_apply_dev_train_gradients)
             strategy.experimental_run_v2(sub_gradient_accumulator.reset)
           ##### accumulate gradient over dev set of k tgt domains at theta_t+1
           with strategy.scope():
@@ -13250,15 +13211,12 @@ def train_L2W_v3(config,
               _sum = 0.0
               _dev_norm = 0.0
               _tr_norm = 0.0
-              for _ in range(config.get("dev_batch_per_run_num",10)):
-                src, tgt = next(dev_iter)
-                strategy.experimental_run_v2(_accumulate_diag_hessians, args=(src,tgt))
+              #count = 0
+              for src, tgt in dev_batches[j]:
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+                strategy.experimental_run_v2(_accumulate_diag_hessians, args=(src, tgt))
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
-              strategy.experimental_run_v2(sub_gradient_accumulator.reset) 
-              strategy.experimental_run_v2(hessian_accumulators.reset)
-              # for hessian_moving_stat in hessian_accumulators.hessians:
-              #   hessian_moving_stat = hessian_moving_stat/tf.reduce_sum(hessian_moving_stat)
+              strategy.experimental_run_v2(sub_gradient_accumulator.reset)     
               for dev_grad, tr_grad, var, hessian_moving_stat in zip(dev_gradient_accumulator.gradients, train_gradient_accumulator.gradients, model.trainable_variables, hessian_accumulators.hessians):
                 if isinstance(dev_grad,tf.IndexedSlices):
                   dev_grad = tf.IndexedSlices(dev_grad.values / (tf.nn.embedding_lookup(hessian_moving_stat, dev_grad.indices) + epsilon), 
@@ -13267,13 +13225,14 @@ def train_L2W_v3(config,
                   dev_grad = dev_grad / (hessian_moving_stat + epsilon)
                 _sum += tf.reduce_sum(dev_grad * tr_grad)
                 _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-                _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                _tr_norm += tf.reduce_sum(tr_grad * tr_grad)    
               if config.get("cosine_reward",True):
                 _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
               else:
-                _reward += _sum * learning_rate(saved_step) * domain_importances[j]
+                _reward += _sum * domain_importances[j] #_sum * learning_rate(saved_step) * domain_importances[j]
               # reset dev gradient accumulations to zero
               strategy.experimental_run_v2(dev_gradient_accumulator.reset)
+              strategy.experimental_run_v2(hessian_accumulators.reset)
               #print(dev_gradient_accumulator.gradients[0])
             # reset train dev gradient accumulations to zero
             strategy.experimental_run_v2(train_gradient_accumulator.reset)
@@ -13285,6 +13244,8 @@ def train_L2W_v3(config,
           weight_reset(snapshots)
           optimizer.iterations.assign(saved_step)
         domain_rewards.assign(tf.constant(rewards))
+        if not config.get("cosine_reward",True):
+          domain_rewards.assign(tf.clip_by_value(domain_rewards, clip_value_min=-1.0, clip_value_max=1.0))
         # compute new domain distribution
         print("domain rewards", domain_rewards)
         for _ in range(config.get("domain_sampler_optim_step", 30)):
@@ -13292,7 +13253,10 @@ def train_L2W_v3(config,
           _sampler_step_1()
           
         print("domain_logits: ", domain_logits.numpy())
-        probs = tf.nn.softmax(domain_logits)
+        if config.get("actor_parameterization","softmax") =="softmax":
+          probs = tf.nn.softmax(domain_logits)
+        elif config.get("actor_parameterization","softmax") =="linear":
+          probs = domain_logits
         new_picking_prob = update_sampling_distribution(probs)
         tf.summary.experimental.set_step(saved_step)
         for i in range(len(domain)):
@@ -13320,7 +13284,19 @@ def train_L2W_v3(config,
         #######
         weight_reset(snapshots)
         optimizer.iterations.assign(saved_step)
+        #print("previous domain count: ", domain_counts)
+        print("previous domain count in percentage: ",[d/sum(domain_counts) for d in domain_counts])
+        domain_counts = [0.0] * len(domain)
         #######
+
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+          "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
+          step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+        _loss = []
+        _number_examples = []
+        start = time.time()
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
@@ -13330,11 +13306,11 @@ def train_L2W_v3(config,
         output_files = []
         new_bleu = 0.0
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-            output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-            score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-            tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
-            output_files.append(output_file)
-            new_bleu += score * domain_importances[i]
+          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+          output_files.append(output_file)
+          new_bleu += score * domain_importances[i]
         ##### BLEU on concat dev set.
         output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
         score = scorer(ref_eval_concat, output_file_concat)
@@ -13346,7 +13322,8 @@ def train_L2W_v3(config,
           descending_streak = 0
         else:
           descending_streak += 1
-      if descending_streak >= 5:
+      tf.summary.flush()
+      if config.get("early_stopping",True) and descending_streak >= 5:
         break
       if step > train_steps:
         break
