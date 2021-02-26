@@ -12909,7 +12909,8 @@ def train_L2W_v3(config,
   print("init domain_logits: ", domain_logits)
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
-  
+  epsilon = config.get("posterior_weight",1e-8)
+  print("epsilon: ", epsilon)
   @tf.function
   def _grad_sampler_accum():
     if config.get("actor_parameterization","softmax") =="softmax":
