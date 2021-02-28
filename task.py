@@ -11589,7 +11589,7 @@ def train_L2W_v2(config,
   elif config.get("actor_parameterization","softmax") =="linear":
     domain_logits = tf.Variable(picking_prob, trainable=True)
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
-  sampler_optimizer = tf.keras.optimizers.SGD(learning_rate=config.get("sampler_optim_lr",0.01)) #tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
+  sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01)) #tf.keras.optimizers.SGD(learning_rate=config.get("sampler_optim_lr",0.01)) 
   sampler_vars = [domain_logits]
   print("init domain_logits: ", domain_logits)
   print("domain_rewards: ", domain_rewards)
