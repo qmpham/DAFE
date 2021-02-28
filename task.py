@@ -11590,9 +11590,9 @@ def train_L2W_v2(config,
     domain_logits = tf.Variable(picking_prob, trainable=True)
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   print("sampler_opt: ", config.get("sampler_opt", "SGD"))
-  if config.get("sampler_opt", "SGD") = "SGD":
+  if config.get("sampler_opt", "SGD") == "SGD":
     sampler_optimizer = tf.keras.optimizers.SGD(learning_rate=config.get("sampler_optim_lr",0.01))
-  elif config.get("sampler_opt", "SGD") = "Adam":
+  elif config.get("sampler_opt", "SGD") == "Adam":
     sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01)) 
   sampler_vars = [domain_logits]
   print("init domain_logits: ", domain_logits)
