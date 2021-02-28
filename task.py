@@ -11563,26 +11563,10 @@ def train_L2W_v2(config,
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
                                             for domain, source_file, target_file in zip(config.get("domain"), config.get("src"), config.get("tgt"))]
 
-  # dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
-  #                                           maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-  #                                           multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
-  #                                           for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref"))]
-  dev_datasets = []
-  for d, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref")):
-    dev_dataset = model.examples_inputter.make_training_dataset(source_file, target_file,
-              batch_size=batch_train_size//2,
-              batch_type="tokens",
-              domain=d,
-              single_pass=False,
-              shuffle_buffer_size=shuffle_buffer_size,
-              length_bucket_width=config.get("length_bucket_width",1),  # Bucketize sequences by the same length for efficiency.
-              maximum_features_length=None,
-              maximum_labels_length=None)
-    with strategy.scope():
-      base_dataset_ = dev_dataset
-      dev_dataset = strategy.experimental_distribute_datasets_from_function(
-          lambda _: base_dataset_)
-    dev_datasets.append(dev_dataset)
+  dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
+                                            for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref"))]
   #############
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
@@ -11899,7 +11883,7 @@ def train_L2W_v2(config,
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
               for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
-                if var.name not in excluded_params: #sum([substring not in var.name for substring in config.get("param_to_exclude_from_reward",["hello"])])>0: #True:#"ADAP_" not in var.name:
+                if var.name not in excluded_params: 
                   #tr_grad = var.value() - snapshot
                   _sum += tf.reduce_sum(dev_grad * tr_grad)
                   _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
