@@ -11595,6 +11595,7 @@ def train_L2W_v2(config,
   elif config.get("sampler_opt", "SGD") == "Adam":
     sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01)) 
   sampler_vars = [domain_logits]
+  uniform_prob = tf.Variable([1.0/len(domain)]*len(domain), trainable=False)
   print("init domain_logits: ", domain_logits)
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
@@ -11610,7 +11611,7 @@ def train_L2W_v2(config,
       if config.get("actor_parameterization","softmax") =="softmax":
         loss +=  tf.reduce_sum(config.get("sampler_entropy_constraint_weight",1e-3) * tf.nn.log_softmax(domain_logits) * tf.nn.softmax(domain_logits))
       elif config.get("actor_parameterization","softmax") =="linear":
-        loss +=  tf.reduce_sum(config.get("sampler_entropy_constraint_weight",1e-3) * domain_logits * tf.math.log(domain_logits))
+        loss +=  tf.reduce_sum(config.get("sampler_entropy_constraint_weight",1e-3) * tf.square(domain_logits - uniform_prob))#tf.reduce_sum(config.get("sampler_entropy_constraint_weight",1e-3) * domain_logits * tf.math.log(domain_logits))
     grad = sampler_optimizer.get_gradients(loss,[domain_logits])
     grad_domain_logits_accum.assign_add(grad[0])
     return tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * domain_rewards)
