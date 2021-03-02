@@ -7693,7 +7693,6 @@ def translate_farajan(source_file,
   def predict_next():    
     source = next(iterator)
     tf.print("source: ", source["tokens"])
-    #context_src, context_tgt = next(context_iteration)
     #tf.print("source: ", source, "src_context: ", context_src, "tgt_context: ", context_tgt)
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
@@ -13804,6 +13803,7 @@ def debug_L2W_v2(config,
     for i in range(len(domain)):
       src, tgt = next(dev_iterators[i])
       print(src["length"].values)
+      print(src["domain"].values)
       sent_nums[i] += sum([len(lengths.numpy()) for lengths in src["length"].values])
   print("sent_nums: ",sent_nums)
 
