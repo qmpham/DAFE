@@ -13791,11 +13791,11 @@ def debug_L2W_v2(config,
   #             length_bucket_width=config.get("length_bucket_width",1),  # Bucketize sequences by the same length for efficiency.
   #             maximum_features_length=None,
   #             maximum_labels_length=None)
-    with strategy.scope():
-      base_dataset_ = dev_dataset
-      dev_dataset = strategy.experimental_distribute_datasets_from_function(
-          lambda _: base_dataset_)
-    dev_datasets.append(dev_dataset)
+  #   with strategy.scope():
+  #     base_dataset_ = dev_dataset
+  #     dev_dataset = strategy.experimental_distribute_datasets_from_function(
+  #         lambda _: base_dataset_)
+  #   dev_datasets.append(dev_dataset)
 
   dev_iterators = [iter(dev_dataset) for dev_dataset in dev_datasets]
   sent_nums = [0.0] * len(domain)
