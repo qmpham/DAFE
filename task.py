@@ -11884,7 +11884,7 @@ def train_L2W_v2(config,
               _tr_norm = 0.0
               #count = 0
               for src, tgt in dev_batches[j]:
-                print("training domain: %d: "%j,src["domain"])
+                print("valid domain: %d: "%j,src["domain"])
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
