@@ -11871,6 +11871,7 @@ def train_L2W_v2(config,
             ##### compute theta_t+1
             for _ in range(config.get("train_batch_per_run_num",10)): 
               src, tgt = next(train_iterators[i])
+              print("training domain: %d: "%i,src["domain"])
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               train_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(_apply_dev_train_gradients)
@@ -11883,17 +11884,15 @@ def train_L2W_v2(config,
               _tr_norm = 0.0
               #count = 0
               for src, tgt in dev_batches[j]:
+                print("training domain: %d: "%j,src["domain"])
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
-              for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
+              for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
                 if var.name not in excluded_params: 
-                  #tr_grad = var.value() - snapshot
                   _sum += tf.reduce_sum(dev_grad * tr_grad)
                   _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                   _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-                  #count +=1
-              #print("number_of_parameters_in_reward: %d"%(count))
               if config.get("cosine_reward",True):
                 _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
               else:
