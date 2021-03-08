@@ -11845,7 +11845,7 @@ def train_L2W_v2(config,
         for v in _domain.values:
           domain_counts[int(v.numpy())] +=1
       else:
-        domain_counts[int(v.numpy())] +=1
+        domain_counts[int(_domain.numpy())] +=1
 
       if step % redistribute_every == 0 and step > config.get("warm_start",5000):
         # compute domain rewards
