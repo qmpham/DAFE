@@ -76,6 +76,9 @@ def main():
         os.makedirs(os.path.join(config["model_dir"],"eval"))
 
   else:
+    gpus = tf.config.list_physical_devices('GPU')
+    for gpu in devices:
+      tf.config.experimental.set_memory_growth(gpu, True)
     devices = tf.config.experimental.list_logical_devices(device_type="GPU")
     strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
     if not os.path.exists(os.path.join(config["model_dir"],"eval")):
