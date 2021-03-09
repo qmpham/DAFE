@@ -13602,6 +13602,14 @@ def debug_L2W_v1(config,
           #######
           current_probs = tf.nn.softmax(domain_logits).numpy()
           print("current_probs: ", current_probs)
+          ####### Prepare dev batch
+          dev_batches = []
+          for j, dev_iter in enumerate(dev_iterators):
+            dev_batches_domain_i = []
+            for _ in range(config.get("dev_batch_per_run_num",10)):
+              src, tgt = next(dev_iter)
+              dev_batches_domain_i.append((src,tgt))
+            dev_batches.append(dev_batches_domain_i)
           #######        
           total_reward = 0
           count = 0
@@ -13610,9 +13618,14 @@ def debug_L2W_v1(config,
             weight_reset(snapshots)
             with strategy.scope():
               ##### compute theta_t+1
-              for _ in range(config.get("train_batch_per_run_num",10)): 
-                src, tgt = next(train_iterators[i])
-                strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+              if config.get("src")[i]!=config.get("eval_src")[0]:
+                for _ in range(config.get("train_batch_per_run_num",10)): 
+                  src, tgt = next(train_iterators[i])
+                  strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+              else:
+                print(config.get("src")[i])
+                for src, tgt in dev_batches[0]:
+                  strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
               #strategy.experimental_run_v2(_apply_dev_train_gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)
@@ -13628,8 +13641,7 @@ def debug_L2W_v1(config,
                 _tr_norm_1 = 0.0
                 _dev_norm_2 = 0.0
                 _tr_norm_2 = 0.0
-                for _ in range(config.get("dev_batch_per_run_num",10)):
-                  src, tgt = next(dev_iter)
+                for src, tgt in dev_batches[j]:
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
                 dev_gradient_accumulator(sub_gradient_accumulator.gradients)
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
