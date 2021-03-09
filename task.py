@@ -13613,8 +13613,8 @@ def debug_L2W_v1(config,
               for _ in range(config.get("train_batch_per_run_num",10)): 
                 src, tgt = next(train_iterators[i])
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-                train_gradient_accumulator(sub_gradient_accumulator.gradients)
-                strategy.experimental_run_v2(_apply_dev_train_gradients)
+              strategy.experimental_run_v2(train_gradient_accumulator(sub_gradient_accumulator.gradients))
+              #strategy.experimental_run_v2(_apply_dev_train_gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)
             ##### accumulate gradient over dev set of k tgt domains at theta_t+1
             with strategy.scope():
@@ -13791,23 +13791,7 @@ def debug_L2W_v2(config,
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
                                             for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref"))]
-  # dev_datasets = []
-  # for d, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref")):
-  #   dev_dataset = model.examples_inputter.make_training_dataset(source_file, target_file,
-  #             batch_size=25,
-  #             batch_type="examples",
-  #             domain=d,
-  #             single_pass=True,
-  #             shuffle_buffer_size=None,
-  #             length_bucket_width=config.get("length_bucket_width",1),  # Bucketize sequences by the same length for efficiency.
-  #             maximum_features_length=None,
-  #             maximum_labels_length=None)
-  #   with strategy.scope():
-  #     base_dataset_ = dev_dataset
-  #     dev_dataset = strategy.experimental_distribute_datasets_from_function(
-  #         lambda _: base_dataset_)
-  #   dev_datasets.append(dev_dataset)
-
+  
   dev_iterators = [iter(dev_dataset) for dev_dataset in dev_datasets]
   sent_nums = [0.0] * len(domain)
   for _ in range(config.get("dev_batch_per_run_num",20)):
