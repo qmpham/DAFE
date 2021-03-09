@@ -13646,27 +13646,9 @@ def debug_L2W_v1(config,
                 dev_gradient_accumulator(sub_gradient_accumulator.gradients)
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
                 for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
-                  if var.name in excluded_params:#"ADAP_" not in var.name:
-                    _sum_1 += tf.reduce_sum(dev_grad * tr_grad)
-                    _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-                    _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-                    _dev_norm_1 += tf.reduce_sum(dev_grad * dev_grad)
-                    _tr_norm_1 += tf.reduce_sum(tr_grad * tr_grad)
-                  else:
-                    _sum_2 += tf.reduce_sum(dev_grad * tr_grad)
-                    _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-                    _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-                    _dev_norm_2 += tf.reduce_sum(dev_grad * dev_grad)
-                    _tr_norm_2 += tf.reduce_sum(tr_grad * tr_grad)
-                print("excluded_rewards: %f"%(_sum_1.numpy()))
-                print("included_rewards: %f"%(_sum_2.numpy()))
-                print("excluded_norms: %f, %f"%(_dev_norm_1.numpy(),_tr_norm_1.numpy()))
-                print("included_norms: %f, %f"%(_dev_norm_2.numpy(),_tr_norm_2.numpy()))
-                _sum = _sum_1 + _sum_2
-                excluded_reward_acc[i,j] += _sum_1
-                excluded_norm_acc[i,j] += np.abs(_dev_norm_1.numpy()+_tr_norm_1.numpy())
-                included_reward_acc[i,j] += _sum_2
-                included_norm_acc[i,j] += np.abs(_dev_norm_2.numpy()+_tr_norm_2.numpy())
+                  _sum += tf.reduce_sum(dev_grad * tr_grad)
+                  _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                  _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
                 if config.get("cosine_reward",True):
                   _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
                 else:
@@ -13694,22 +13676,6 @@ def debug_L2W_v1(config,
           #######
         except tf.errors.OutOfRangeError:
           print("average reward: ", total_reward/count)
-
-  print("excluded_reward_acc: ")
-  print(excluded_reward_acc)
-  print("excluded_norm_acc: ")
-  print(excluded_norm_acc)
-  print("included_reward_acc: ")
-  print(included_reward_acc)
-  print("included_norm_acc: ")
-  print(included_norm_acc)
-  print("reward_acc: ")
-  print(reward_acc)
-  #print("reduced_reward_acc: ")
-  #print(np.sum(reward_acc, axis=1))
-  print(np.var(reward_acc,axis=2))
-  print(np.mean(reward_acc,axis=2))
-  print(np.sum(np.mean(reward_acc,axis=2), axis=1))
 
 def debug_L2W_v2(config,
           optimizer,          
