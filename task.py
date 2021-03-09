@@ -13493,7 +13493,7 @@ def debug_L2W_v1(config,
         reported_loss = loss[0] / loss[2]
       else:
         training_loss, reported_loss = loss, loss
-      tf.print(loss[1],loss[2],sep="|")
+      #tf.print(loss[1],loss[2],sep="|")
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
       return training_loss
