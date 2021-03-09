@@ -13643,7 +13643,7 @@ def debug_L2W_v1(config,
                 _tr_norm_2 = 0.0
                 for src, tgt in dev_batches[j]:
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-                dev_gradient_accumulator(sub_gradient_accumulator.gradients)
+                strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
                 for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
                   _sum += tf.reduce_sum(dev_grad * tr_grad)
