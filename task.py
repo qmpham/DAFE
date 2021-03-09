@@ -13623,8 +13623,8 @@ def debug_L2W_v1(config,
               for _ in range(config.get("train_batch_per_run_num",10)): 
                 src, tgt = next(train_iterators[i])
                 strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-              strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
-              strategy.experimental_run_v2(_apply_dev_train_gradients)
+                strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
+                strategy.experimental_run_v2(_apply_dev_train_gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)
             ##### accumulate gradient over dev set of k tgt domains at theta_t+1
             with strategy.scope():
