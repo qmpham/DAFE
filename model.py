@@ -2009,7 +2009,7 @@ class SequenceToSequence_with_dprob(model.SequenceGenerator):
         vocab_size=self.labels_inputter.vocabulary_size,
         output_layer=output_layer)
 
-  def call(self, features, labels=None, training=None, step=None, internal_node_printing=False):
+  def call(self, features, labels=None, training=None, step=None, internal_node_printing=False, inference=True):
     # Encode the source.
     assert isinstance(self.features_inputter, My_inputter)
     assert isinstance(self.labels_inputter, My_inputter)    
@@ -2036,7 +2036,7 @@ class SequenceToSequence_with_dprob(model.SequenceGenerator):
           training=training)
 
     # When not in training, also compute the model predictions.
-    if not training:
+    if not training and inference:
       predictions = self._dynamic_decode(
           features,
           encoder_outputs,
