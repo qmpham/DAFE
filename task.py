@@ -13493,7 +13493,7 @@ def debug_L2W_v1(config,
         reported_loss = loss[0] / loss[2]
       else:
         training_loss, reported_loss = loss, loss
-
+      tf.print(loss[1],loss[2],sep="|")
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
       return training_loss
@@ -13593,7 +13593,7 @@ def debug_L2W_v1(config,
   included_norm_acc = np.zeros((domain_num, domain_num))
   reward_acc = np.zeros((domain_num, domain_num, 10))
   with _summary_writer.as_default(): 
-      for it in range(1):#while True:
+      for it in range(3):#while True:
         try:
           # compute domain rewards
           rewards = [0.0] * len(domain)
@@ -13618,15 +13618,9 @@ def debug_L2W_v1(config,
             weight_reset(snapshots)
             with strategy.scope():
               ##### compute theta_t+1
-              if config.get("src")[i]!=config.get("eval_src")[0]:
-                for _ in range(config.get("train_batch_per_run_num",10)): 
-                  src, tgt = next(train_iterators[i])
-                  strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-              else:
-                #print(config.get("src")[i])
-                for src, tgt in dev_batches[0]:
-                  #print(src)
-                  strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+              for _ in range(config.get("train_batch_per_run_num",10)): 
+                src, tgt = next(train_iterators[i])
+                strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               #print(sub_gradient_accumulator.gradients[3])
               strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
               #print(train_gradient_accumulator.gradients[3])
