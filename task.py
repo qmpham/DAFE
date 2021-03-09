@@ -13399,7 +13399,7 @@ def debug_L2W_v1(config,
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, single_pass=config.get("single_pass",False), temperature=config.get("temperature",1.0))
                                             for domain, source_file, target_file in zip(config.get("domain"), config.get("src"), config.get("tgt"))]
 
-  dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size//2, batch_type, shuffle_buffer_size, 
+  dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], 1, "examples", shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
                                             for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref"))]
@@ -13625,6 +13625,7 @@ def debug_L2W_v1(config,
               else:
                 print(config.get("src")[i])
                 for src, tgt in dev_batches[0]:
+                  print(src)
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
               #strategy.experimental_run_v2(_apply_dev_train_gradients)
@@ -13642,6 +13643,7 @@ def debug_L2W_v1(config,
                 _dev_norm_2 = 0.0
                 _tr_norm_2 = 0.0
                 for src, tgt in dev_batches[j]:
+                  print(src)
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
                 strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
