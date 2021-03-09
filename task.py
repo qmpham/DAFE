@@ -13484,9 +13484,9 @@ def debug_L2W_v1(config,
       outputs, _ = model(
           source,
           labels=target,
-          training=True,
+          training=False,
           step=optimizer.iterations)
-      loss = model.compute_loss(outputs, target, training=True)
+      loss = model.compute_loss(outputs, target, training=False)
 
       if isinstance(loss, tuple):
         training_loss = loss[0] / loss[1]
