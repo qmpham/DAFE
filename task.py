@@ -13623,13 +13623,13 @@ def debug_L2W_v1(config,
                   src, tgt = next(train_iterators[i])
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
               else:
-                print(config.get("src")[i])
+                #print(config.get("src")[i])
                 for src, tgt in dev_batches[0]:
-                  print(src)
+                  #print(src)
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-              print(sub_gradient_accumulator.gradients[3])
+              #print(sub_gradient_accumulator.gradients[3])
               strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
-              print(train_gradient_accumulator.gradients[3])
+              #print(train_gradient_accumulator.gradients[3])
               #strategy.experimental_run_v2(_apply_dev_train_gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)
             ##### accumulate gradient over dev set of k tgt domains at theta_t+1
@@ -13644,13 +13644,13 @@ def debug_L2W_v1(config,
                 _tr_norm_1 = 0.0
                 _dev_norm_2 = 0.0
                 _tr_norm_2 = 0.0
-                print(sub_gradient_accumulator.gradients[3])
+                #print(sub_gradient_accumulator.gradients[3])
                 for src, tgt in dev_batches[j]:
-                  print(src)
+                  #print(src)
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-                print(sub_gradient_accumulator.gradients[3])
+                #print(sub_gradient_accumulator.gradients[3])
                 strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
-                print(dev_gradient_accumulator.gradients[3])
+                #print(dev_gradient_accumulator.gradients[3])
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
                 for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
                   _sum += tf.reduce_sum(dev_grad * tr_grad)
