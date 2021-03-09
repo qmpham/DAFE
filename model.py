@@ -103,7 +103,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         vocab_size=self.labels_inputter.vocabulary_size,
         output_layer=output_layer)
 
-  def call(self, features, labels=None, training=None, step=None, internal_node_printing=False, return_embedding=False):
+  def call(self, features, labels=None, training=None, step=None, internal_node_printing=False, return_embedding=False, inference=True):
     # Encode the source.
     assert isinstance(self.features_inputter, My_inputter)
     assert isinstance(self.labels_inputter, My_inputter)    
@@ -133,7 +133,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
       #outputs = dict(logits=outputs["logits"], attention=outputs["attention"], domain_classification_logits=domain_classification_logits)
 
     # When not in training, also compute the model predictions.
-    if not training:
+    if not training and inference:
       predictions = self._dynamic_decode(
           features,
           encoder_outputs,
