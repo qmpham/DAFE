@@ -13636,13 +13636,6 @@ def debug_L2W_v1(config,
               src, tgt = next(dev_iter)
               dev_batches_domain_i.append((src,tgt))
             dev_batches.append(dev_batches_domain_i)
-          ####### loss of dev batch at theta_t
-          for j, dev_iter in enumerate(dev_iterators):
-            loss_ = 0
-            for src, tgt in dev_batches[j]:
-              loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
-              loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
-            print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
           #######        
           total_reward = 0
           count = 0
@@ -13650,6 +13643,13 @@ def debug_L2W_v1(config,
             _reward = 0.0
             weight_reset(snapshots)
             with strategy.scope():
+              ####### loss of dev batch at theta_t
+              for j, dev_iter in enumerate(dev_iterators):
+                loss_ = 0
+                for src, tgt in dev_batches[j]:
+                  loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
+                  loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
+                print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
               ##### compute theta_t+1
               for _ in range(config.get("train_batch_per_run_num",10)): 
                 for _ in range(config.get("train_batch_step_accum",10)):
@@ -13658,6 +13658,7 @@ def debug_L2W_v1(config,
                 strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
                 strategy.experimental_run_v2(_apply_dev_train_gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)
+
             ##### accumulate gradient over dev set of k tgt domains at theta_t+1
             with strategy.scope():
               for j, dev_iter in enumerate(dev_iterators):
