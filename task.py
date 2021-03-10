@@ -13556,13 +13556,14 @@ def debug_L2W_v1(config,
       for snap, var in zip(snapshots, model.trainable_variables):
         strategy.extended.update(var, _set_weight, args=(snap, ))
 
-  def _compute_loss(src, tgt):
+  def _compute_loss(source, target):
     outputs, _ = model(
         source,
         labels=target,
-        training=True,
-        step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
+        training=False,
+        step=optimizer.iterations,
+        inference=False)
+    loss = model.compute_loss(outputs, target, training=False)
     
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
