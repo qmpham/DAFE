@@ -13410,7 +13410,7 @@ def debug_L2W_v1(config,
 
   dev_datasets = [create_trainining_dataset(strategy, model, [domain], [source_file], [target_file], batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0), single_pass=True)
+                                            multi_domain=config.get("multi_domain", True), picking_prob=None, temperature=config.get("temperature",1.0))
                                             for domain, source_file, target_file in zip(config.get("eval_domain"), config.get("eval_src"), config.get("eval_ref"))]
   #############
   with strategy.scope():
@@ -13618,23 +13618,6 @@ def debug_L2W_v1(config,
   included_reward_acc = np.zeros((domain_num, domain_num))
   included_norm_acc = np.zeros((domain_num, domain_num))
   reward_acc = np.zeros((domain_num, domain_num, 10))
-
-  ####### Prepare dev batch
-  dev_batches = []
-  with _summary_writer.as_default(): 
-    for j, dev_iter in enumerate(dev_iterators):
-      dev_batches_domain_i = []
-      while True:
-        try:
-          src, tgt = next(dev_iter)
-          dev_batches_domain_i.append((src,tgt))
-        except tf.errors.OutOfRangeError:
-          break
-        except StopIteration:
-          break 
-    print("num of batches of domain %s: %d"%(config.get("eval_src")[j],len(dev_batches_domain_i)))
-    dev_batches.append(dev_batches_domain_i)
-
   with _summary_writer.as_default(): 
       for it in range(3):#while True:
         try:
@@ -13645,6 +13628,14 @@ def debug_L2W_v1(config,
           #######
           current_probs = tf.nn.softmax(domain_logits).numpy()
           print("current_probs: ", current_probs)
+          ####### Prepare dev batch
+          dev_batches = []
+          for j, dev_iter in enumerate(dev_iterators):
+            dev_batches_domain_i = []
+            for _ in range(config.get("dev_batch_per_run_num",10)):
+              src, tgt = next(dev_iter)
+              dev_batches_domain_i.append((src,tgt))
+            dev_batches.append(dev_batches_domain_i)
           #######        
           total_reward = 0
           count = 0
