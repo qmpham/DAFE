@@ -13632,10 +13632,13 @@ def debug_L2W_v1(config,
           dev_batches = []
           for j, dev_iter in enumerate(dev_iterators):
             dev_batches_domain_i = []
+            batch_count = 0
             for _ in range(config.get("dev_batch_per_run_num",10)):
               src, tgt = next(dev_iter)
+              batch_count += sum([tf.shape(val)[0].numpy() for val in src["domain"].values])
               dev_batches_domain_i.append((src,tgt))
             dev_batches.append(dev_batches_domain_i)
+            print("number of dev batches of domain %s: %d"%(config.get("eval_src")[j], batch_count))
           #######        
           total_reward = 0
           count = 0
