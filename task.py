@@ -13556,7 +13556,7 @@ def debug_L2W_v1(config,
       for snap, var in zip(snapshots, model.trainable_variables):
         strategy.extended.update(var, _set_weight, args=(snap, ))
 
-  def _loss(src, tgt):
+  def _compute_loss(src, tgt):
     outputs, _ = model(
         source,
         labels=target,
@@ -13639,7 +13639,7 @@ def debug_L2W_v1(config,
           for j, dev_iter in enumerate(dev_iterators):
             loss_ = 0
             for src, tgt in dev_batches[j]:
-              loss_per_device = strategy.experimental_run_v2(_loss, args=(src, tgt))
+              loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
               loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
             print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
           #######        
@@ -13671,7 +13671,7 @@ def debug_L2W_v1(config,
                 _tr_norm_2 = 0.0
                 loss_ = 0
                 for src, tgt in dev_batches[j]:
-                  loss_per_device = strategy.experimental_run_v2(_loss, args=(src, tgt))
+                  loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
                   loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
                 print("average loss at theta_t+1 on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
                 for src, tgt in dev_batches[j]:
@@ -13695,11 +13695,8 @@ def debug_L2W_v1(config,
                 strategy.experimental_run_v2(dev_gradient_accumulator.reset)
                 #print(dev_gradient_accumulator.gradients[0])
               # reset train dev gradient accumulations to zero
-                
               strategy.experimental_run_v2(train_gradient_accumulator.reset)
-
             rewards[i] = _reward.numpy()
-            
             # reset model parameters
             weight_reset(snapshots)
             optimizer.iterations.assign(saved_step)
