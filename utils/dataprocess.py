@@ -340,7 +340,7 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
 
   return meta_train_dataset, meta_test_dataset
 
-def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0, pick_in_order=False, window_size=None, multi_device=True):
+def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0, pick_in_order=False, window_size=None):
 
   print("maximum_length", maximum_length)
   train_datasets = [] 
@@ -394,11 +394,11 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
     print("random_pick")
     train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
   
-  if multi_device:
-    with strategy.scope():
-      base_dataset = train_dataset
-      train_dataset = strategy.experimental_distribute_datasets_from_function(
-            lambda _: base_dataset)  
+  
+  with strategy.scope():
+    base_dataset = train_dataset
+    train_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)  
 
   return train_dataset
 
