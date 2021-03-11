@@ -13361,6 +13361,7 @@ def debug_L2W_v1(config,
           eval_every=15000,
           report_every=100): 
   beam_size = 5
+  length_penalty = 0.6
   if config.get("train_steps",None)!=None:
     train_steps = config.get("train_steps")
   if config.get("batch_type",None)!=None:
