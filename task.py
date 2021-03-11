@@ -13360,6 +13360,7 @@ def debug_L2W_v1(config,
           save_every=5000,
           eval_every=15000,
           report_every=100): 
+  beam_size = 5
   if config.get("train_steps",None)!=None:
     train_steps = config.get("train_steps")
   if config.get("batch_type",None)!=None:
