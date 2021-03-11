@@ -13657,6 +13657,7 @@ def debug_L2W_v1(config,
               for _ in range(config.get("train_batch_per_run_num",10)): 
                 for _ in range(config.get("train_batch_step_accum",10)):
                   src, tgt = next(train_iterators[i])
+                  print("training domain: ", [d[0].numpy() for d in src["domain"].values])
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
                 strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
                 strategy.experimental_run_v2(_apply_dev_train_gradients)
