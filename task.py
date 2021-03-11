@@ -13572,6 +13572,58 @@ def debug_L2W_v1(config,
       training_loss, reported_loss = loss, loss
     return reported_loss
 
+  @tf.function
+  def predict_next(source):    
+    #source = next(iterator)
+    #tf.print("source: ", source["tokens"])
+    #tf.print("source: ", source, "src_context: ", context_src, "tgt_context: ", context_tgt)
+    source_length = source["length"]
+    batch_size = tf.shape(source_length)[0]
+    source_inputs = model.features_inputter(source)
+    if experiment in ["residual","residualv15","DRO","residualv25","residualv27","residualv28","residualv29","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv13","residualv12","residualv6","residualv7","residualv11","residualv8","residualv9","baselinev1"]:
+      encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"], source["is_noisy"]], source_length, training=False, internal_node_printing=True)
+    else:
+      encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
+
+    # Prepare the decoding strategy.
+    if beam_size > 1:
+      encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
+      source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
+      decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
+    else:
+      decoding_strategy = onmt.utils.GreedySearch()
+
+    # Run dynamic decoding.
+    decoder_state = model.decoder.initial_state(
+        memory=encoder_outputs,
+        memory_sequence_length=source_length)
+    if experiment in ["residual","residualv2","DRO","residualv15","residualv25","residualv27","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv1","residualv3","residualv5","residualv6","residualv7","residualv13","residualv12","residualv11","residualv8","residualv9","baselinev1"]:
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
+    elif experiment in ["DC"]:
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain, training=False)
+    elif experiment in ["WDC"]:
+      e_r, _ = model.classification_layer(encoder_outputs, source_length, training=False)
+      e_s, _ = model.adv_classification_layer(encoder_outputs, source_length, training=False)
+      g_s = model.share_gate(tf.concat([tf.tile(tf.expand_dims(e_s,1),[1,tf.shape(encoder_outputs)[1],1]),encoder_outputs],-1))
+      g_r = model.specific_gate(tf.concat([tf.tile(tf.expand_dims(e_r,1),[1,tf.shape(encoder_outputs)[1],1]),encoder_outputs],-1))
+      h_r = g_r * encoder_outputs
+      h_s = g_s * encoder_outputs
+      encoder_mask = model.encoder.build_mask(source_inputs, sequence_length=source_length)
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), h_r, h_s, encoder_mask]
+    elif experiment in ["residualv28","residualv29"]:
+      map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), source["domain"]]
+    else:
+      map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
+    decoded = model.decoder.dynamic_decode(
+        map_input_fn,
+        tf.fill([batch_size], START_OF_SENTENCE_ID),
+        end_id=END_OF_SENTENCE_ID,
+        initial_state=decoder_state,
+        decoding_strategy=decoding_strategy,
+        maximum_iterations=250)
+    target_lengths = decoded.lengths
+    target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64)) 
+    return target_tokens, target_lengths
   # Runs the training loop.
   import time
   start = time.time()  
@@ -13618,6 +13670,9 @@ def debug_L2W_v1(config,
   included_reward_acc = np.zeros((domain_num, domain_num))
   included_norm_acc = np.zeros((domain_num, domain_num))
   reward_acc = np.zeros((domain_num, domain_num, 10))
+  output_file_1 = "/gpfsdswork/projects/rech/sfz/utt84zy/DAFE/output_1"
+  output_file_2 = "/gpfsdswork/projects/rech/sfz/utt84zy/DAFE/output_2"
+  ref_file = "/gpfsdswork/projects/rech/sfz/utt84zy/DAFE/ref"
   with _summary_writer.as_default(): 
       for it in range(3):#while True:
         try:
@@ -13653,6 +13708,23 @@ def debug_L2W_v1(config,
                   loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
                   loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
                 print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
+                ####### BLEU
+                with open(output_file_1, "w") as output_:
+                  for src, tgt in dev_batches[j]:
+                    #translating phase
+                    batch_tokens_per_replica, batch_length_per_replica = strategy.experimental_run_v2(predict_next, args=(src))
+                    batch_tokens_per_replica = batch_tokens_per_replica.values
+                    batch_length_per_replica = batch_length_per_replica.values
+                    #reset step
+                    for batch_tokens, batch_length in zip(batch_tokens_per_replica, batch_length_per_replica):
+                      for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
+                        sentence = b" ".join(tokens[0][:length[0]])
+                        print_bytes(sentence, output_)
+                with open(ref_file, "w") as output_:
+                  for src, tgt in dev_batches[j]:
+                    tgt_per_replica = tgt["tokens"].values
+                    for tgt_ in tgt_per_replica:
+                      print_bytes(" ".join(tgt_.numpy()))
               ##### compute theta_t+1
               for _ in range(config.get("train_batch_per_run_num",10)): 
                 for _ in range(config.get("train_batch_step_accum",10)):
@@ -13680,6 +13752,18 @@ def debug_L2W_v1(config,
                   loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
                   loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
                 print("average loss at theta_t+1 on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
+                with open(output_file_2, "w") as output_:
+                  for src, tgt in dev_batches[j]:
+                    #translating phase
+                    batch_tokens_per_replica, batch_length_per_replica = strategy.experimental_run_v2(predict_next, args=(src))
+                    batch_tokens_per_replica = batch_tokens_per_replica.values
+                    batch_length_per_replica = batch_length_per_replica.values
+                    #reset step
+                    for batch_tokens, batch_length in zip(batch_tokens_per_replica, batch_length_per_replica):
+                      for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
+                        sentence = b" ".join(tokens[0][:length[0]])
+                        print_bytes(sentence, output_)
+                        
                 for src, tgt in dev_batches[j]:
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
                 strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
