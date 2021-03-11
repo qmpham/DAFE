@@ -13574,9 +13574,6 @@ def debug_L2W_v1(config,
 
   @tf.function
   def predict_next(source):    
-    #source = next(iterator)
-    #tf.print("source: ", source["tokens"])
-    #tf.print("source: ", source, "src_context: ", context_src, "tgt_context: ", context_tgt)
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
@@ -13712,7 +13709,7 @@ def debug_L2W_v1(config,
                 with open(output_file_1, "w") as output_:
                   for src, tgt in dev_batches[j]:
                     #translating phase
-                    batch_tokens_per_replica, batch_length_per_replica = strategy.experimental_run_v2(predict_next, args=(src))
+                    batch_tokens_per_replica, batch_length_per_replica = strategy.experimental_run_v2(predict_next, args=(src,))
                     batch_tokens_per_replica = batch_tokens_per_replica.values
                     batch_length_per_replica = batch_length_per_replica.values
                     #reset step
@@ -13763,7 +13760,7 @@ def debug_L2W_v1(config,
                       for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
                         sentence = b" ".join(tokens[0][:length[0]])
                         print_bytes(sentence, output_)
-                        
+
                 for src, tgt in dev_batches[j]:
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
                 strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
