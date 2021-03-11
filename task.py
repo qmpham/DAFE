@@ -13488,7 +13488,29 @@ def debug_L2W_v1(config,
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, num_examples
 
-  def _accumulate_dev_train_gradients(source, target):
+  def _accumulate_train_gradients(source, target):
+    with tf.GradientTape() as tape:
+      variables = model.trainable_variables    
+      tape.watch(variables)
+      outputs, _ = model(
+          source,
+          labels=target,
+          training=True,
+          step=optimizer.iterations,
+          inference=False)
+      loss = model.compute_loss(outputs, target, training=False)
+
+      if isinstance(loss, tuple):
+        training_loss = loss[0] / loss[1]
+        reported_loss = loss[0] / loss[2]
+      else:
+        training_loss, reported_loss = loss, loss
+      #tf.print(loss[1],loss[2],sep="|")
+      gradients = tape.gradient(training_loss, variables)
+      sub_gradient_accumulator(gradients)
+      return training_loss
+  
+  def _accumulate_dev_gradients(source, target):
     with tf.GradientTape() as tape:
       variables = model.trainable_variables    
       tape.watch(variables)
@@ -13509,6 +13531,7 @@ def debug_L2W_v1(config,
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
       return training_loss
+
   
   def _reset_dev_train_gradients():
     dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
@@ -13712,7 +13735,7 @@ def debug_L2W_v1(config,
                 for _ in range(config.get("train_batch_step_accum",10)):
                   src, tgt = next(train_iterators[i])
                   print("training domain: ", [d[0].numpy() for d in src["domain"].values])
-                  strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+                  strategy.experimental_run_v2(_accumulate_train_gradients, args=(src, tgt))
                 strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
                 strategy.experimental_run_v2(_apply_dev_train_gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)
@@ -13736,7 +13759,8 @@ def debug_L2W_v1(config,
                 print("average loss at theta_t+1 on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
 
                 for src, tgt in dev_batches[j]:
-                  strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+                  strategy.experimental_run_v2(_accumulate_dev_gradients, args=(src, tgt))
+                  strategy.experimental_run_v2(_accumulate_gradients, args=(src,tgt))
                 strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
                 for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
