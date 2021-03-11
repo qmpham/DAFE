@@ -13707,23 +13707,6 @@ def debug_L2W_v1(config,
                   loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
                   loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
                 print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
-                ####### BLEU
-                with open(output_file_1, "w") as output_:
-                  for src, tgt in dev_batches[j]:
-                    #translating phase
-                    batch_tokens_per_replica, batch_length_per_replica = strategy.experimental_run_v2(predict_next, args=(src,))
-                    batch_tokens_per_replica = batch_tokens_per_replica.values
-                    batch_length_per_replica = batch_length_per_replica.values
-                    #reset step
-                    for batch_tokens, batch_length in zip(batch_tokens_per_replica, batch_length_per_replica):
-                      for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
-                        sentence = b" ".join(tokens[0][:length[0]])
-                        print_bytes(sentence, output_)
-                with open(ref_file, "w") as output_:
-                  for src, tgt in dev_batches[j]:
-                    tgt_per_replica = tgt["tokens"].values
-                    for tgt_ in tgt_per_replica:
-                      print_bytes(" ".join(tgt_.numpy()))
               ##### compute theta_t+1
               for _ in range(config.get("train_batch_per_run_num",10)): 
                 for _ in range(config.get("train_batch_step_accum",10)):
@@ -13751,24 +13734,13 @@ def debug_L2W_v1(config,
                   loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
                   loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
                 print("average loss at theta_t+1 on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
-                with open(output_file_2, "w") as output_:
-                  for src, tgt in dev_batches[j]:
-                    #translating phase
-                    batch_tokens_per_replica, batch_length_per_replica = strategy.experimental_run_v2(predict_next, args=(src))
-                    batch_tokens_per_replica = batch_tokens_per_replica.values
-                    batch_length_per_replica = batch_length_per_replica.values
-                    #reset step
-                    for batch_tokens, batch_length in zip(batch_tokens_per_replica, batch_length_per_replica):
-                      for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
-                        sentence = b" ".join(tokens[0][:length[0]])
-                        print_bytes(sentence, output_)
 
                 for src, tgt in dev_batches[j]:
                   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
                 strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
                 for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
-                  tr_grad = snapshot -var
+                  tr_grad = snapshot - var
                   _sum += tf.reduce_sum(dev_grad * tr_grad)
                   _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                   _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
