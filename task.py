@@ -13695,8 +13695,10 @@ def debug_L2W_v1(config,
   output_file_1 = "/gpfsdswork/projects/rech/sfz/utt84zy/DAFE/output_1"
   output_file_2 = "/gpfsdswork/projects/rech/sfz/utt84zy/DAFE/output_2"
   ref_file = "/gpfsdswork/projects/rech/sfz/utt84zy/DAFE/ref"
+  loss_diff = []
+  rewards_acc = []
   with _summary_writer.as_default(): 
-      for it in range(3):#while True:
+      for it in range(100):#while True:
         try:
           # compute domain rewards
           rewards = [0.0] * len(domain)
@@ -13719,6 +13721,8 @@ def debug_L2W_v1(config,
           #######        
           total_reward = 0
           count = 0
+          loss_t = 0
+          loss_t_1 = 0
           for i, train_iter in enumerate(train_iterators):
             _reward = 0.0
             weight_reset(snapshots)
@@ -13730,11 +13734,12 @@ def debug_L2W_v1(config,
                   loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
                   loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
                 print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
+                loss_t = loss_/len(dev_batches[j])
               ##### compute theta_t+1
               for _ in range(config.get("train_batch_per_run_num",10)): 
                 for _ in range(config.get("train_batch_step_accum",10)):
                   src, tgt = next(train_iterators[i])
-                  print("training domain: ", [d[0].numpy() for d in src["domain"].values])
+                  #print("training domain: ", [d[0].numpy() for d in src["domain"].values])
                   strategy.experimental_run_v2(_accumulate_train_gradients, args=(src, tgt))
                 strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
                 strategy.experimental_run_v2(_apply_dev_train_gradients)
@@ -13757,7 +13762,7 @@ def debug_L2W_v1(config,
                   loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
                   loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
                 print("average loss at theta_t+1 on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
-
+                loss_t_1 = loss_/len(dev_batches[j])
                 for src, tgt in dev_batches[j]:
                   strategy.experimental_run_v2(_accumulate_dev_gradients, args=(src, tgt))
                 strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
@@ -13772,9 +13777,8 @@ def debug_L2W_v1(config,
                 else:
                   _reward_ij = _sum * learning_rate(saved_step) * domain_importances[j]
                 _reward += _reward_ij
-                total_reward += _reward_ij
-                count +=1
-                reward_acc[i,j, it] += _reward_ij
+                loss_diff.append(- loss_t_1 + loss_t)
+                rewards_acc.append(_reward_ij)
                 print("reward of training set %d to dev set %d: %f"%(i,j,_reward_ij))
                 # reset dev gradient accumulations to zero
                 strategy.experimental_run_v2(dev_gradient_accumulator.reset)
@@ -13791,6 +13795,10 @@ def debug_L2W_v1(config,
           #######
         except tf.errors.OutOfRangeError:
           print("average reward: ", total_reward/count)
+
+  print(loss_diff)
+  print(rewards_acc)
+  print(np.cov(loss_diff, rewards_acc))
 
 def debug_L2W_v2(config,
           optimizer,          
