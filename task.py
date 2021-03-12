@@ -13699,7 +13699,7 @@ def debug_L2W_v1(config,
   loss_diff = []
   rewards_acc = []
   with _summary_writer.as_default(): 
-      for it in range(25):#while True:
+      for it in range(15):#while True:
         try:
           # compute domain rewards
           rewards = [0.0] * len(domain)
@@ -13989,7 +13989,6 @@ def debug_L2W_v2(config,
       sub_gradient_accumulator(gradients)
       return training_loss
 
-  
   def _reset_dev_train_gradients():
     dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
     [train_gradient_accumulator.reset() for train_gradient_accumulator in train_gradient_accumulators]
@@ -14155,7 +14154,7 @@ def debug_L2W_v2(config,
   loss_diff = []
   rewards_acc = []
   with _summary_writer.as_default(): 
-      for it in range(25):#while True:
+      for it in range(15):#while True:
         try:
           # compute domain rewards
           rewards = [0.0] * len(domain)
