@@ -13740,9 +13740,9 @@ def debug_L2W_v1(config,
           total_reward = 0
           count = 0
           loss_t = [0] * len(dev_iterators)
+          reward_ = np.zeros((len(train_iterators), len(dev_iterators)))
           for i, train_iter in enumerate(train_iterators):
             _reward = 0.0
-            reward_ = np.zeros((len(train_iterators), len(dev_iterators)))
             weight_reset(snapshots)
             with strategy.scope():
               ####### loss of dev batch at theta_t
