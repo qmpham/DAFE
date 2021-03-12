@@ -11674,7 +11674,29 @@ def train_L2W_v2(config,
       training_loss, reported_loss = loss, loss
     return reported_loss
 
-  def _accumulate_dev_train_gradients(source, target):
+  def _accumulate_train_gradients(source, target):
+    with tf.GradientTape() as tape:
+      variables = model.trainable_variables    
+      tape.watch(variables)
+      outputs, _ = model(
+          source,
+          labels=target,
+          training=True,
+          step=optimizer.iterations,
+          inference=False)
+      loss = model.compute_loss(outputs, target, training=True)
+
+      if isinstance(loss, tuple):
+        training_loss = loss[0] / loss[1]
+        reported_loss = loss[0] / loss[2]
+      else:
+        training_loss, reported_loss = loss, loss
+      #tf.print(loss[1],loss[2],sep="|")
+      gradients = tape.gradient(training_loss, variables)
+      sub_gradient_accumulator(gradients)
+      return training_loss
+  
+  def _accumulate_dev_gradients(source, target):
     with tf.GradientTape() as tape:
       variables = model.trainable_variables    
       tape.watch(variables)
@@ -11691,7 +11713,7 @@ def train_L2W_v2(config,
         reported_loss = loss[0] / loss[2]
       else:
         training_loss, reported_loss = loss, loss
-
+      #tf.print(loss[1],loss[2],sep="|")
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
       return training_loss
@@ -11892,7 +11914,7 @@ def train_L2W_v2(config,
             for _ in range(config.get("train_batch_per_run_num",10)): 
               for _ in range(config.get("train_batch_step_accum",10)):
                 src, tgt = next(train_iterators[i])
-                strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+                strategy.experimental_run_v2(_accumulate_train_gradients, args=(src, tgt))
               strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
               strategy.experimental_run_v2(_apply_dev_train_gradients)
             strategy.experimental_run_v2(sub_gradient_accumulator.reset)
@@ -11907,7 +11929,7 @@ def train_L2W_v2(config,
               #count = 0
               for src, tgt in dev_batches[j]:
                 #print("valid domain: %d: "%j,src["domain"])
-                strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
+                strategy.experimental_run_v2(_accumulate_dev_gradients, args=(src, tgt))
               strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
               for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
@@ -11921,12 +11943,8 @@ def train_L2W_v2(config,
                 _reward += _sum * domain_importances[j] #_sum * learning_rate(saved_step) * domain_importances[j]
               # reset dev gradient accumulations to zero
               strategy.experimental_run_v2(dev_gradient_accumulator.reset)
-              #print(dev_gradient_accumulator.gradients[0])
             # reset train dev gradient accumulations to zero
             strategy.experimental_run_v2(train_gradient_accumulator.reset)
-            #print(sub_gradient_accumulator.gradients[0])
-            #print(train_gradient_accumulator.gradients[0])
-          #_reward /= len(domain)
           rewards[i] = _reward.numpy()
           # reset model parameters
           weight_reset(snapshots)
@@ -13533,7 +13551,6 @@ def debug_L2W_v1(config,
       sub_gradient_accumulator(gradients)
       return training_loss
 
-  
   def _reset_dev_train_gradients():
     dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
     [train_gradient_accumulator.reset() for train_gradient_accumulator in train_gradient_accumulators]
