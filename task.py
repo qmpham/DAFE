@@ -13780,6 +13780,12 @@ def debug_L2W_v1(config,
                     _reward_ij = _sum * learning_rate(saved_step) * domain_importances[j]
                   _reward += _reward_ij
                   reward_[i,j] += _reward_ij 
+                  loss_ = 0
+                  for src, tgt in dev_batches[j]:
+                    loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
+                    loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
+                  print("average loss at theta_t+1 on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
+                  print("reward of training set %d to dev set %d: %f"%(i,j,_reward_ij))
                   # reset dev gradient accumulations to zero
                   strategy.experimental_run_v2(dev_gradient_accumulator.reset)
                 # reset train dev gradient accumulations to zero
