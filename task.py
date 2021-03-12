@@ -13764,6 +13764,8 @@ def debug_L2W_v1(config,
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)
                 for j, dev_iter in enumerate(dev_iterators):
                   _sum = 0.0
+                  _dev_norm = 0.0
+                  _tr_norm = 0.0
                   for src, tgt in dev_batches[j]:
                     strategy.experimental_run_v2(_accumulate_dev_gradients, args=(src, tgt))
                   strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
