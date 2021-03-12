@@ -13722,8 +13722,7 @@ def debug_L2W_v1(config,
           #######        
           total_reward = 0
           count = 0
-          loss_t = 0
-          loss_t_1 = 0
+          loss_t = [0] * len(dev_iterators)
           for i, train_iter in enumerate(train_iterators):
             _reward = 0.0
             reward_ = np.zeros((len(train_iterators), len(dev_iterators)))
@@ -13736,7 +13735,7 @@ def debug_L2W_v1(config,
                   loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
                   loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
                 print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
-                loss_t = loss_/len(dev_batches[j])
+                loss_t[j] = loss_/len(dev_batches[j])
               ##### compute theta_t+1
               for _ in range(config.get("train_batch_per_run_num",10)): 
                 for _ in range(config.get("train_batch_step_accum",10)):
@@ -13748,15 +13747,6 @@ def debug_L2W_v1(config,
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)
                 for j, dev_iter in enumerate(dev_iterators):
                   _sum = 0.0
-                  _dev_norm = 0.0
-                  _tr_norm = 0.0
-                  _sum_1 = 0.0
-                  _sum_2 = 0.0
-                  _dev_norm_1 = 0.0
-                  _tr_norm_1 = 0.0
-                  _dev_norm_2 = 0.0
-                  _tr_norm_2 = 0.0
-                  loss_ = 0
                   for src, tgt in dev_batches[j]:
                     strategy.experimental_run_v2(_accumulate_dev_gradients, args=(src, tgt))
                   strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
@@ -13780,12 +13770,14 @@ def debug_L2W_v1(config,
                 print("reward of training set %d to dev set %d: %f"%(i,j,reward_[i,j]))
                 rewards_acc.append(reward_[i,j])
               ####### loss of dev batch at theta_t+1
-              for src, tgt in dev_batches[j]:
-                loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
-                loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
-              print("average loss at theta_t+1 on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
-              loss_t_1 = loss_/len(dev_batches[j])
-              loss_diff.append(- loss_t_1 + loss_t)
+              for j, dev_iter in enumerate(dev_iterators):
+                loss_ = 0
+                for src, tgt in dev_batches[j]:
+                  loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
+                  loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
+                print("average loss at theta_t+1 on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
+                loss_ = loss_/len(dev_batches[j])
+                loss_diff.append(- loss_ + loss_t[j])
             # reset model parameters
             weight_reset(snapshots)
             optimizer.iterations.assign(saved_step)
