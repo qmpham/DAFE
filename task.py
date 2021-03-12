@@ -13698,7 +13698,7 @@ def debug_L2W_v1(config,
   loss_diff = []
   rewards_acc = []
   with _summary_writer.as_default(): 
-      for it in range(100):#while True:
+      for it in range(25):#while True:
         try:
           # compute domain rewards
           rewards = [0.0] * len(domain)
