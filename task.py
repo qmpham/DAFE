@@ -13740,7 +13740,11 @@ def debug_L2W_v1(config,
           total_reward = 0
           count = 0
           loss_t = [0] * len(dev_iterators)
-          reward_ = np.zeros((len(train_iterators), len(dev_iterators)))
+          #reward_ = np.zeros((len(train_iterators), len(dev_iterators)))
+          rewards_ = dict()
+          for i in range(len(train_iterators)):
+            for j in range(len(dev_iterators)):
+              rewards_[(i,j)] = []
           for i, train_iter in enumerate(train_iterators):
             _reward = 0.0
             weight_reset(snapshots)
@@ -13779,7 +13783,7 @@ def debug_L2W_v1(config,
                   else:
                     _reward_ij = _sum * learning_rate(saved_step) * domain_importances[j]
                   _reward += _reward_ij
-                  reward_[i,j] += _reward_ij 
+                  reward_[(i,j)].append(_reward_ij)
                   loss_ = 0
                   for src, tgt in dev_batches[j]:
                     loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
@@ -13792,8 +13796,8 @@ def debug_L2W_v1(config,
                 strategy.experimental_run_v2(train_gradient_accumulator.reset)
               #######
               for j, dev_iter in enumerate(dev_iterators):
-                print("reward of training set %d to dev set %d: %f"%(i,j,reward_[i,j]))
-                rewards_acc.append(reward_[i,j])
+                print("reward of training set %d to dev set %d: %f"%(i,j,reward_[(i,j)]))
+                rewards_acc.append(sum.(reward_[(i,j)]))
               ####### loss of dev batch at theta_t+1
               for j, dev_iter in enumerate(dev_iterators):
                 loss_ = 0
