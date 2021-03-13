@@ -13781,7 +13781,7 @@ def debug_L2W_v1(config,
                     _reward_ij = _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
                   else:
                     _reward_ij = _sum * learning_rate(saved_step) * domain_importances[j]
-                  reward_[(i,j)].append(_reward_ij)
+                  reward_[(i,j)].append(_reward_ij.numpy())
                   loss_ = 0
                   for src, tgt in dev_batches[j]:
                     loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
