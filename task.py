@@ -13741,10 +13741,10 @@ def debug_L2W_v1(config,
           count = 0
           loss_t = [0] * len(dev_iterators)
           #reward_ = np.zeros((len(train_iterators), len(dev_iterators)))
-          rewards_ = dict()
+          reward_ = dict()
           for i in range(len(train_iterators)):
             for j in range(len(dev_iterators)):
-              rewards_[(i,j)] = []
+              reward_[(i,j)] = []
           for i, train_iter in enumerate(train_iterators):
             _reward = 0.0
             weight_reset(snapshots)
