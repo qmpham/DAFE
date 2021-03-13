@@ -13794,7 +13794,7 @@ def debug_L2W_v1(config,
                 strategy.experimental_run_v2(train_gradient_accumulator.reset)
               #######
               for j, dev_iter in enumerate(dev_iterators):
-                print("reward of training set %d to dev set %d: %f"%(i,j,reward_[(i,j)]))
+                print("reward of training set %d to dev set %d: "%(i,j),reward_[(i,j)])
                 rewards_acc.append(sum(reward_[(i,j)]))
               ####### loss of dev batch at theta_t+1
               for j, dev_iter in enumerate(dev_iterators):
