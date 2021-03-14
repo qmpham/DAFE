@@ -11945,7 +11945,7 @@ def train_L2W_v2(config,
               strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
               strategy.experimental_run_v2(_apply_dev_train_gradients)
             strategy.experimental_run_v2(sub_gradient_accumulator.reset)
-            ####### loss of dev batch at theta_t
+            ####### loss of dev batch at theta_t+1
             for j, dev_iter in enumerate(dev_iterators):
               loss_ = 0
               for src, tgt in dev_batches[j]:
