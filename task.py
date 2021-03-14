@@ -13758,12 +13758,14 @@ def debug_L2W_v1(config,
                 loss_t[j] = loss_/len(dev_batches[j])
               ##### compute theta_t+1
               for _ in range(config.get("train_batch_per_run_num",10)): 
+                old_snapshots = [v.value() for v in model.trainable_variables]
                 for _ in range(config.get("train_batch_step_accum",10)):
                   src, tgt = next(train_iterators[i])
                   #print("training domain: ", [d[0].numpy() for d in src["domain"].values])
                   strategy.experimental_run_v2(_accumulate_train_gradients, args=(src, tgt))
                 strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
                 strategy.experimental_run_v2(_apply_dev_train_gradients)
+                new_snapshots = [v.value() for v in model.trainable_variables]
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)
                 for j, dev_iter in enumerate(dev_iterators):
                   _sum = 0.0
@@ -13773,7 +13775,8 @@ def debug_L2W_v1(config,
                     strategy.experimental_run_v2(_accumulate_dev_gradients, args=(src, tgt))
                   strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
                   strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
-                  for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
+                  for dev_grad, tr_grad, var, snapshot, old_snapshot, new_snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots, old_snapshots, new_snapshots):
+                    tr_grad = -new_snapshot + old_snapshot
                     _sum += tf.reduce_sum(dev_grad * tr_grad)
                     _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                     _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
