@@ -11953,7 +11953,7 @@ def train_L2W_v2(config,
                 loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
               print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_.numpy()/len(dev_batches[j])))
               loss_t_1[j] = loss_.numpy()/len(dev_batches[j])
-            rewards[i] = sum[(l-l1)*importance for l,l1,importance in zip(loss_t, loss_t_1, domain_importances)]
+            rewards[i] = sum([(l-l1)*importance for l,l1,importance in zip(loss_t, loss_t_1, domain_importances)])
           ##### accumulate gradient over dev set of k tgt domains at theta_t+1
           # with strategy.scope():
           #   for j, dev_iter in enumerate(dev_iterators):
