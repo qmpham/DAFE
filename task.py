@@ -11909,15 +11909,6 @@ def train_L2W_v2(config,
         saved_step = optimizer.iterations.numpy()
         loss_t = [0.0] * len(dev_iterators)
         loss_t_1 = [0.0] * len(dev_iterators)
-        ####### loss of dev batch at theta_t
-        with strategy.scope():
-          for j, dev_iter in enumerate(dev_iterators):
-            loss_ = 0
-            for src, tgt in dev_batches[j]:
-              loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
-              loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
-            print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_.numpy()/len(dev_batches[j])))
-            loss_t[j] = loss_.numpy()/len(dev_batches[j])
         #######
         if config.get("actor_parameterization","softmax") =="softmax":
           current_probs = tf.nn.softmax(domain_logits).numpy()
@@ -11932,6 +11923,15 @@ def train_L2W_v2(config,
             src, tgt = next(dev_iter)
             dev_batches_domain_i.append((src,tgt))
           dev_batches.append(dev_batches_domain_i)
+        ####### loss of dev batch at theta_t
+        with strategy.scope():
+          for j, dev_iter in enumerate(dev_iterators):
+            loss_ = 0
+            for src, tgt in dev_batches[j]:
+              loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
+              loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
+            print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_.numpy()/len(dev_batches[j])))
+            loss_t[j] = loss_.numpy()/len(dev_batches[j])
         #######        
         for i, train_iter in enumerate(train_iterators):
           _reward = 0.0
