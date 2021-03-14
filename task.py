@@ -11790,6 +11790,22 @@ def train_L2W_v2(config,
       for snap, var in zip(snapshots, model.trainable_variables):
         strategy.extended.update(var, _set_weight, args=(snap, ))
 
+  def _compute_loss(source, target):
+    outputs, _ = model(
+        source,
+        labels=target,
+        training=False,
+        step=optimizer.iterations,
+        inference=False)
+    loss = model.compute_loss(outputs, target, training=False)
+    
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+    return reported_loss
+ 
   # Runs the training loop.
   import time
   start = time.time()  
@@ -11891,6 +11907,17 @@ def train_L2W_v2(config,
         rewards = [0.0] * len(domain)
         snapshots = [v.value() for v in model.trainable_variables]
         saved_step = optimizer.iterations.numpy()
+        loss_t = [0.0] * len(dev_iterators)
+        loss_t_1 = [0.0] * len(dev_iterators)
+        ####### loss of dev batch at theta_t
+        with strategy.scope():
+          for j, dev_iter in enumerate(dev_iterators):
+            loss_ = 0
+            for src, tgt in dev_batches[j]:
+              loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
+              loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
+            print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_.numpy()/len(dev_batches[j])))
+            loss_t[j] = loss_.numpy()/len(dev_batches[j])
         #######
         if config.get("actor_parameterization","softmax") =="softmax":
           current_probs = tf.nn.softmax(domain_logits).numpy()
@@ -11918,34 +11945,41 @@ def train_L2W_v2(config,
               strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
               strategy.experimental_run_v2(_apply_dev_train_gradients)
             strategy.experimental_run_v2(sub_gradient_accumulator.reset)
-
-            strategy.experimental_run_v2(sub_gradient_accumulator.reset)
-          ##### accumulate gradient over dev set of k tgt domains at theta_t+1
-          with strategy.scope():
+            ####### loss of dev batch at theta_t
             for j, dev_iter in enumerate(dev_iterators):
-              _sum = 0.0
-              _dev_norm = 0.0
-              _tr_norm = 0.0
-              #count = 0
+              loss_ = 0
               for src, tgt in dev_batches[j]:
-                #print("valid domain: %d: "%j,src["domain"])
-                strategy.experimental_run_v2(_accumulate_dev_gradients, args=(src, tgt))
-              strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
-              strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
-              for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
-                #if var.name not in excluded_params: 
-                _sum += tf.reduce_sum(dev_grad * tr_grad)
-                _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-                _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-              if config.get("cosine_reward",True):
-                _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
-              else:
-                _reward += _sum * domain_importances[j] #_sum * learning_rate(saved_step) * domain_importances[j]
-              # reset dev gradient accumulations to zero
-              strategy.experimental_run_v2(dev_gradient_accumulator.reset)
-            # reset train dev gradient accumulations to zero
-            strategy.experimental_run_v2(train_gradient_accumulator.reset)
-          rewards[i] = _reward.numpy()
+                loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
+                loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
+              print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_.numpy()/len(dev_batches[j])))
+              loss_t_1[j] = loss_.numpy()/len(dev_batches[j])
+            rewards[i] = sum[(l-l1)*importance for l,l1,importance in zip(loss_t, loss_t_1, domain_importances)]
+          ##### accumulate gradient over dev set of k tgt domains at theta_t+1
+          # with strategy.scope():
+          #   for j, dev_iter in enumerate(dev_iterators):
+          #     _sum = 0.0
+          #     _dev_norm = 0.0
+          #     _tr_norm = 0.0
+          #     #count = 0
+          #     for src, tgt in dev_batches[j]:
+          #       #print("valid domain: %d: "%j,src["domain"])
+          #       strategy.experimental_run_v2(_accumulate_dev_gradients, args=(src, tgt))
+          #     strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
+          #     strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
+          #     for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
+          #       #if var.name not in excluded_params: 
+          #       _sum += tf.reduce_sum(dev_grad * tr_grad)
+          #       _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+          #       _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+          #     if config.get("cosine_reward",True):
+          #       _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
+          #     else:
+          #       _reward += _sum * domain_importances[j] #_sum * learning_rate(saved_step) * domain_importances[j]
+          #     # reset dev gradient accumulations to zero
+          #     strategy.experimental_run_v2(dev_gradient_accumulator.reset)
+          #   # reset train dev gradient accumulations to zero
+          #   strategy.experimental_run_v2(train_gradient_accumulator.reset)
+          # rewards[i] = _reward.numpy()
           # reset model parameters
           weight_reset(snapshots)
           optimizer.iterations.assign(saved_step)
