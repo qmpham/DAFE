@@ -14211,7 +14211,7 @@ def debug_L2W_v2(config,
   loss_diff = []
   rewards_acc = []
   with _summary_writer.as_default(): 
-      for it in range(15):#while True:
+      for it in range(5):#while True:
         try:
           # compute domain rewards
           rewards = [0.0] * len(domain)
@@ -14281,7 +14281,7 @@ def debug_L2W_v2(config,
                 strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
                 strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
                 for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
-                  tr_grad = snapshot - var
+                  #tr_grad = snapshot - var
                   _sum += tf.reduce_sum(dev_grad * tr_grad)
                   _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
                   _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
