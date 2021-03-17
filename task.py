@@ -14413,7 +14413,7 @@ def debug_L2W_v1(config,
                 for src, tgt in dev_batches[j]:
                   loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
                   loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
-                print("average loss at theta_t+1 on %s: %f"%(config.get("eval_src")[j], loss_/len(dev_batches[j])))
+                print("average loss at theta_t+1 from training domain %d on %s: %f"%(i, config.get("eval_src")[j], loss_/len(dev_batches[j])))
                 loss_ = loss_/len(dev_batches[j])
                 loss_diff.append(- loss_ + loss_t[j])
             # reset model parameters
