@@ -12562,11 +12562,16 @@ def train_L2W_g(config,
                 strategy.experimental_run_v2(_accumulate_dev_gradients, args=(src, tgt))
               strategy.experimental_run_v2(lambda: dev_gradient_accumulator(sub_gradient_accumulator.gradients))
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
-              for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
-                #if var.name not in excluded_params: 
-                _sum += tf.reduce_sum(dev_grad * tr_grad)
-                _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-                _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+              for dev_grad, tr_grad, var, snapshot in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables, snapshots):
+                if config.get("reward_formula","g-cosine"):
+                  _sum += tf.reduce_sum(dev_grad * tr_grad)
+                  _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                  _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
+                elif config.get("reward_formula","u-cosine"):
+                  tr_grad = snapshot - var
+                  _sum += tf.reduce_sum(dev_grad * tr_grad)
+                  _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                  _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
               if config.get("cosine_reward",True):
                 _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
               else:
