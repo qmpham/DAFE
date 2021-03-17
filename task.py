@@ -12484,6 +12484,7 @@ def train_L2W_g(config,
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
   domain_counts = [0.0] * len(domain)
+  print("reward_formula: ", config.get("reward_formula","g-cosine"))
   with _summary_writer.as_default():
     while True:
       ####Training batch
