@@ -11525,6 +11525,7 @@ def train_L2W_v2(config,
   else:
     domain_importances = config.get("domain_importances")
   print("There are %d in-domain corpora"%len(source_file))
+  domain_num = len(source_file)
   ###############
   print("cosine_reward: ",config.get("cosine_reward",True))
   ###############
@@ -11572,22 +11573,21 @@ def train_L2W_v2(config,
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     sub_gradient_accumulator = optimizer_util.GradientAccumulator()
-    #dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
-    #train_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     dev_gradient_accumulator = optimizer_util.GradientAccumulator()
     train_gradient_accumulator = optimizer_util.GradientAccumulator()
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
-    #domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
     d_logits_grad_accumulator = optimizer_util.GradientAccumulator()
-    #domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
-    #sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
-    #sampler_vars = [domain_logits]
-    #sampler_optimizer._create_slots(sampler_vars)
+    
   print("actor_parameterization: ",config.get("actor_parameterization","softmax"))
   if config.get("actor_parameterization","softmax") =="softmax":
     domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
   elif config.get("actor_parameterization","softmax") =="linear":
     domain_logits = tf.Variable(picking_prob, trainable=True)
+  elif config.get("actor_parameterization","softmax") =="taylor":
+    domain_logits = tf.Variable([1.0/domain_num]*domain_num, trainable=True)
+  elif config.get("actor_parameterization","softmax") =="sparsemax":
+    domain_logits = tf.Variable([0.0]*domain_num, trainable=True)
+  
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   print("sampler_opt: ", config.get("sampler_opt", "SGD"))
   if config.get("sampler_opt", "SGD") == "SGD":
@@ -11599,13 +11599,19 @@ def train_L2W_v2(config,
   print("init domain_logits: ", domain_logits)
   print("domain_rewards: ", domain_rewards)
   print("domain_importances: ", domain_importances)
-  
+  temp = config.get("actor_temperature",1.0)
+  print("actor_temperature: ", temp)
   @tf.function
   def _grad_sampler_accum():
     if config.get("actor_parameterization","softmax") =="softmax":
-      loss = - tf.reduce_sum(tf.stop_gradient(tf.nn.softmax(domain_logits)) * tf.nn.log_softmax(domain_logits) * domain_rewards)
+      loss = - tf.reduce_sum(tf.nn.softmax(domain_logits*temp) * domain_rewards)
     elif config.get("actor_parameterization","softmax") =="linear":
       loss = - tf.reduce_sum(domain_logits * domain_rewards)
+    elif config.get("actor_parameterization","softmax") =="taylor":
+      loss = - tf.reduce_sum(tf.math.square(domain_logits*temp)/tf.reduce_sum(tf.math.square(domain_logits*temp)) * domain_rewards)
+    elif config.get("actor_parameterization","softmax") =="sparsemax":
+      loss = - tf.reduce_sum(tfa.activations.sparsemax(domain_logits*temp) * domain_rewards)
+    
     if config.get("sampler_entropy_constraint",False):
       print("sampler_entropy_constraint_weight",config.get("sampler_entropy_constraint_weight",1e-3))
       if config.get("actor_parameterization","softmax") =="softmax":
@@ -11620,7 +11626,6 @@ def train_L2W_v2(config,
   def _sampler_step_1():
     sampler_optimizer.apply_gradients([(grad_domain_logits_accum, domain_logits)])
     if config.get("actor_parameterization","softmax") =="linear":
-      #domain_logits.assign(domain_logits - tf.reduce_min(domain_logits))
       domain_logits.assign(tf.clip_by_value(domain_logits, clip_value_min=0.0, clip_value_max=10.0))
       domain_logits.assign(domain_logits/tf.reduce_sum(domain_logits))
     grad_domain_logits_accum.assign(tf.zeros_like(domain_logits))
@@ -11846,9 +11851,14 @@ def train_L2W_v2(config,
     print("current domain_logits", config.get("domain_logits",[0.0]*len(domain)))
     domain_logits.assign(config.get("domain_logits",[0.0]*len(domain)))
     if config.get("actor_parameterization","softmax") =="softmax":
-      probs = tf.nn.softmax(domain_logits)
+      probs = tf.nn.softmax(domain_logits*temp)
     elif config.get("actor_parameterization","softmax") =="linear":
       probs = domain_logits
+    elif config.get("actor_parameterization","softmax") =="taylor":
+      probs = tf.math.square(domain_logits*temp)/tf.reduce_sum(tf.math.square(domain_logits*temp))
+    elif config.get("actor_parameterization","softmax") =="sparsemax":
+      loss = - tf.reduce_sum(tfa.activations.sparsemax(domain_logits*temp) * domain_rewards)
+
     new_picking_prob = update_sampling_distribution(probs)
     # create new training course with updated domain distribution
     train_dataset = tf.data.experimental.sample_from_datasets(train_datasets_p, weights=new_picking_prob)
@@ -11909,9 +11919,14 @@ def train_L2W_v2(config,
         saved_step = optimizer.iterations.numpy()
         #######
         if config.get("actor_parameterization","softmax") =="softmax":
-          current_probs = tf.nn.softmax(domain_logits).numpy()
+          current_probs = tf.nn.softmax(domain_logits*temp).numpy()
         elif config.get("actor_parameterization","softmax") =="linear":
           current_probs = domain_logits.numpy()
+        elif config.get("actor_parameterization","softmax") =="taylor":
+          current_probs = tf.math.square(domain_logits*temp)/tf.reduce_sum(tf.math.square(domain_logits*temp))
+        elif config.get("actor_parameterization","softmax") =="sparsemax":
+          current_probs = tfa.activations.sparsemax(domain_logits*temp)
+
         print("current_probs: ", current_probs)
         ####### Prepare dev batch
         dev_batches = []
@@ -11966,9 +11981,14 @@ def train_L2W_v2(config,
           
         print("domain_logits: ", domain_logits.numpy())
         if config.get("actor_parameterization","softmax") =="softmax":
-          probs = tf.nn.softmax(domain_logits)
+          probs = tf.nn.softmax(domain_logits*temp)
         elif config.get("actor_parameterization","softmax") =="linear":
           probs = domain_logits
+        elif config.get("actor_parameterization","softmax") =="taylor":
+          probs = tf.math.square(domain_logits*temp)/tf.reduce_sum(tf.math.square(domain_logits*temp))
+        elif config.get("actor_parameterization","softmax") =="sparsemax":
+          probs = tfa.activations.sparsemax(domain_logits*temp)
+          
         new_picking_prob = update_sampling_distribution(probs)
         tf.summary.experimental.set_step(saved_step)
         for i in range(len(domain)):
