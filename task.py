@@ -11698,7 +11698,6 @@ def train_L2W_v2(config,
         reported_loss = loss[0] / loss[2]
       else:
         training_loss, reported_loss = loss, loss
-      #tf.print(loss[1],loss[2],sep="|")
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
       return training_loss
@@ -11720,15 +11719,10 @@ def train_L2W_v2(config,
         reported_loss = loss[0] / loss[2]
       else:
         training_loss, reported_loss = loss, loss
-      #tf.print(loss[1],loss[2],sep="|")
       gradients = tape.gradient(training_loss, variables)
       sub_gradient_accumulator(gradients)
       return training_loss
   
-  def _reset_dev_train_gradients():
-    dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
-    [train_gradient_accumulator.reset() for train_gradient_accumulator in train_gradient_accumulators]
-
   def _apply_gradients():
     variables = model.trainable_variables
     grads_and_vars = []
@@ -11748,13 +11742,6 @@ def train_L2W_v2(config,
       grads_and_vars.append((scaled_gradient, variable))
     inner_optimizer.apply_gradients(grads_and_vars)
     sub_gradient_accumulator.reset()
- 
-  def _apply_sampler_gradients():
-    grads_and_vars = []
-    scaled_gradient = d_logits_grad_accumulator.gradients[0] / (strategy.num_replicas_in_sync * tf.cast(d_logits_grad_accumulator.step, tf.float32))
-    grads_and_vars.append((scaled_gradient, domain_logits))
-    sampler_optimizer.apply_gradients(grads_and_vars)
-    d_logits_grad_accumulator.reset()
 
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
@@ -11772,21 +11759,6 @@ def train_L2W_v2(config,
   def _step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_gradients)
-
-  @tf.function
-  def _dev_train_step():
-    with strategy.scope():
-      strategy.experimental_run_v2(_apply_dev_train_gradients)
-
-  @tf.function
-  def _sampler_step():
-    with strategy.scope():
-      strategy.experimental_run_v2(_apply_sampler_gradients)
-
-  @tf.function
-  def _reset_dev_train_grad_accum_step():
-    with strategy.scope():
-      _reset_dev_train_gradients()
   
   def _set_weight(v, w):
     v.assign(tf.cast(w,v.dtype))
