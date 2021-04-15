@@ -11586,7 +11586,10 @@ def train_L2W_v2(config,
   elif config.get("actor_parameterization","softmax") =="taylor":
     domain_logits = tf.Variable([1.0/domain_num]*domain_num, trainable=True)
   elif config.get("actor_parameterization","softmax") =="sparsemax":
-    domain_logits = tf.Variable([0.0]*domain_num, trainable=True)
+    if config.get("picking_prob",None):
+      domain_logits = tf.Variable(np.sqrt(np.array(picking_prob)), trainable=True)
+    else:
+      domain_logits = tf.Variable([0.0]*domain_num, trainable=True)
   
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   print("sampler_opt: ", config.get("sampler_opt", "SGD"))
