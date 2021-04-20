@@ -12125,20 +12125,18 @@ def train_L2W_g(config,
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     sub_gradient_accumulator = optimizer_util.GradientAccumulator()
-    #dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
-    #train_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
+    
     dev_gradient_accumulator = optimizer_util.GradientAccumulator()
     train_gradient_accumulator = optimizer_util.GradientAccumulator()
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
-    #domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
     d_logits_grad_accumulator = optimizer_util.GradientAccumulator()
-    #domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
-    #sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
-    #sampler_vars = [domain_logits]
-    #sampler_optimizer._create_slots(sampler_vars)
+    
   print("actor_parameterization: ",config.get("actor_parameterization","softmax"))
   if config.get("actor_parameterization","softmax") =="softmax":
-    domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
+    if config.get("domain_logits",[0.0]*len(domain)):
+      domain_logits = tf.Variable(config.get("domain_logits",[0.0]*len(domain)), trainable=True)
+    else:
+      domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
   elif config.get("actor_parameterization","softmax") =="linear":
     domain_logits = tf.Variable(picking_prob, trainable=True)
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
