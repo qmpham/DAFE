@@ -12473,7 +12473,7 @@ def train_L2W_g(config,
             src, tgt = next(dev_iter)
             dev_batches_domain_i.append((src,tgt))
           dev_batches.append(dev_batches_domain_i)
-        ####### loss of dev batch at theta_t
+        """ ####### loss of dev batch at theta_t
         with strategy.scope():
           for j, dev_iter in enumerate(dev_iterators):
             loss_ = 0
@@ -12481,7 +12481,7 @@ def train_L2W_g(config,
               loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
               loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
             print("average loss at theta_t on %s: %f"%(config.get("eval_src")[j], loss_.numpy()/len(dev_batches[j])))
-            loss_t[j] = loss_.numpy()/len(dev_batches[j])
+            loss_t[j] = loss_.numpy()/len(dev_batches[j]) """
         #######        
         for i, train_iter in enumerate(train_iterators):
           _reward = 0.0
