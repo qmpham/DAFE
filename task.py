@@ -11012,17 +11012,11 @@ def train_L2W_v1(config,
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     sub_gradient_accumulator = optimizer_util.GradientAccumulator()
-    #dev_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
-    #train_gradient_accumulators = [optimizer_util.GradientAccumulator() for _ in domain]
     dev_gradient_accumulator = optimizer_util.GradientAccumulator()
     train_gradient_accumulator = optimizer_util.GradientAccumulator()
     domain_rewards = tf.Variable([0.0]*len(domain), trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
-    #domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
     d_logits_grad_accumulator = optimizer_util.GradientAccumulator()
-    #domain_importances = tf.Variable(domain_importances, trainable=False, aggregation=tf.compat.v1.VariableAggregation.MEAN, synchronization=tf.VariableSynchronization.AUTO)
-    #sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
-    #sampler_vars = [domain_logits]
-    #sampler_optimizer._create_slots(sampler_vars)
+
   domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01))
@@ -11354,13 +11348,9 @@ def train_L2W_v1(config,
             for _ in range(config.get("train_batch_per_run_num",10)): 
               src, tgt = next(train_iterators[i])
               strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
-            ##### accumulate gradient over training set of src domain i at theta_t
-            # for _ in range(config.get("train_batch_per_run_num",10)):
-            #   src, tgt = next(train_iter)
-            #   strategy.experimental_run_v2(_accumulate_dev_train_gradients, args=(src, tgt))
             train_gradient_accumulator(sub_gradient_accumulator.gradients)
             strategy.experimental_run_v2(_apply_dev_train_gradients)
-            #strategy.experimental_run_v2(sub_gradient_accumulator.reset)
+            strategy.experimental_run_v2(sub_gradient_accumulator.reset)
           ##### accumulate gradient over dev set of k tgt domains at theta_t+1
           with strategy.scope():
             for j, dev_iter in enumerate(dev_iterators):
@@ -11374,16 +11364,14 @@ def train_L2W_v1(config,
               dev_gradient_accumulator(sub_gradient_accumulator.gradients)
               strategy.experimental_run_v2(sub_gradient_accumulator.reset)         
               for dev_grad, tr_grad, var in zip(dev_gradient_accumulator._gradients, train_gradient_accumulator._gradients, model.trainable_variables):
-                if var.name not in excluded_params: #sum([substring not in var.name for substring in config.get("param_to_exclude_from_reward",["hello"])])>0: #True:#"ADAP_" not in var.name:
-                  _sum += tf.reduce_sum(dev_grad * tr_grad)
-                  _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
-                  _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
-                  #count +=1
+                _sum += tf.reduce_sum(dev_grad * tr_grad)
+                _dev_norm += tf.reduce_sum(dev_grad * dev_grad)
+                _tr_norm += tf.reduce_sum(tr_grad * tr_grad)
               #print("number_of_parameters_in_reward: %d"%(count))
               if config.get("cosine_reward",True):
                 _reward += _sum / (tf.sqrt(_dev_norm * _tr_norm) + 1e-10) * domain_importances[j]
               else:
-                _reward += _sum * domain_importances[j] #_sum * learning_rate(saved_step) * domain_importances[j]
+                _reward += _sum * domain_importances[j]
               # reset dev gradient accumulations to zero
               strategy.experimental_run_v2(dev_gradient_accumulator.reset)
               #print(dev_gradient_accumulator.gradients[0])
@@ -12473,8 +12461,6 @@ def train_L2W_g(config,
         rewards = [0.0] * len(domain)
         snapshots = [v.value() for v in model.trainable_variables]
         saved_step = optimizer.iterations.numpy()
-        loss_t = [0.0] * len(dev_iterators)
-        loss_t_1 = [0.0] * len(dev_iterators)
         #######
         if config.get("actor_parameterization","softmax") =="softmax":
           current_probs = tf.nn.softmax(domain_logits).numpy()
@@ -12511,16 +12497,6 @@ def train_L2W_g(config,
               strategy.experimental_run_v2(lambda: train_gradient_accumulator(sub_gradient_accumulator.gradients))
               strategy.experimental_run_v2(_apply_dev_train_gradients)
             strategy.experimental_run_v2(sub_gradient_accumulator.reset)
-            ####### loss of dev batch at theta_t+1
-            # for j, dev_iter in enumerate(dev_iterators):
-            #   loss_ = 0
-            #   for src, tgt in dev_batches[j]:
-            #     loss_per_device = strategy.experimental_run_v2(_compute_loss, args=(src, tgt))
-            #     loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
-            #   print("average loss at theta_t+1 on %s: %f"%(config.get("eval_src")[j], loss_.numpy()/len(dev_batches[j])))
-            #   loss_t_1[j] = loss_.numpy()/len(dev_batches[j])
-            # rewards[i] = sum([(l-l1)*importance for l,l1,importance in zip(loss_t, loss_t_1, domain_importances)])
-          ##### accumulate gradient over dev set of k tgt domains at theta_t+1
           with strategy.scope():
             for j, dev_iter in enumerate(dev_iterators):
               _sum = 0.0
