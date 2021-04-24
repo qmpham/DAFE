@@ -11575,7 +11575,7 @@ def train_L2W_v2(config,
     domain_logits = tf.Variable([1.0/domain_num]*domain_num, trainable=True)
   elif config.get("actor_parameterization","softmax") =="taylor":
     if config.get("picking_prob",None):
-      domain_logits = tf.Variable(np.sqrt(np.array(picking_prob)), trainable=True)
+      domain_logits = tf.Variable(np.sqrt(np.array(picking_prob)), dtype=tf.float64 trainable=True)
     else:
       domain_logits = tf.Variable([1.0/domain_num]*domain_num, trainable=True)
   
@@ -11585,7 +11585,6 @@ def train_L2W_v2(config,
     sampler_optimizer = tf.keras.optimizers.SGD(learning_rate=config.get("sampler_optim_lr",0.01))
   elif config.get("sampler_opt", "SGD") == "Adam":
     sampler_optimizer = tf.keras.optimizers.Adam(learning_rate=config.get("sampler_optim_lr",0.01)) 
-  sampler_vars = [domain_logits]
   uniform_prob = tf.Variable([1.0/len(domain)]*len(domain), trainable=False)
   print("init domain_logits: ", domain_logits)
   print("domain_rewards: ", domain_rewards)
