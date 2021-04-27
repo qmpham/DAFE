@@ -15372,6 +15372,7 @@ def train_domain_mixing_residual(config,
     model.create_variables(optimizer=optimizer)
     non_adv_gradient_accumulator = optimizer_util.GradientAccumulator()  
     adv_gradient_accumulator = optimizer_util.GradientAccumulator()
+    adv_optimizer = tf.keras.optimizers.Adam(0.1)
 
   def _accumulate_gradients(source, target):
     outputs, _ = model(
@@ -15395,7 +15396,7 @@ def train_domain_mixing_residual(config,
       training_loss, reported_loss = loss, loss
     if config["adv_training"]:
       print("adv_training")
-      total_loss = training_loss - encoder_classification_loss
+      total_loss = training_loss + 0.1 * tf.reduce_mean(tf.nn.log_softmax(domain_classification_logits) * tf.nn.softmax(domain_classification_logits))
     else:
       total_loss = training_loss + encoder_classification_loss
     non_adv_vars = [v for v in model.trainable_variables if "On_top_encoder_domain_classification" not in v.name]
@@ -15411,7 +15412,7 @@ def train_domain_mixing_residual(config,
     print("adv_var_numb: ", len(adv_vars))
     for v in adv_vars:
       print(v.name)
-    gradients = optimizer.get_gradients(encoder_classification_loss, adv_vars)
+    gradients = adv_optimizer.get_gradients(encoder_classification_loss, adv_vars)
     adv_gradient_accumulator(gradients)
     #####
     num_examples = tf.reduce_sum(target["length"])
@@ -15434,7 +15435,7 @@ def train_domain_mixing_residual(config,
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(adv_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
-    optimizer.apply_gradients(grads_and_vars)
+    adv_optimizer.apply_gradients(grads_and_vars)
     adv_gradient_accumulator.reset()
 
   @dataset_util.function_on_next(train_dataset)
