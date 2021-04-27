@@ -35,7 +35,7 @@ def main():
   np.random.seed(seed) 
   #tf.random.set_seed(seed)
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train","train_L2W","train_IW_v0","train_NGD_L2W_v1","train_L2W_v2","train_L2W_g","train_L2W_v3","debug_L2W_v1","debug_L2W_v2","debug_L2W_v3","train_L2W_v1","train_NGD_L2W","debug_NGD","train_NGD", "continue_NGD", "score", "EWC_stat", "EWC_res_stat", "translate_farajan", "translate_farajan_residual", "train_adv", "train_wada", "finetune_noisy_v1", "finetune_wada", "finetune_wada_v1", "proxy", "debug_slurm_train", "metatrainv16", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train","train_domain_mixing_residual","train_L2W","train_IW_v0","train_NGD_L2W_v1","train_L2W_v2","train_L2W_g","train_L2W_v3","debug_L2W_v1","debug_L2W_v2","debug_L2W_v3","train_L2W_v1","train_NGD_L2W","debug_NGD","train_NGD", "continue_NGD", "score", "EWC_stat", "EWC_res_stat", "translate_farajan", "translate_farajan_residual", "train_adv", "train_wada", "finetune_noisy_v1", "finetune_wada", "finetune_wada_v1", "proxy", "debug_slurm_train", "metatrainv16", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
   parser.add_argument("--config", help="configuration file")
   parser.add_argument("--config_root")
   parser.add_argument("--src")
@@ -1422,6 +1422,8 @@ def main():
     task.sentence_encode(source_file, model, checkpoint_manager, checkpoint, domain, output_file, experiment=experiment, batch_size=1)
   elif args.run == "train_denny_britz":
     task.train_denny_britz(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
+  elif args.run == "train_domain_mixing_residual":
+    task.train_domain_mixing_residual(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint, experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "experimental_translate":
     model.create_variables()
     print("translate with encoder_domain %d and decoder_domain %d"%(int(args.encoder_domain), int(args.decoder_domain)))
