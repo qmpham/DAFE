@@ -5261,6 +5261,7 @@ def train_denny_britz(config,
         training=True,
         step=optimizer.iterations)
     domain_classification_logits = outputs["domain_classification_logits"]
+    print("domain_classification_logits",domain_classification_logits)
     encoder_classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], domain_classification_logits))
     loss = model.compute_loss(outputs, target, training=True)  
     if isinstance(loss, tuple):
