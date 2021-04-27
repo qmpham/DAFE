@@ -132,8 +132,6 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
             encoder_sequence_length,
             step=step,
             training=training)
-        if return_domain_classification_logits:
-          outputs = dict(logits=outputs["logits"], attention=outputs["attention"], domain_classification_logits=domain_classification_logits)
 
       # When not in training, also compute the model predictions.
       if not training and inference:
