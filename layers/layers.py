@@ -53,10 +53,10 @@ class Classification_layer(tf.keras.layers.Layer):
     e = tf.matmul(attention_weight, inputs)
     e = tf.squeeze(e,1)
     e = common.dropout(e, rate=0.3, training=training)
-    logits = self.ff_layer_1(tf.nn.relu(e))          
-    logits = common.dropout(logits, rate=0.3, training=training)
-    logits = self.ff_layer_2(logits)
-    logits = common.dropout(logits, rate=0.3, training=training)
+    #logits = self.ff_layer_1(tf.nn.relu(e))          
+    #logits = common.dropout(logits, rate=0.3, training=training)
+    #logits = self.ff_layer_2(logits)
+    #logits = common.dropout(logits, rate=0.3, training=training)
     logits = self.ff_layer_end(tf.nn.relu(e))
     return e, logits
   
