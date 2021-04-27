@@ -5252,10 +5252,12 @@ def train_denny_britz(config,
     model.create_variables(optimizer=optimizer)
     non_adv_gradient_accumulator = optimizer_util.GradientAccumulator()  
     adv_gradient_accumulator = optimizer_util.GradientAccumulator()
+
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
         labels=target,
+        return_domain_classification_logits=True,
         training=True,
         step=optimizer.iterations)
     domain_classification_logits = outputs["domain_classification_logits"]
