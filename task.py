@@ -15490,7 +15490,7 @@ def train_domain_mixing_residual(config,
         _encoder_classification_loss.append(encoder_classification_loss)
         _number_examples.append(num_examples)
       _step()  
-      _adv_step()
+      #_adv_step()
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
