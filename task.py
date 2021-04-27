@@ -15492,6 +15492,7 @@ def train_domain_mixing_residual(config,
       _step()  
       _adv_step()
       step = optimizer.iterations.numpy() // 2
+      optimizer.iterations.assign(step)
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
