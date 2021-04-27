@@ -15372,7 +15372,7 @@ def train_domain_mixing_residual(config,
     model.create_variables(optimizer=optimizer)
     non_adv_gradient_accumulator = optimizer_util.GradientAccumulator()  
     adv_gradient_accumulator = optimizer_util.GradientAccumulator()
-    adv_optimizer = tf.keras.optimizers.SGD(1.0)
+    adv_optimizer = tf.keras.optimizers.SGD(config.get("adv_lr",0.1))
 
   def _accumulate_gradients(source, target):
     outputs, _ = model(
