@@ -15369,12 +15369,13 @@ def train_domain_mixing_residual(config,
     model.create_variables(optimizer=optimizer)
     non_adv_gradient_accumulator = optimizer_util.GradientAccumulator()  
     adv_gradient_accumulator = optimizer_util.GradientAccumulator()
-    
+
   def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
         labels=target,
         training=True,
+        return_domain_classification_logits=True,
         step=optimizer.iterations)
     domain_classification_logits = outputs["domain_classification_logits"]
     encoder_classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], domain_classification_logits))
