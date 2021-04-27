@@ -5309,6 +5309,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
            input_fn=None,
            sampling_probability=None,
            training=None,
+           adapter_activate=True,
            internal_node_printing=False):
     
     self._assert_is_initialized()
@@ -5328,6 +5329,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           memory=self.memory,
           memory_sequence_length=self.memory_sequence_length,
           training=training,
+          adapter_activate=adapter_activate,
           internal_node_printing=internal_node_printing)
       logits = self.output_layer(outputs)
     elif rank == 3:
@@ -5342,6 +5344,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           input_fn=input_fn,
           sampling_probability=sampling_probability,
           training=training,
+          adapter_activate=adapter_activate,
           internal_node_printing=internal_node_printing)
     else:
       raise ValueError("Unsupported input rank %d" % rank)
@@ -5355,6 +5358,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
            memory_sequence_length=None,
            step=None,
            training=None,
+           adapter_activate=True,
            internal_node_printing=False):
     # Process inputs.
     domain = inputs[1]
@@ -5419,8 +5423,9 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
           inputs = inputs + adapt
       if self.version == 15:
-        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-        inputs = inputs + tf.nn.dropout(adapt, 1-self.training_res_using_rate)
+        if adapter_activate:
+          adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+          inputs = inputs + tf.nn.dropout(adapt, 1-self.training_res_using_rate)
 
     if self.version not in [3,8,9,10,11,12,15]:
       total_adapt = tf.add_n(total_adapt)
@@ -5551,6 +5556,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
               input_fn=None,
               sampling_probability=None,
               training=None,
+              adapter_activate=True,
               internal_node_printing=False):
     _ = initial_state
     _ = input_fn
@@ -5562,6 +5568,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         memory=memory,
         memory_sequence_length=memory_sequence_length,
         training=training,
+        adapter_activate=adapter_activate,
         internal_node_printing=internal_node_printing)
     logits = self.output_layer(outputs)
     return logits, state, attention
@@ -5595,6 +5602,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
            memory=None,
            memory_sequence_length=None,
            training=None,
+           adapter_activate=True,
            internal_node_printing=False):
     
     inputs = [tf.expand_dims(inputs[0], 1), inputs[1]]
@@ -5605,6 +5613,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         memory_sequence_length=memory_sequence_length,
         step=timestep,
         training=training,
+        adapter_activate=adapter_activate,
         internal_node_printing=internal_node_printing)
     outputs = tf.squeeze(outputs, axis=1)
     if attention is not None:
@@ -6267,7 +6276,7 @@ class Priming_SelfAttentionDecoder(Decoder):
 
     inputs = common.dropout(tgt_inputs, self.dropout, training=training)
     pre_inputs = common.dropout(pre_inputs, self.dropout, training=training)
-    
+
     # Prepare query mask.
     mask = None
     if step is None:

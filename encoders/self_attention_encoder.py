@@ -1520,7 +1520,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     self.testing_res_using_rate = testing_res_using_rate
     print("testing_res_using_rate: ", testing_res_using_rate)
     print("training_res_using_rate: ", training_res_using_rate)
-  def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False):
+  def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False, adapter_activate=True):
     domain = inputs[1]
     domain = domain[0]
     inputs = inputs[0]
@@ -1553,8 +1553,9 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
           inputs = inputs + adapt
       if self.version == 15:
-        adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-        inputs = inputs + common.dropout(adapt, 1-self.training_res_using_rate, training=training)
+        if adapter_activate:
+          adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+          inputs = inputs + common.dropout(adapt, 1-self.training_res_using_rate, training=training)
     if self.version not in [3,8,9,10,11,12,15]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:

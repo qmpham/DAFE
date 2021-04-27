@@ -103,7 +103,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
         vocab_size=self.labels_inputter.vocabulary_size,
         output_layer=output_layer)
 
-  def call(self, features, labels=None, training=None, step=None, internal_node_printing=False, return_domain_classification_logits=False, return_embedding=False, inference=True):
+  def call(self, features, labels=None, training=None, step=None, internal_node_printing=False, return_domain_classification_logits=False, return_embedding=False, adapter_activate=True, inference=True):
     # Encode the source.
     assert isinstance(self.features_inputter, My_inputter)
     assert isinstance(self.labels_inputter, My_inputter)    
@@ -111,39 +111,43 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
     source_inputs = self.features_inputter(features, training=training)
     if isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v1) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v2) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v12) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v15) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v16):
       encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
-        [source_inputs, features["domain"], features["is_noisy"]], sequence_length=source_length, training=training, internal_node_printing=internal_node_printing)
+        [source_inputs, features["domain"], features["is_noisy"]], sequence_length=source_length, training=training, adapter_activate=adapter_activate, internal_node_printing=internal_node_printing)
     else:
       encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         [source_inputs, features["domain"], features["is_noisy"]], sequence_length=source_length, training=training)
 
-    _, domain_classification_logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
+    if return_domain_classification_logits:
+      _, domain_classification_logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
 
     outputs = None
     predictions = None
 
     # When a target is provided, compute the decoder outputs for it.
-    if labels is not None:
-      outputs, target_inputs = self._decode_target(
-          labels,
-          encoder_outputs,
-          encoder_state,
-          encoder_sequence_length,
-          step=step,
-          training=training)
-      if return_domain_classification_logits:
-        outputs = dict(logits=outputs["logits"], attention=outputs["attention"], domain_classification_logits=domain_classification_logits)
+    if adapter_activate:
+      if labels is not None:
+        outputs, target_inputs = self._decode_target(
+            labels,
+            encoder_outputs,
+            encoder_state,
+            encoder_sequence_length,
+            step=step,
+            training=training)
+        if return_domain_classification_logits:
+          outputs = dict(logits=outputs["logits"], attention=outputs["attention"], domain_classification_logits=domain_classification_logits)
 
-    # When not in training, also compute the model predictions.
-    if not training and inference:
-      predictions = self._dynamic_decode(
-          features,
-          encoder_outputs,
-          encoder_state,
-          encoder_sequence_length)
-    if return_embedding:
-      return outputs, predictions, source_inputs, target_inputs
+      # When not in training, also compute the model predictions.
+      if not training and inference:
+        predictions = self._dynamic_decode(
+            features,
+            encoder_outputs,
+            encoder_state,
+            encoder_sequence_length)
+      if return_embedding:
+        return outputs, predictions, source_inputs, target_inputs
+      else:
+        return outputs, predictions
     else:
-      return outputs, predictions
+      return domain_classification_logits
 
   def adv_call(self, features, labels=None, training=None, step=None):
     # Encode the source.
