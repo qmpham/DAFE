@@ -15384,6 +15384,7 @@ def train_domain_mixing_residual(config,
         labels=target,
         training=True,
         adapter_activate=False,
+        return_domain_classification_logits=True,
         step=optimizer.iterations)
     encoder_classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], domain_classification_logits))
     loss = model.compute_loss(outputs, target, training=True)  
