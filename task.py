@@ -12101,6 +12101,8 @@ def train_L2W_v2(config,
             num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
             _domain = per_replica_domain #strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)
           return loss, num_examples, _domain
+
+        del train_data_flow #free unreferenced variable
         train_data_flow = iter(_train_forward())
         #######
         weight_reset(snapshots)
