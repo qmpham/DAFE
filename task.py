@@ -11672,8 +11672,8 @@ def train_L2W_v2(config,
         output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
         output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
       regularization_losses = model.losses
-      #print("model_name_scope", model.name_scope())
-      #print(regularization_losses)
+      print("model_name_scope", model.name_scope())
+      print(regularization_losses)
       layer_activity_regularization_losses = []
       output_activity_regularization_losses = []
       d_classification_gate_losses = []
