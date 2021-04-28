@@ -15627,16 +15627,7 @@ def train_domain_mixing_residual(config,
         labels=target,
         training=True,
         step=optimizer.iterations)
-    domain_classification_logits = model(
-        source,
-        labels=target,
-        training=True,
-        adapter_activate=False,
-        return_domain_classification_logits=True,
-        step=optimizer.iterations)
-    encoder_classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], domain_classification_logits))
-    #tf.print("domain_classification_logits",domain_classification_logits)
-    #tf.print("encoder_classification_loss", encoder_classification_loss)
+    
     loss = model.compute_loss(outputs, target, training=True)  
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
@@ -15704,6 +15695,15 @@ def train_domain_mixing_residual(config,
       if len(d_classifier_weight_regularization_losses)>0 and d_classifier_weight_regularization_losses_scale>0:
         training_loss += d_classifier_weight_regularization_losses_scale * tf.add_n(d_classifier_weight_regularization_losses)
 
+    domain_classification_logits = model(
+        source,
+        labels=target,
+        training=True,
+        adapter_activate=False,
+        return_domain_classification_logits=True,
+        step=optimizer.iterations)
+    encoder_classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], domain_classification_logits))
+    
     if config["adv_training"]:
       print("adv_training")
       total_loss = training_loss + 0.5 * tf.reduce_mean(tf.nn.log_softmax(domain_classification_logits) * tf.nn.softmax(domain_classification_logits))
