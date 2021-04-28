@@ -15714,8 +15714,8 @@ def train_domain_mixing_residual(config,
     #####
     reported_loss = training_loss
     print("var numb: ", len(non_adv_vars))
-    #for v in non_adv_vars:
-      #print(v.name)
+    for v in non_adv_vars:
+      print(v.name)
     gradients = optimizer.get_gradients(total_loss, non_adv_vars)
     non_adv_gradient_accumulator(gradients)
     #####
