@@ -15635,13 +15635,14 @@ def train_domain_mixing_residual(config,
         return_domain_classification_logits=True,
         step=optimizer.iterations)
     encoder_classification_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(source["domain"], domain_classification_logits))
+    tf.print("domain_classification_logits",domain_classification_logits)
+    tf.print("encoder_classification_loss", encoder_classification_loss)
     loss = model.compute_loss(outputs, target, training=True)  
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-
 
     if config.get("ADAP_activity_regularizing",False):
       layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
