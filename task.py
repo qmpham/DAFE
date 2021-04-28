@@ -11658,10 +11658,10 @@ def train_L2W_v2(config,
       d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
       d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
       d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
-      print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
-      print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
-      print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
-      print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
+      #print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+      #print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
+      #print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
+      #print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
       if isinstance(layer_activity_regularization_loss_scale, list):
         domain = source["domain"][0]
         layer_activity_regularization_loss_scale = tf.constant(layer_activity_regularization_loss_scale)
@@ -11672,8 +11672,8 @@ def train_L2W_v2(config,
         output_activity_regularization_loss_scale = tf.constant(output_activity_regularization_loss_scale)
         output_activity_regularization_loss_scale = tf.nn.embedding_lookup(output_activity_regularization_loss_scale, domain)
       regularization_losses = model.losses
-      print("model_name_scope", model.name_scope())
-      print(regularization_losses)
+      #print("model_name_scope", model.name_scope())
+      #print(regularization_losses)
       layer_activity_regularization_losses = []
       output_activity_regularization_losses = []
       d_classification_gate_losses = []
@@ -11692,11 +11692,11 @@ def train_L2W_v2(config,
         elif "ADAP_" in loss_.name:
           layer_activity_regularization_losses.append(loss_)
 
-      print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
-      print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
-      print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
-      print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
-      print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
+      #print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
+      #print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
+      #print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
+      #print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
+      #print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
       if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
         training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
 
