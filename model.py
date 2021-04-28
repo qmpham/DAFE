@@ -40,7 +40,7 @@ class Multi_domain_SequenceToSequence(model.SequenceGenerator):
                target_inputter,
                encoder,
                decoder,
-               num_domains=2,
+               num_domains=6,
                num_units=512,
                share_embeddings=EmbeddingsSharingLevel.NONE):
 
