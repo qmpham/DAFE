@@ -1046,6 +1046,8 @@ def main():
     model = Multi_domain_SequenceToSequence(
     source_inputter=My_inputter(embedding_size=512),
     target_inputter=My_inputter(embedding_size=512),
+    num_domains=num_domains,
+    num_units=512,
     encoder=Multi_domain_SelfAttentionEncoder_v15(
         num_layers=6,
         num_domains=num_domains,
