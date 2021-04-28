@@ -11780,6 +11780,7 @@ def train_L2W_v2(config,
         d_classification_gate_losses = []
         d_classifier_activity_regularization_losses = []
         d_classifier_weight_regularization_losses = []
+        """
         for loss_ in regularization_losses:
           if "multi_adap__dense" in loss_.name:
             output_activity_regularization_losses.append(loss_)
@@ -11792,14 +11793,14 @@ def train_L2W_v2(config,
               d_classification_gate_losses.append(loss_)
           elif "ADAP_" in loss_.name:
             layer_activity_regularization_losses.append(loss_)
-
+        """
         print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
         print("There are %d adaptation regularization loss on output layer_____"%len(output_activity_regularization_losses))
         print("There are %d adaptation regularization loss on domain classification gate_____"%len(d_classification_gate_losses))
         print("There are %d d_classifier_activity_regularization_losses"%len(d_classifier_activity_regularization_losses))
         print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
         if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
-          training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
+          training_loss += layer_activity_regularization_loss_scale * tf.add_n(regularization_losses) #tf.add_n(layer_activity_regularization_losses)
 
         if len(output_activity_regularization_losses)>0 and output_activity_regularization_loss_scale>0:
           training_loss += output_activity_regularization_loss_scale * tf.add_n(output_activity_regularization_losses)
