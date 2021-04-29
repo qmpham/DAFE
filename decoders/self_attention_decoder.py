@@ -5407,7 +5407,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      if self.version not in [3,8,9,10,11,12]:
+      if self.version not in [3,8,9,10,11,12,15]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
       if self.version == 10:
@@ -5423,7 +5423,6 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
           inputs = inputs + adapt
       if self.version == 15:
-        
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         inputs = inputs + tf.nn.dropout(adapt, 1-self.training_res_using_rate)
 
