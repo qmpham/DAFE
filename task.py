@@ -15939,13 +15939,10 @@ def CL_marine(config,
         del train_dataset
         del train_data_flow
         phase_id +=1
+        print("entering phase %d"%phase_id)
         train_dataset = create_trainining_dataset(strategy, model, domain, source_file[:phase_id+1], target_file[:phase_id+1], batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
-        with strategy.scope():
-          base_dataset = train_dataset
-          train_dataset = strategy.experimental_distribute_datasets_from_function(
-                lambda _: base_dataset)
         @dataset_util.function_on_next(train_dataset)
         def _train_forward(next_fn):    
           with strategy.scope():
