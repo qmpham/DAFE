@@ -1520,6 +1520,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     self.testing_res_using_rate = testing_res_using_rate
     print("testing_res_using_rate: ", testing_res_using_rate)
     print("training_res_using_rate: ", training_res_using_rate)
+  
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False, adapter_activate=True):
     domain = inputs[1]
     domain = domain[0]
