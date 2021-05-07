@@ -11534,6 +11534,7 @@ def train_L2W_v2(config,
   picking_prob = [w/sum(picking_prob) for w in picking_prob]
   if config.get("picking_prob",None):
     picking_prob = config.get("picking_prob",None)
+  picking_prob = [p/sum(picking_prob) for p in picking_prob]
   print("initial domain picking probability: ", picking_prob)
   for i,src,tgt in zip(domain, source_file, target_file):
     train_datasets_p.append(model.examples_inputter.make_training_dataset(src, tgt,
@@ -11658,7 +11659,7 @@ def train_L2W_v2(config,
       d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
       d_classifier_activity_regularization_loss_scale = config.get("d_classifier_activity_regularization_loss_scale",1.0)
       d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
-      print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
+      #print("layer_activity_regularization_loss_scale: ", layer_activity_regularization_loss_scale)
       #print("output_activity_regularization_loss_scale: ", output_activity_regularization_loss_scale)
       #print("d_classification_gate_loss_scale: ", d_classification_gate_loss_scale)
       #print("d_classifier_weight_regularization_losses_scale: ", d_classifier_weight_regularization_losses_scale)
