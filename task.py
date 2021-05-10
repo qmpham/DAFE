@@ -12158,6 +12158,7 @@ def train_L2W_g(config,
 
   print("maximum_length", maximum_length)
   train_datasets_p = [] 
+  domain_num = len(domain)
   datasets_size = [count_lines(src) for src in source_file]
   picking_prob = [data_size/sum(datasets_size) for data_size in datasets_size]
   temperature=config.get("temperature",1.0)
