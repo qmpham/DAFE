@@ -12204,12 +12204,20 @@ def train_L2W_g(config,
     
   print("actor_parameterization: ",config.get("actor_parameterization","softmax"))
   if config.get("actor_parameterization","softmax") =="softmax":
-    if config.get("domain_logits",[0.0]*len(domain)):
-      domain_logits = tf.Variable(config.get("domain_logits",[0.0]*len(domain)), trainable=True)
+    if config.get("picking_prob",None):
+      domain_logits = tf.Variable(np.log(np.array(picking_prob)), dtype=tf.float32, trainable=True)
     else:
-      domain_logits = tf.Variable([0.0]*len(domain), trainable=True)
+      domain_logits = tf.Variable([1.0/domain_num]*domain_num, trainable=True)
   elif config.get("actor_parameterization","softmax") =="linear":
     domain_logits = tf.Variable(picking_prob, trainable=True)
+  elif config.get("actor_parameterization","softmax") =="sparsemax":
+    domain_logits = tf.Variable([1.0/domain_num]*domain_num, trainable=True)
+  elif config.get("actor_parameterization","softmax") =="taylor":
+    if config.get("picking_prob",None):
+      domain_logits = tf.Variable(np.sqrt(np.array(picking_prob)), dtype=tf.float32, trainable=True)
+    else:
+      domain_logits = tf.Variable([1.0/domain_num]*domain_num, trainable=True)
+  
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   print("sampler_opt: ", config.get("sampler_opt", "SGD"))
   if config.get("sampler_opt", "SGD") == "SGD":
