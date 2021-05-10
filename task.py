@@ -11477,7 +11477,7 @@ def train_L2W_v2(config,
           batch_size = 2048,
           batch_type = "tokens",
           experiment="residual",
-          shuffle_buffer_size=-1,  # Uniform shuffle.
+          shuffle_buffer_size=2000000,  # Uniform shuffle.
           train_steps=200000,
           save_every=5000,
           eval_every=15000,
@@ -12109,7 +12109,7 @@ def train_L2W_g(config,
           batch_size = 2048,
           batch_type = "tokens",
           experiment="residual",
-          shuffle_buffer_size=-1,  # Uniform shuffle.
+          shuffle_buffer_size=2000000,  # Uniform shuffle.
           train_steps=200000,
           save_every=5000,
           eval_every=15000,
