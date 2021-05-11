@@ -11884,13 +11884,13 @@ def train_L2W_v2(config,
     print("current domain_logits", config.get("domain_logits",[0.0]*len(domain)))
     domain_logits.assign(config.get("domain_logits",[0.0]*len(domain)))
     if config.get("actor_parameterization","softmax") =="softmax":
-      probs = tf.nn.softmax(domain_logits*temp)
+      probs = tf.nn.softmax(domain_logits)
     elif config.get("actor_parameterization","softmax") =="linear":
       probs = domain_logits
     elif config.get("actor_parameterization","softmax") =="taylor":
-      probs = tf.math.square(domain_logits*temp)/tf.reduce_sum(tf.math.square(domain_logits*temp))
+      probs = tf.math.square(domain_logits)/tf.reduce_sum(tf.math.square(domain_logits))
     elif config.get("actor_parameterization","softmax") =="sparsemax":
-      loss = - tf.reduce_sum(tfa.activations.sparsemax(domain_logits*temp) * domain_rewards)
+      probs = tfa.activations.sparsemax(domain_logits)
 
     new_picking_prob = update_sampling_distribution(probs)
     # create new training course with updated domain distribution
@@ -12204,6 +12204,7 @@ def train_L2W_g(config,
     d_logits_grad_accumulator = optimizer_util.GradientAccumulator()
     
   print("actor_parameterization: ",config.get("actor_parameterization","softmax"))
+  temp = config.get("actor_temperature",1.0)
   if config.get("actor_parameterization","softmax") =="softmax":
     if config.get("picking_prob",None):
       domain_logits = tf.Variable(np.log(np.array(picking_prob)), dtype=tf.float32, trainable=True)
@@ -12481,6 +12482,11 @@ def train_L2W_g(config,
       probs = tf.nn.softmax(domain_logits)
     elif config.get("actor_parameterization","softmax") =="linear":
       probs = domain_logits
+    elif config.get("actor_parameterization","softmax") =="taylor":
+      probs = tf.math.square(domain_logits)/tf.reduce_sum(tf.math.square(domain_logits))
+    elif config.get("actor_parameterization","softmax") =="sparsemax":
+      probs = tfa.activations.sparsemax(domain_logits)
+    
     new_picking_prob = update_sampling_distribution(probs)
     # create new training course with updated domain distribution
     train_dataset = tf.data.experimental.sample_from_datasets(train_datasets_p, weights=new_picking_prob)
