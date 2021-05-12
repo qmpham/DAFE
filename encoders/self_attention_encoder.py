@@ -149,7 +149,7 @@ class Multi_domain_SelfAttentionEncoder_v2(Encoder):
     self.ADAP_contribution = ADAP_contribution
     self.res_using_rate = res_using_rate
   
-  def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False, adapter_activate=adapter_activate):
+  def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False, adapter_activate=True):
     domain = inputs[1]
     domain = domain[0]
     inputs = inputs[0]    
