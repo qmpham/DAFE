@@ -11727,11 +11727,11 @@ def train_L2W_v2(config,
   
   def _loss(src, tgt):
     outputs, _ = model(
-        source,
-        labels=target,
+        src,
+        labels=tgt,
         training=True,
         step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
+    loss = model.compute_loss(outputs, tgt, training=True)
     
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
@@ -12221,6 +12221,7 @@ def train_L2W_g(config,
     else:
       domain_logits = tf.Variable([1.0/domain_num]*domain_num, trainable=True) """
     domain_logits = tf.Variable(np.sqrt(np.array(picking_prob)), dtype=tf.float32, trainable=True)
+  
   grad_domain_logits_accum = tf.Variable(tf.zeros_like(domain_logits), trainable=False)
   print("sampler_opt: ", config.get("sampler_opt", "SGD"))
   if config.get("sampler_opt", "SGD") == "SGD":
@@ -12294,11 +12295,11 @@ def train_L2W_g(config,
   
   def _loss(src, tgt):
     outputs, _ = model(
-        source,
-        labels=target,
+        src,
+        labels=tgt,
         training=True,
         step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
+    loss = model.compute_loss(outputs, tgt, training=True)
     
     if isinstance(loss, tuple):
       training_loss = loss[0] / loss[1]
@@ -13698,10 +13699,6 @@ def train_L2W_v3(config,
         return diag_hessian_acc
       tf.scan(hessian_accum_along_loss, loss, parallel_iterations=batch_hessian_size)
 
-  def _reset_dev_train_gradients():
-    dev_gradient_accumulator.reset() # for dev_gradient_accumulator in dev_gradient_accumulators]
-    [train_gradient_accumulator.reset() for train_gradient_accumulator in train_gradient_accumulators]
-
   def _apply_gradients():
     variables = model.trainable_variables
     grads_and_vars = []
@@ -13755,11 +13752,6 @@ def train_L2W_v3(config,
   def _sampler_step():
     with strategy.scope():
       strategy.experimental_run_v2(_apply_sampler_gradients)
-
-  @tf.function
-  def _reset_dev_train_grad_accum_step():
-    with strategy.scope():
-      _reset_dev_train_gradients()
   
   def _set_weight(v, w):
     v.assign(tf.cast(w,v.dtype))
