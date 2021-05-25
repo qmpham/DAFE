@@ -2608,7 +2608,6 @@ class Multi_domain_SequenceToSequence_DRO(model.SequenceGenerator):
       return vars_b
 
 class Priming_SequenceToSequence(model.SequenceGenerator):
-
   """A sequence to sequence model."""
 
   def __init__(self,
@@ -2616,12 +2615,30 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
                target_inputter,
                encoder,
                decoder,
-               num_domains=2,
-               num_units=512,
                share_embeddings=EmbeddingsSharingLevel.NONE):
+    """Initializes a sequence-to-sequence model.
 
-    if not isinstance(target_inputter, inputters.WordEmbedder) and not isinstance(target_inputter, My_inputter):
-      raise TypeError("Target inputter must be a WordEmbedder or My_inputter")
+    Args:
+      source_inputter: A :class:`opennmt.inputters.Inputter` to process
+        the source data.
+      target_inputter: A :class:`opennmt.inputters.Inputter` to process
+        the target data. Currently, only the
+        :class:`opennmt.inputters.WordEmbedder` is supported.
+      encoder: A :class:`opennmt.encoders.Encoder` to encode the source.
+      decoder: A :class:`opennmt.decoders.Decoder` to decode the target.
+      share_embeddings: Level of embeddings sharing, see
+        :class:`opennmt.models.EmbeddingsSharingLevel`
+        for possible values.
+
+    Raises:
+      TypeError: if :obj:`target_inputter` is not a
+        :class:`opennmt.inputters.WordEmbedder` (same for
+        :obj:`source_inputter` when embeddings sharing is enabled) or if
+        :obj:`source_inputter` and :obj:`target_inputter` do not have the same
+        ``dtype``.
+    """
+    if not isinstance(target_inputter, inputters.WordEmbedder):
+      raise TypeError("Target inputter must be a WordEmbedder")
     if EmbeddingsSharingLevel.share_input_embeddings(share_embeddings):
       if isinstance(source_inputter, inputters.ParallelInputter):
         source_inputters = source_inputter.inputters
@@ -2632,25 +2649,24 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           raise TypeError("Sharing embeddings requires all inputters to be a "
                           "WordEmbedder")
 
-    examples_inputter = Multi_domain_SequenceToSequenceInputter(
+    examples_inputter = SequenceToSequenceInputter(
         source_inputter,
         target_inputter,
         share_parameters=EmbeddingsSharingLevel.share_input_embeddings(share_embeddings))
-    super(Priming_SequenceToSequence, self).__init__(examples_inputter)
+    super(SequenceToSequence, self).__init__(examples_inputter)
     self.encoder = encoder
     self.decoder = decoder
     self.share_embeddings = share_embeddings
-    self.classification_layer = Classification_layer(num_units, domain_numb=num_domains, name="On_top_encoder_domain_classification")
- 
+
   def auto_config(self, num_replicas=1):
-    config = super(Multi_domain_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
+    config = super(SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
         "params": {
-            "beam_width": 5
+            "beam_width": 4
         },
         "train": {
             "sample_buffer_size": -1,
-            "max_step": 200000
+            "max_step": 500000
         },
         "infer": {
             "batch_size": 32,
@@ -2659,8 +2675,10 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     })
 
   def initialize(self, data_config, params=None):
-    super(Multi_domain_SequenceToSequence, self).initialize(data_config, params=params)
+    super(SequenceToSequence, self).initialize(data_config, params=params)
     if self.params.get("contrastive_learning"):
+      # Use the simplest and most effective CL_one from the paper.
+      # https://www.aclweb.org/anthology/P19-1623
       noiser = noise.WordNoiser(
           noises=[noise.WordOmission(1)],
           subword_token=self.params.get("decoding_subword_token", "￭"),
@@ -2668,7 +2686,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
       self.labels_inputter.set_noise(noiser, in_place=False)
 
   def build(self, input_shape):
-    super(Multi_domain_SequenceToSequence, self).build(input_shape)
+    super(SequenceToSequence, self).build(input_shape)
     output_layer = None
     if EmbeddingsSharingLevel.share_target_embeddings(self.share_embeddings):
       output_layer = layers.Dense(
@@ -2679,46 +2697,35 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         vocab_size=self.labels_inputter.vocabulary_size,
         output_layer=output_layer)
 
-  def call(self, features, labels=None, training=None, step=None, internal_node_printing=False, return_embedding=False, inference=True):
+  def call(self, features, labels=None, training=None, step=None):
     # Encode the source.
-    assert isinstance(self.features_inputter, My_inputter)
-    assert isinstance(self.labels_inputter, My_inputter)    
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
-    if isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v1) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v2) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v12) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v15) or isinstance(self.encoder, Multi_domain_SelfAttentionEncoder_v16):
-      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
-        [source_inputs, features["domain"], features["is_noisy"]], sequence_length=source_length, training=training, internal_node_printing=internal_node_printing)
-    else:
-      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
-        [source_inputs, features["domain"], features["is_noisy"]], sequence_length=source_length, training=training)
-
-    #_, domain_classification_logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
+    encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
+        source_inputs, sequence_length=source_length, training=training)
 
     outputs = None
     predictions = None
 
     # When a target is provided, compute the decoder outputs for it.
     if labels is not None:
-      outputs, target_inputs = self._decode_target(
+      outputs = self._decode_target(
           labels,
           encoder_outputs,
           encoder_state,
           encoder_sequence_length,
           step=step,
           training=training)
-      #outputs = dict(logits=outputs["logits"], attention=outputs["attention"], domain_classification_logits=domain_classification_logits)
 
     # When not in training, also compute the model predictions.
-    if not training and inference:
+    if not training:
       predictions = self._dynamic_decode(
           features,
           encoder_outputs,
           encoder_state,
           encoder_sequence_length)
-    if return_embedding:
-      return outputs, predictions, source_inputs, target_inputs
-    else:
-      return outputs, predictions
+
+    return outputs, predictions
 
   def _decode_target(self,
                      labels,
@@ -2726,11 +2733,10 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
                      encoder_state,
                      encoder_sequence_length,
                      step=None,
-                     training=None,
-                     internal_node_printing=False):
+                     training=None):
     params = self.params
     target_inputs = self.labels_inputter(labels, training=training)
-    input_fn = lambda ids: [self.labels_inputter({"ids": ids}, training=training), labels["domain"]]
+    input_fn = lambda ids: self.labels_inputter({"ids": ids}, training=training)
 
     sampling_probability = None
     if training:
@@ -2745,7 +2751,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         memory_sequence_length=encoder_sequence_length,
         initial_state=encoder_state)
     logits, _, attention = self.decoder(
-        [target_inputs, labels["domain"]],
+        target_inputs,
         self.labels_inputter.get_length(labels),
         state=initial_state,
         input_fn=input_fn,
@@ -2766,8 +2772,8 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           sampling_probability=sampling_probability,
           training=training)
       outputs["noisy_logits"] = noisy_logits
-    return outputs, target_inputs
- 
+    return outputs
+
   def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length):
     params = self.params
     batch_size = tf.shape(tf.nest.flatten(encoder_outputs)[0])[0]
@@ -2787,7 +2793,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         memory_sequence_length=encoder_sequence_length,
         initial_state=encoder_state)
     sampled_ids, sampled_length, log_probs, alignment, _ = self.decoder.dynamic_decode(
-        lambda ids: [self.labels_inputter({"ids": ids}), features["domain"]],
+        self.labels_inputter,
         start_ids,
         initial_state=initial_state,
         decoding_strategy=decoding.DecodingStrategy.from_params(params),
@@ -2864,7 +2870,6 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           labels["noisy_length"],
           eta=params.get("max_margin_eta", 0.1))
     labels_lengths = self.labels_inputter.get_length(labels)
-    #print("average_loss_in_time", params.get("average_loss_in_time", False))
     loss, loss_normalizer, loss_token_normalizer = losses.cross_entropy_sequence_loss(
         logits,
         labels["ids_out"],
@@ -2888,22 +2893,6 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
               weight=params.get("guided_alignment_weight", 1))
     return loss, loss_normalizer, loss_token_normalizer
 
-  def compute_individual_loss(self, outputs, labels, training=True):
-    if not isinstance(outputs, dict):
-      outputs = dict(logits=outputs)
-    logits = outputs["logits"]
-    labels_lengths = self.labels_inputter.get_length(labels)
-  
-    max_time = tf.shape(logits)[1]
-
-    cross_entropy = _softmax_cross_entropy(logits, labels["ids_out"], 0.1, training)
-    weights = tf.sequence_mask(
-        labels_lengths, maxlen=max_time, dtype=cross_entropy.dtype)
-    loss = tf.reduce_sum(cross_entropy * weights,1)
-    loss_token_normalizer = tf.reduce_sum(weights,1)
-    
-    return loss/loss_token_normalizer
-  
   def print_prediction(self, prediction, params=None, stream=None):
     if params is None:
       params = {}
@@ -2927,22 +2916,6 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           alignment_type=alignment_type)
       print_bytes(tf.compat.as_bytes(sentence), stream=stream)
 
-  def classification_on_top_encoder(self, features, training=None):
-
-    source_length = self.features_inputter.get_length(features)
-    source_inputs = self.features_inputter(features, training=training)
-    encoder_outputs, _, encoder_sequence_length = self.encoder(
-        [source_inputs, features["domain"]], sequence_length=source_length, training=training)
-    e, logits = self.classification_layer(encoder_outputs, encoder_sequence_length, training=training)
-    return e, logits
-
-  def sentence_encode(self, features, training=False):
-    source_length = self.features_inputter.get_length(features)
-    source_inputs = self.features_inputter(features, training=training)
-    mask = self.encoder.build_mask(source_inputs, source_length, dtype=tf.float32)
-    mask = tf.expand_dims(mask,2)
-    return tf.reduce_mean(source_inputs * tf.broadcast_to(mask, tf.shape(source_inputs)),1)
-
   def transfer_weights(self, new_model, new_optimizer=None, optimizer=None, ignore_weights=None):
     updated_variables = []
 
@@ -2965,6 +2938,23 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           variables = [vocab.update_variable(var_a, var_b, mapping, vocab_axis=vocab_axis)]
         updated_variables.extend(variables)
       return vars_b
+
+    _map_variables(
+        lambda model: model.features_inputter,
+        lambda model: ([model.features_inputter.embedding], [0]))
+    _map_variables(
+        lambda model: model.labels_inputter,
+        lambda model: ([
+            model.labels_inputter.embedding,
+            model.decoder.output_layer.kernel,
+            model.decoder.output_layer.bias], [0, 1, 0]))
+
+    return super(SequenceToSequence, self).transfer_weights(
+        new_model,
+        new_optimizer=new_optimizer,
+        optimizer=optimizer,
+        ignore_weights=updated_variables)
+
 
 
 
