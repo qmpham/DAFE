@@ -2996,7 +2996,7 @@ class PrimingInputter(inputters.ParallelInputter):
                xlabels_inputter,
                share_parameters=False):
     super(PrimingInputter, self).__init__(
-        features_inputter, xfeatures_inputter, labels_inputter, xlabels_inputter, share_parameters=share_parameters, combine_features=False)
+        [features_inputter, xfeatures_inputter, labels_inputter, xlabels_inputter], share_parameters=share_parameters, combine_features=False)
     self.alignment_file = None
     self.features_inputter = features_inputter
     self.features_inputter.asset_prefix = "source"
