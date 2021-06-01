@@ -751,7 +751,7 @@ def function_on_next(dataset, as_numpy=False):
 
   return decorator
 
-def create_priming_trainining_dataset(strategy, model, domain, source_file, sim_file, target_file, pre_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0, pick_in_order=False, window_size=None):
+def create_priming_trainining_dataset(strategy, model, source_file, sim_file, target_file, pre_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0, pick_in_order=False, window_size=None):
 
   print("maximum_length", maximum_length)
   train_dataset = model.examples_inputter.make_training_dataset(source_file, sim_file, target_file, pre_file,
