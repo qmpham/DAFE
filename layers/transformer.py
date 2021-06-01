@@ -474,3 +474,170 @@ class SelfAttentionDecoderLayer_v1(tf.keras.layers.Layer):
         training=training)
     return outputs, self_kv
   
+class Priming_SelfAttentionDecoderLayer(tf.keras.layers.Layer):
+  """Implements one self-attention decoding layer."""
+
+  def __init__(self,
+               num_units,
+               num_heads,
+               ffn_inner_dim,
+               num_sources=1,
+               dropout=0.1,
+               attention_dropout=0.1,
+               ffn_dropout=0.1,
+               ffn_activation=tf.nn.relu,
+               **kwargs):
+    
+    super(Priming_SelfAttentionDecoderLayer, self).__init__(**kwargs)
+    self.self_attention = MultiHeadAttention(
+        num_heads,
+        num_units,
+        dropout=attention_dropout)
+    self.self_attention = TransformerLayerWrapper(
+        self.self_attention, dropout)
+    self.attention = []
+    for _ in range(num_sources):
+      attention = MultiHeadAttention(
+          num_heads,
+          num_units,
+          dropout=attention_dropout,
+          return_attention=num_sources == 1)
+      attention = TransformerLayerWrapper(
+          attention, dropout)
+      self.attention.append(attention)
+    self.ffn = FeedForwardNetwork(
+        ffn_inner_dim,
+        num_units,
+        dropout=ffn_dropout,
+        activation=ffn_activation)
+    self.ffn = TransformerLayerWrapper(
+        self.ffn, dropout)
+
+  def map_v1_weights(self, weights):
+    m = []
+    m += self.self_attention.map_v1_weights(weights["masked_multi_head"])
+    m += self.attention[0].map_v1_weights(weights["multi_head"])
+    m += self.ffn.map_v1_weights(weights["ffn"])
+    return m
+
+  # pylint: disable=arguments-differ
+  def call(self,
+           inputs,
+           mask=None,
+           memory=None,
+           memory_mask=None,
+           cache=None,
+           training=None):
+    """Runs the decoder layer."""
+    if cache is None:
+      cache = {}
+
+    outputs, self_kv = self.self_attention(
+        inputs,
+        mask=mask,
+        cache=cache.get("self_kv"),
+        training=training)
+
+    attention = None
+    memory_kv = []
+    if memory is not None:
+      memory_cache = cache.get("memory_kv")
+      if memory_cache is None:
+        memory_cache = [None] * len(self.attention)
+      for layer, mem, mem_mask, mem_cache in zip(
+          self.attention, memory, memory_mask, memory_cache):
+        result = layer(
+            outputs,
+            memory=mem,
+            mask=mem_mask,
+            cache=mem_cache,
+            training=training)
+        if len(result) == 3:
+          outputs, memory_kv_i, attention = result
+          attention = attention[:, 0]  # Use the first head for the attention vector.
+        else:
+          outputs, memory_kv_i = result
+        memory_kv.append(memory_kv_i)
+
+    outputs = self.ffn(outputs, training=training)
+    cache = dict(self_kv=self_kv, memory_kv=memory_kv)
+    return outputs, cache, attention
+
+  def forward_fn(self,
+           inputs,
+           args_dict,
+           mask=None,
+           memory=None,
+           memory_mask=None,
+           cache=None,
+           training=None):
+    """Runs the decoder layer."""
+    if cache is None:
+      cache = {}
+
+    outputs, self_kv = self.self_attention.forward_fn(
+        inputs,
+        args_dict,
+        mask=mask,
+        cache=cache.get("self_kv"),
+        training=training)
+
+    attention = None
+    memory_kv = []
+    if memory is not None:
+      memory_cache = cache.get("memory_kv")
+      if memory_cache is None:
+        memory_cache = [None] * len(self.attention)
+      for layer, mem, mem_mask, mem_cache in zip(
+          self.attention, memory, memory_mask, memory_cache):
+        result = layer.forward_fn(
+            outputs,
+            args_dict,
+            memory=mem,
+            mask=mem_mask,
+            cache=mem_cache,
+            training=training)
+        if len(result) == 3:
+          outputs, memory_kv_i, attention = result
+          attention = attention[:, 0]  # Use the first head for the attention vector.
+        else:
+          outputs, memory_kv_i = result
+        memory_kv.append(memory_kv_i)
+
+    outputs = self.ffn.forward_fn(outputs, args_dict, training=training)
+    cache = dict(self_kv=self_kv, memory_kv=memory_kv)
+    return outputs, cache, attention
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

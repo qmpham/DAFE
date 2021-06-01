@@ -20,6 +20,7 @@ from opennmt.layers import reducer
 from opennmt.models import model
 from opennmt.utils import decoding
 from opennmt.utils import losses
+from opennmt.data import dataset as dataset_util
 from opennmt.utils.misc import print_bytes, format_translation_output, merge_dict, shape_list
 from opennmt.decoders import decoder as decoder_util
 from opennmt.models.sequence_to_sequence import EmbeddingsSharingLevel, SequenceToSequence, SequenceToSequenceInputter, replace_unknown_target, _add_noise
@@ -2612,8 +2613,11 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
 
   def __init__(self,
                source_inputter,
+               xsource_inputter,
                target_inputter,
+               xtarget_inputter,
                encoder,
+               pre_encoder,
                decoder,
                share_embeddings=EmbeddingsSharingLevel.NONE):
     """Initializes a sequence-to-sequence model.
@@ -2649,17 +2653,20 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           raise TypeError("Sharing embeddings requires all inputters to be a "
                           "WordEmbedder")
 
-    examples_inputter = SequenceToSequenceInputter(
+    examples_inputter = PrimingInputter(
         source_inputter,
+        xsource_inputter,
         target_inputter,
+        xtarget_inputter,
         share_parameters=EmbeddingsSharingLevel.share_input_embeddings(share_embeddings))
-    super(SequenceToSequence, self).__init__(examples_inputter)
+    super(Priming_SequenceToSequence, self).__init__(examples_inputter)
     self.encoder = encoder
+    self.pre_encoder = pre_encoder
     self.decoder = decoder
     self.share_embeddings = share_embeddings
 
   def auto_config(self, num_replicas=1):
-    config = super(SequenceToSequence, self).auto_config(num_replicas=num_replicas)
+    config = super(Priming_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
         "params": {
             "beam_width": 4
@@ -2675,7 +2682,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     })
 
   def initialize(self, data_config, params=None):
-    super(SequenceToSequence, self).initialize(data_config, params=params)
+    super(Priming_SequenceToSequence, self).initialize(data_config, params=params)
     if self.params.get("contrastive_learning"):
       # Use the simplest and most effective CL_one from the paper.
       # https://www.aclweb.org/anthology/P19-1623
@@ -2686,7 +2693,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
       self.labels_inputter.set_noise(noiser, in_place=False)
 
   def build(self, input_shape):
-    super(SequenceToSequence, self).build(input_shape)
+    super(Priming_SequenceToSequence, self).build(input_shape)
     output_layer = None
     if EmbeddingsSharingLevel.share_target_embeddings(self.share_embeddings):
       output_layer = layers.Dense(
@@ -2697,13 +2704,18 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         vocab_size=self.labels_inputter.vocabulary_size,
         output_layer=output_layer)
 
-  def call(self, features, labels=None, training=None, step=None):
+  def call(self, features, pres, labels=None, training=None, step=None):
     # Encode the source.
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         source_inputs, sequence_length=source_length, training=training)
 
+    pre_length = self.features_inputter.get_length(pres)
+    pre_inputs = self.features_inputter(pres, training=training)
+    pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
+        pre_inputs, sequence_length=pre_length, training=training)
+    
     outputs = None
     predictions = None
 
@@ -2714,6 +2726,9 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           encoder_outputs,
           encoder_state,
           encoder_sequence_length,
+          pre_encoder_outputs,
+          pre_encoder_state,
+          pre_encoder_sequence_length,
           step=step,
           training=training)
 
@@ -2723,7 +2738,10 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           features,
           encoder_outputs,
           encoder_state,
-          encoder_sequence_length)
+          encoder_sequence_length,
+          pre_encoder_outputs,
+          pre_encoder_state,
+          pre_encoder_sequence_length)
 
     return outputs, predictions
 
@@ -2732,6 +2750,9 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
                      encoder_outputs,
                      encoder_state,
                      encoder_sequence_length,
+                     pre_encoder_outputs,
+                     pre_encoder_state,
+                     pre_encoder_sequence_length,
                      step=None,
                      training=None):
     params = self.params
@@ -2747,9 +2768,10 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           k=params.get("scheduled_sampling_k"))
 
     initial_state = self.decoder.initial_state(
-        memory=encoder_outputs,
-        memory_sequence_length=encoder_sequence_length,
-        initial_state=encoder_state)
+        memory=[encoder_outputs, pre_encoder_outputs],
+        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        initial_state= [encoder_state, pre_encoder_state])
+
     logits, _, attention = self.decoder(
         target_inputs,
         self.labels_inputter.get_length(labels),
@@ -2774,7 +2796,10 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
       outputs["noisy_logits"] = noisy_logits
     return outputs
 
-  def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length):
+  def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length, pre_encoder_outputs,
+          pre_encoder_state,
+          pre_encoder_sequence_length):
+
     params = self.params
     batch_size = tf.shape(tf.nest.flatten(encoder_outputs)[0])[0]
     start_ids = tf.fill([batch_size], constants.START_OF_SENTENCE_ID)
@@ -2786,12 +2811,19 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
       encoder_sequence_length = tfa.seq2seq.tile_batch(encoder_sequence_length, beam_size)
       if encoder_state is not None:
         encoder_state = tfa.seq2seq.tile_batch(encoder_state, beam_size)
+      
+      pre_encoder_outputs = tfa.seq2seq.tile_batch(pre_encoder_outputs, beam_size)
+      pre_encoder_sequence_length = tfa.seq2seq.tile_batch(pre_encoder_sequence_length, beam_size)
+      if encoder_state is not None:
+        pre_encoder_state = tfa.seq2seq.tile_batch(pre_encoder_state, beam_size)
+      
 
     # Dynamically decodes from the encoder outputs.
     initial_state = self.decoder.initial_state(
-        memory=encoder_outputs,
-        memory_sequence_length=encoder_sequence_length,
-        initial_state=encoder_state)
+        memory= [encoder_outputs, pre_encoder_outputs],
+        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        initial_state= [encoder_state, pre_encoder_state])
+
     sampled_ids, sampled_length, log_probs, alignment, _ = self.decoder.dynamic_decode(
         self.labels_inputter,
         start_ids,
@@ -2955,8 +2987,184 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         optimizer=optimizer,
         ignore_weights=updated_variables)
 
+class PrimingInputter(inputters.ParallelInputter):
+  
+  def __init__(self,
+               features_inputter,
+               xfeatures_inputter,
+               labels_inputter,
+               xlabels_inputter,
+               share_parameters=False):
+    super(PrimingInputter, self).__init__(
+        features_inputter, xfeatures_inputter, labels_inputter, xlabels_inputter, share_parameters=share_parameters, combine_features=False)
+    self.alignment_file = None
+    self.features_inputter = features_inputter
+    self.xfeatures_inputter = xfeatures_inputter
+    self.labels_inputter = labels_inputter
+    self.xlabels_inputter = xlabels_inputter
 
+  def initialize(self, data_config, asset_prefix=""):
+    super(SequenceToSequenceInputter, self).initialize(data_config, asset_prefix=asset_prefix)
+    self.alignment_file = data_config.get("train_alignments")
 
+  def make_dataset(self, data_file, training=None):
+    dataset = super(SequenceToSequenceInputter, self).make_dataset(
+        data_file, training=training)
+    return dataset
+
+  def make_features(self, element=None, features=None, training=None):
+    features, sim, labels, pre = super(PrimingInputter, self).make_features(
+        element=element, features=features, training=training)
+    _shift_target_sequence(labels)
+    if "noisy_ids" in labels:
+      _shift_target_sequence(labels, prefix="noisy_")
+    return features, labels
+
+  def make_inference_dataset(self,
+                             features_file,
+                             sim_file,
+                             pre_file,
+                             batch_size,
+                             length_bucket_width=None,
+                             num_threads=1,
+                             prefetch_buffer_size=None):
+
+    def map_(src,sim,pre):
+      src = self.features_inputter.make_features(src, training=False)
+      sim = self.xfeatures_inputter.make_features(sim, training=False)
+      pre = self.xlabels_inputter.make_features(pre, training=False)
+      return src, sim, pre
+    dataset = self.make_dataset([features_file, sim_file, pre_file], training=False)
+    return dataset.apply(dataset_util.inference_pipeline(
+                       batch_size,
+                       process_fn=map_,
+                       num_threads=num_threads))
+
+  def make_evaluation_dataset(self,
+                              features_file,
+                              sim_file,
+                              labels_file,
+                              pre_file,
+                              batch_size,
+                              num_threads=1,
+                              prefetch_buffer_size=None):
+    
+    
+    map_func = lambda *arg: self.make_features(arg, training=False)
+    dataset = self.make_dataset([features_file, sim_file, labels_file, pre_file], training=False)
+    dataset = dataset.apply(dataset_util.inference_pipeline(
+        batch_size,
+        process_fn=map_func,
+        num_threads=num_threads,
+        prefetch_buffer_size=prefetch_buffer_size))
+    return dataset
+
+  def make_training_dataset(self,
+                            features_file,
+                            sim_file,
+                            labels_file,
+                            pre_file,
+                            batch_size,
+                            batch_type="examples",
+                            batch_multiplier=1,
+                            batch_size_multiple=1,
+                            shuffle_buffer_size=None,
+                            length_bucket_width=None,
+                            maximum_features_length=None,
+                            maximum_labels_length=None,
+                            single_pass=False,
+                            num_shards=1,
+                            shard_index=0,
+                            num_threads=4,
+                            prefetch_buffer_size=None):
+    
+    map_func = lambda *arg: self.make_features(arg, training=True)
+    dataset = self.make_dataset([features_file, sim_file, labels_file, pre_file], training=True)
+    dataset = dataset.apply(dataset_util.training_pipeline(
+        batch_size,
+        batch_type=batch_type,
+        batch_multiplier=batch_multiplier,
+        batch_size_multiple=batch_size_multiple,
+        process_fn=map_func,
+        length_bucket_width=length_bucket_width,
+        features_length_fn=self.features_inputter.get_length,
+        labels_length_fn=self.labels_inputter.get_length,
+        maximum_features_length=maximum_features_length,
+        maximum_labels_length=maximum_labels_length,
+        single_pass=single_pass,
+        num_shards=num_shards,
+        shard_index=shard_index,
+        num_threads=num_threads,
+        shuffle_buffer_size=shuffle_buffer_size,
+        prefetch_buffer_size=prefetch_buffer_size))
+    return dataset
+
+def _shift_target_sequence(labels, prefix=""):
+  labels_ids = labels["%sids" % prefix]
+  bos = tf.constant([constants.START_OF_SENTENCE_ID], dtype=labels_ids.dtype)
+  eos = tf.constant([constants.END_OF_SENTENCE_ID], dtype=labels_ids.dtype)
+  labels["%sids" % prefix] = tf.concat([bos, labels_ids], axis=0)
+  labels["%sids_out" % prefix] = tf.concat([labels_ids, eos], axis=0)
+  labels["%slength" % prefix] += 1
+
+def align_tokens_from_attention(tokens, attention):
+  """Returns aligned tokens from the attention.
+
+  Args:
+    tokens: The tokens on which the attention is applied as a string
+      ``tf.Tensor`` of shape :math:`[B, T_s]`.
+    attention: The attention vector of shape :math:`[B, T_t, T_s]`.
+
+  Returns:
+    The aligned tokens as a string ``tf.Tensor`` of shape :math:`[B, T_t]`.
+  """
+  alignment = tf.argmax(attention, axis=-1, output_type=tf.int32)
+  return tf.gather(tokens, alignment, axis=1, batch_dims=1)
+
+def replace_unknown_target(target_tokens,
+                           source_tokens,
+                           attention,
+                           unknown_token=constants.UNKNOWN_TOKEN):
+  """Replaces all target unknown tokens by the source token with the highest
+  attention.
+
+  Args:
+    target_tokens: A a string ``tf.Tensor`` of shape :math:`[B, T_t]`.
+    source_tokens: A a string ``tf.Tensor`` of shape :math:`[B, T_s]`.
+    attention: The attention vector of shape :math:`[B, T_t, T_s]`.
+    unknown_token: The target token to replace.
+
+  Returns:
+    A string ``tf.Tensor`` with the same shape and type as :obj:`target_tokens`
+    but will all instances of :obj:`unknown_token` replaced by the aligned source
+    token.
+  """
+  aligned_source_tokens = align_tokens_from_attention(source_tokens, attention)
+  return tf.where(
+      tf.equal(target_tokens, unknown_token),
+      x=aligned_source_tokens,
+      y=target_tokens)
+
+def _add_noise(tokens, lengths, params, subword_token, is_spacer=None):
+  if not isinstance(params, list):
+    raise ValueError("Expected a list of noise modules")
+  noises = []
+  for module in params:
+    noise_type, args = six.next(six.iteritems(module))
+    if not isinstance(args, list):
+      args = [args]
+    noise_type = noise_type.lower()
+    if noise_type == "dropout":
+      noise_class = noise.WordDropout
+    elif noise_type == "replacement":
+      noise_class = noise.WordReplacement
+    elif noise_type == "permutation":
+      noise_class = noise.WordPermutation
+    else:
+      raise ValueError("Invalid noise type: %s" % noise_type)
+    noises.append(noise_class(*args))
+  noiser = noise.WordNoiser(noises=noises, subword_token=subword_token, is_spacer=is_spacer)
+  return noiser(tokens, lengths, keep_shape=True)
 
 
 

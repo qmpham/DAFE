@@ -18,7 +18,7 @@ from opennmt.optimizers import utils as optimizer_util
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter, ProbInputter, ProbInputter_v1
 from opennmt.models.sequence_to_sequence import SequenceToSequence
-from model import Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1, SequenceToSequence_with_dprob, Multi_domain_SequenceToSequence_DRO
+from model import Priming_SequenceToSequence, Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1, SequenceToSequence_with_dprob, Multi_domain_SequenceToSequence_DRO
 from encoders.self_attention_encoder import *
 from decoders.self_attention_decoder import *
 import numpy as np
@@ -1234,6 +1234,36 @@ def main():
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         inner_layer_norm=None if not config.get("inner_layer_norm",True) else Multi_LayerNorm,
         version=config.get("version",1)))
+  elif experiment=="priming_nmt_2":
+    model = Priming_SequenceToSequence(
+    source_inputter = onmt.inputters.WordEmbedder(embedding_size=512),
+    xsource_inputter = onmt.inputters.WordEmbedder(embedding_size=512),
+    target_inputter = onmt.inputters.WordEmbedder(embedding_size=512),
+    xtarget_inputter = onmt.inputters.WordEmbedder(embedding_size=512),
+    encoder = onmt.encoders.SelfAttentionEncoder(
+              num_layers=6,
+              num_units=512,
+              num_heads=8,
+              ffn_inner_dim=2048,
+              dropout=0.1,
+              attention_dropout=0.1,
+              ffn_dropout=0.1),
+    pre_encoder = onmt.encoders.SelfAttentionEncoder(
+              num_layers=6,
+              num_units=512,
+              num_heads=8,
+              ffn_inner_dim=2048,
+              dropout=0.1,
+              attention_dropout=0.1,
+              ffn_dropout=0.1),
+    decoder = onmt.decoders.SelfAttentionDecoder(
+              num_layers=6,
+              num_units=512,
+              num_heads=8,
+              ffn_inner_dim=2048,
+              dropout=0.1,
+              attention_dropout=0.1,
+              ffn_dropout=0.1))
   elif experiment=="pretrain":
     return
   warmup_steps = config.get("warmup_steps",4000)

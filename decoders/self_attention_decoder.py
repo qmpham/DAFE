@@ -6185,12 +6185,9 @@ class Multi_domain_SelfAttentionDecoder_v19(Decoder):
         attention_size=tf.shape(self.memory)[1] if self.support_alignment_history else None)
 
 class Priming_SelfAttentionDecoder(Decoder):
-  
+
   def __init__(self,
                num_layers,
-               num_domains,
-               num_domain_units=128,
-               ADAP_layer_stopping_gradient=False,
                num_units=512,
                num_heads=8,
                ffn_inner_dim=2048,
@@ -6202,7 +6199,7 @@ class Priming_SelfAttentionDecoder(Decoder):
                num_sources=1,
                **kwargs):
     
-    super(Multi_domain_SelfAttentionDecoder, self).__init__(num_sources=num_sources, **kwargs)
+    super(Priming_SelfAttentionDecoder, self).__init__(num_sources=num_sources, **kwargs)
     self.num_units = num_units
     self.num_heads = num_heads
     self.dropout = dropout
@@ -6221,20 +6218,6 @@ class Priming_SelfAttentionDecoder(Decoder):
             ffn_dropout=ffn_dropout,
             ffn_activation=ffn_activation)
         for i in range(num_layers)]
-    self.mask = make_domain_mask(num_domains, num_units, num_domain_units=num_domain_units)
-    self.multi_domain_layers = [
-        Multi_domain_FeedForwardNetwork(num_domains*num_domain_units, num_units, name="ADAP_%d"%i)
-        for i in range(num_layers)]
-    self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
-  
-  def initialize(self, vocab_size=None, output_layer=None):
-    
-    if output_layer is not None:
-      self.output_layer = output_layer
-    else:
-      if vocab_size is None:
-        raise ValueError("One of vocab_size and output_layer must be set")
-      self.output_layer = common.Dense(vocab_size)
 
   @property
   def minimum_sources(self):
@@ -6265,16 +6248,10 @@ class Priming_SelfAttentionDecoder(Decoder):
            step=None,
            training=None):
     # Process inputs.
-    tgt_inputs = inputs[0]
-    pre_inputs = inputs[1]
-
     inputs *= self.num_units**0.5
     if self.position_encoder is not None:
-      tgt_inputs = self.position_encoder(tgt_inputs, position=step + 1 if step is not None else None)
-      pre_inputs = self.position_encoder(pre_inputs)
-
-    inputs = common.dropout(tgt_inputs, self.dropout, training=training)
-    pre_inputs = common.dropout(pre_inputs, self.dropout, training=training)
+      inputs = self.position_encoder(inputs, position=step + 1 if step is not None else None)
+    inputs = common.dropout(inputs, self.dropout, training=training)
 
     # Prepare query mask.
     mask = None
@@ -6287,6 +6264,10 @@ class Priming_SelfAttentionDecoder(Decoder):
 
     # Prepare memory mask.
     memory_mask = None
+    pre_memory_mask = None
+    memory, pre_memory = memory
+    memory_sequence_length, pre_memory_sequence_length = memory_sequence_length
+
     if memory is not None:
       if not isinstance(memory, (list, tuple)):
         memory = (memory,)
@@ -6296,6 +6277,16 @@ class Priming_SelfAttentionDecoder(Decoder):
       memory_mask = [
           tf.sequence_mask(mem_length, maxlen=tf.shape(mem)[1])
           for mem, mem_length in zip(memory, memory_sequence_length)]
+
+    if pre_memory is not None:
+      if not isinstance(memory, (list, tuple)):
+        pre_memory = (pre_memory,)
+    if pre_memory_sequence_length is not None:
+      if not isinstance(pre_memory_sequence_length, (list, tuple)):
+        pre_memory_sequence_length = (pre_memory_sequence_length,)
+      pre_memory_mask = [
+          tf.sequence_mask(pre_mem_length, maxlen=tf.shape(pre_mem)[1])
+          for pre_mem, pre_mem_length in zip(pre_memory, pre_memory_sequence_length)]
 
     # Run each layer.
     new_cache = []
@@ -6308,7 +6299,6 @@ class Priming_SelfAttentionDecoder(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-
     outputs = self.layer_norm(inputs)
     return outputs, new_cache, attention
 
@@ -6341,8 +6331,7 @@ class Priming_SelfAttentionDecoder(Decoder):
            memory=None,
            memory_sequence_length=None,
            training=None):
-    
-    inputs = [tf.expand_dims(inputs[0], 1), inputs[1]]
+    inputs = tf.expand_dims(inputs, 1)
     outputs, state, attention = self._run(
         inputs,
         cache=state,
@@ -6354,9 +6343,8 @@ class Priming_SelfAttentionDecoder(Decoder):
     if attention is not None:
       attention = tf.squeeze(attention, axis=1)
     return outputs, state, attention
-    
-  def _get_initial_state(self, batch_size, dtype, initial_state=None):
 
+  def _get_initial_state(self, batch_size, dtype, initial_state=None):
     # The decoder state contains the keys and values projections of the previous timesteps.
     _ = initial_state
     cache = []

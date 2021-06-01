@@ -751,8 +751,24 @@ def function_on_next(dataset, as_numpy=False):
 
   return decorator
 
+def create_priming_trainining_dataset(strategy, model, domain, source_file, sim_file, target_file, pre_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0, pick_in_order=False, window_size=None):
 
+  print("maximum_length", maximum_length)
+  train_dataset = model.examples_inputter.make_training_dataset(source_file, sim_file, target_file, pre_file,
+              batch_size=batch_train_size,
+              batch_type=batch_type,
+              single_pass=single_pass,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length)
+    
+  with strategy.scope():
+    base_dataset = train_dataset
+    train_dataset = strategy.experimental_distribute_datasets_from_function(
+          lambda _: base_dataset)  
 
+  return train_dataset
 
 
 
