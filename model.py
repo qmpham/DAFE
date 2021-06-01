@@ -2723,7 +2723,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         self.examples_inputter.input_signature())
     print("features: ",features)
     features = self.examples_inputter.make_features(features=features)
-
+    print("features: ",features)
     # Add the batch dimension back before calling the model.
     features, sims, labels, pres = tf.nest.map_structure(lambda x: tf.expand_dims(x, 0), features)
     _ = self(features, pres, labels=labels, training=True, step=0)
