@@ -3003,7 +3003,7 @@ class PrimingInputter(inputters.ParallelInputter):
     self.xfeatures_inputter = xfeatures_inputter
     self.xfeatures_inputter.asset_prefix = "sim"
     self.labels_inputter = labels_inputter
-    self.labels_inputter.asset_prefix = "tgt"
+    self.labels_inputter.asset_prefix = "target"
     self.xlabels_inputter = xlabels_inputter
     self.xlabels_inputter.asset_prefix = "pre"
 
