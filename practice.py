@@ -59,7 +59,9 @@ def main():
   
   data_config = {
       "source_vocabulary": config["src_vocab"],
-      "target_vocabulary": config["tgt_vocab"]
+      "sim_vocabulary": config["src_vocab"],
+      "target_vocabulary": config["tgt_vocab"],
+      "pre_vocabulary": config["tgt_vocab"]
     }
 
   if config.get("cross_device",False):

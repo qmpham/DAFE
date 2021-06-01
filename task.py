@@ -15921,14 +15921,6 @@ def priming_train(config,
   
   def _apply_gradients():
     variables = model.trainable_variables
-    model_vars = []
-    classifier_vars = []
-    for var in variables:
-      if "ADAP_gate/dense" in var.name:
-        classifier_vars.append(var)
-      else:
-        model_vars.append(var)
-    variables = model_vars + classifier_vars
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.

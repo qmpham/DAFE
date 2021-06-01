@@ -2999,9 +2999,13 @@ class PrimingInputter(inputters.ParallelInputter):
         features_inputter, xfeatures_inputter, labels_inputter, xlabels_inputter, share_parameters=share_parameters, combine_features=False)
     self.alignment_file = None
     self.features_inputter = features_inputter
+    self.features_inputter.asset_prefix = "source"
     self.xfeatures_inputter = xfeatures_inputter
+    self.xfeatures_inputter.asset_prefix = "sim"
     self.labels_inputter = labels_inputter
+    self.labels_inputter.asset_prefix = "tgt"
     self.xlabels_inputter = xlabels_inputter
+    self.xlabels_inputter.asset_prefix = "pre"
 
   def initialize(self, data_config, asset_prefix=""):
     super(SequenceToSequenceInputter, self).initialize(data_config, asset_prefix=asset_prefix)
