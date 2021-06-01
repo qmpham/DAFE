@@ -3008,11 +3008,11 @@ class PrimingInputter(inputters.ParallelInputter):
     self.xlabels_inputter.asset_prefix = "pre"
 
   def initialize(self, data_config, asset_prefix=""):
-    super(SequenceToSequenceInputter, self).initialize(data_config, asset_prefix=asset_prefix)
+    super(PrimingInputter, self).initialize(data_config, asset_prefix=asset_prefix)
     self.alignment_file = data_config.get("train_alignments")
 
   def make_dataset(self, data_file, training=None):
-    dataset = super(SequenceToSequenceInputter, self).make_dataset(
+    dataset = super(PrimingInputter, self).make_dataset(
         data_file, training=training)
     return dataset
 
