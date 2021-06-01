@@ -3051,7 +3051,7 @@ class PrimingInputter(inputters.ParallelInputter):
     _shift_target_sequence(labels)
     if "noisy_ids" in labels:
       _shift_target_sequence(labels, prefix="noisy_")
-    return features, labels
+    return features, sim, labels, pre
 
   def make_inference_dataset(self,
                              features_file,
