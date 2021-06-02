@@ -2613,9 +2613,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
 
   def __init__(self,
                source_inputter,
-               xsource_inputter,
                target_inputter,
-               xtarget_inputter,
                encoder,
                pre_encoder,
                decoder,
@@ -2653,11 +2651,9 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           raise TypeError("Sharing embeddings requires all inputters to be a "
                           "WordEmbedder")
 
-    examples_inputter = PrimingInputter(
+    examples_inputter = SequenceToSequenceInputter(
         source_inputter,
-        xsource_inputter,
         target_inputter,
-        xtarget_inputter,
         share_parameters=EmbeddingsSharingLevel.share_input_embeddings(share_embeddings))
     super(Priming_SequenceToSequence, self).__init__(examples_inputter)
     self.encoder = encoder
@@ -2725,7 +2721,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     features = self.examples_inputter.make_features(features=features)
     print("features: ",features)
     # Add the batch dimension back before calling the model.
-    features, sims, labels, pres = tf.nest.map_structure(lambda x: tf.expand_dims(x, 0), features)
+    [features, sims, pres], labels = tf.nest.map_structure(lambda x: tf.expand_dims(x, 0), features)
     _ = self(features, pres, labels=labels, training=True, step=0)
 
     if optimizer is not None:
@@ -2733,15 +2729,17 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
       optimizer._create_hypers()  # pylint: disable=protected-access
       optimizer._create_slots(self.trainable_variables)  # pylint: disable=protected-access
   
-  def call(self, features, pres, labels=None, training=None, step=None):
+  def call(self, features, labels=None, training=None, step=None):
     # Encode the source.
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
+
+    source_length, _, pre_length = source_length
+    source_inputs, _, pre_inputs = source_inputs
+
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         source_inputs, sequence_length=source_length, training=training)
 
-    pre_length = self.features_inputter.get_length(pres)
-    pre_inputs = self.features_inputter(pres, training=training)
     pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
         pre_inputs, sequence_length=pre_length, training=training)
     
@@ -3015,122 +3013,6 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         new_optimizer=new_optimizer,
         optimizer=optimizer,
         ignore_weights=updated_variables)
-
-class PrimingInputter(inputters.ParallelInputter):
-  
-  def __init__(self,
-               features_inputter,
-               xfeatures_inputter,
-               labels_inputter,
-               xlabels_inputter,
-               share_parameters=False):
-    super(PrimingInputter, self).__init__(
-        [features_inputter, xfeatures_inputter, labels_inputter, xlabels_inputter], share_parameters=share_parameters, combine_features=False)
-    self.alignment_file = None
-    self.features_inputter = features_inputter
-    self.features_inputter.asset_prefix = "source"
-    self.xfeatures_inputter = xfeatures_inputter
-    self.xfeatures_inputter.asset_prefix = "sim"
-    self.labels_inputter = labels_inputter
-    self.labels_inputter.asset_prefix = "target"
-    self.xlabels_inputter = xlabels_inputter
-    self.xlabels_inputter.asset_prefix = "pre"
-
-  def initialize(self, data_config, asset_prefix=""):
-    super(PrimingInputter, self).initialize(data_config, asset_prefix=asset_prefix)
-    self.alignment_file = data_config.get("train_alignments")
-
-  def make_dataset(self, data_file, training=None):
-    dataset = super(PrimingInputter, self).make_dataset(
-        data_file, training=training)
-    return dataset
-
-  def make_features(self, element=None, features=None, training=None):
-    features, sim, labels, pre = super(PrimingInputter, self).make_features(
-        element=element, features=features, training=training)
-    _shift_target_sequence(labels)
-    if "noisy_ids" in labels:
-      _shift_target_sequence(labels, prefix="noisy_")
-    return features, sim, labels, pre
-
-  def make_inference_dataset(self,
-                             features_file,
-                             sim_file,
-                             pre_file,
-                             batch_size,
-                             length_bucket_width=None,
-                             num_threads=1,
-                             prefetch_buffer_size=None):
-
-    def map_(src,sim,pre):
-      src = self.features_inputter.make_features(src, training=False)
-      sim = self.xfeatures_inputter.make_features(sim, training=False)
-      pre = self.xlabels_inputter.make_features(pre, training=False)
-      return src, sim, pre
-    dataset = self.make_dataset([features_file, sim_file, pre_file], training=False)
-    return dataset.apply(dataset_util.inference_pipeline(
-                       batch_size,
-                       process_fn=map_,
-                       num_threads=num_threads))
-
-  def make_evaluation_dataset(self,
-                              features_file,
-                              sim_file,
-                              labels_file,
-                              pre_file,
-                              batch_size,
-                              num_threads=1,
-                              prefetch_buffer_size=None):
-    
-    
-    map_func = lambda *arg: self.make_features(arg, training=False)
-    dataset = self.make_dataset([features_file, sim_file, labels_file, pre_file], training=False)
-    dataset = dataset.apply(dataset_util.inference_pipeline(
-        batch_size,
-        process_fn=map_func,
-        num_threads=num_threads,
-        prefetch_buffer_size=prefetch_buffer_size))
-    return dataset
-
-  def make_training_dataset(self,
-                            features_file,
-                            sim_file,
-                            labels_file,
-                            pre_file,
-                            batch_size,
-                            batch_type="examples",
-                            batch_multiplier=1,
-                            batch_size_multiple=1,
-                            shuffle_buffer_size=None,
-                            length_bucket_width=None,
-                            maximum_features_length=None,
-                            maximum_labels_length=None,
-                            single_pass=False,
-                            num_shards=1,
-                            shard_index=0,
-                            num_threads=4,
-                            prefetch_buffer_size=None):
-    
-    map_func = lambda *arg: self.make_features(arg, training=True)
-    dataset = self.make_dataset([features_file, sim_file, labels_file, pre_file], training=True)
-    dataset = dataset.apply(dataset_util.training_pipeline(
-        batch_size,
-        batch_type=batch_type,
-        batch_multiplier=batch_multiplier,
-        batch_size_multiple=batch_size_multiple,
-        process_fn=map_func,
-        length_bucket_width=length_bucket_width,
-        features_length_fn=self.features_inputter.get_length,
-        labels_length_fn=self.labels_inputter.get_length,
-        maximum_features_length=maximum_features_length,
-        maximum_labels_length=maximum_labels_length,
-        single_pass=single_pass,
-        num_shards=num_shards,
-        shard_index=shard_index,
-        num_threads=num_threads,
-        shuffle_buffer_size=shuffle_buffer_size,
-        prefetch_buffer_size=prefetch_buffer_size))
-    return dataset
 
 def _shift_target_sequence(labels, prefix=""):
   labels_ids = labels["%sids" % prefix]
