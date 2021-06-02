@@ -24,7 +24,7 @@ from opennmt.data import dataset as dataset_util
 from opennmt.utils.misc import print_bytes, format_translation_output, merge_dict, shape_list
 from opennmt.decoders import decoder as decoder_util
 from opennmt.models.sequence_to_sequence import EmbeddingsSharingLevel, SequenceToSequence, SequenceToSequenceInputter, replace_unknown_target, _add_noise
-from utils.my_inputter import My_inputter, Multi_domain_SequenceToSequenceInputter, Multi_domain_SequenceToSequenceInputter_withprob, Multi_domain_SequenceToSequenceInputter_DRO
+from utils.my_inputter import My_inputter, Priming_SequenceToSequenceInputter, Multi_domain_SequenceToSequenceInputter, Multi_domain_SequenceToSequenceInputter_withprob, Multi_domain_SequenceToSequenceInputter_DRO
 from utils.utils_ import make_domain_mask, masking
 from opennmt.layers import common
 from layers.layers import Classification_layer
@@ -2651,7 +2651,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           raise TypeError("Sharing embeddings requires all inputters to be a "
                           "WordEmbedder")
 
-    examples_inputter = SequenceToSequenceInputter(
+    examples_inputter = Priming_SequenceToSequenceInputter(
         source_inputter,
         target_inputter,
         share_parameters=EmbeddingsSharingLevel.share_input_embeddings(share_embeddings))

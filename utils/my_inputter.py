@@ -660,10 +660,36 @@ class Multi_domain_SequenceToSequenceInputter_DRO(ParallelInputter):
             prefetch_buffer_size=prefetch_buffer_size))
         return dataset
 
-    
+class Priming_SequenceToSequenceInputter(inputters.ExampleInputter):
+  """A custom :class:`opennmt.inputters.ExampleInputter` for sequence to
+  sequence models.
+  """
 
+  def __init__(self,
+               features_inputter,
+               labels_inputter,
+               share_parameters=False):
+    super(Priming_SequenceToSequenceInputter, self).__init__(
+        features_inputter, labels_inputter, share_parameters=share_parameters)
 
+  def initialize(self, data_config, asset_prefix=""):
+    super(Priming_SequenceToSequenceInputter, self).initialize(data_config, asset_prefix=asset_prefix)
 
+  def make_dataset(self, data_file, training=None):
+    dataset = super(Priming_SequenceToSequenceInputter, self).make_dataset(
+        data_file, training=training)
+    print("file numb: ",len(data_file))
+    label_dataset = self.labels_inputter.make_dataset(data_file[1])
+    feature_dataset = self.features_inputter.make_dataset(data_file[0])
+    return tf.data.Dataset.zip(tuple([feature_dataset,label_dataset]))
+
+  def make_features(self, element=None, features=None, training=None):
+    features, labels = super(Priming_SequenceToSequenceInputter, self).make_features(
+        element=element, features=features, training=training)
+    _shift_target_sequence(labels)
+    if "noisy_ids" in labels:
+      _shift_target_sequence(labels, prefix="noisy_")
+    return features, labels
 
 
 
