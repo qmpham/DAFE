@@ -1,5 +1,6 @@
 import sys
 from numpy import dtype
+from opennmt.inputters import inputter
 sys.path.append("/gpfsdswork/projects/rech/sfz/utt84zy/anaconda3/envs/huggingface/lib/python3.7/site-packages")
 
 from opennmt.inputters.text_inputter import WordEmbedder, _get_field, TextInputter
@@ -685,9 +686,13 @@ class Priming_SequenceToSequenceInputter(inputters.ExampleInputter):
     return tf.data.Dataset.zip(tuple([feature_dataset,label_dataset]))
 
   def make_features(self, element=None, features=None, training=None):
-    src = self.features_inputter.make_features(element=element[0],training=training)
-    labels = self.labels_inputter.make_features(element=element[1],training=training)
-
+    #src = self.features_inputter.make_features(element=element[0],training=training)
+    #labels = self.labels_inputter.make_features(element=element[1],training=training)
+    temp = []
+    for i, inputter in enumerate(self.inputters):
+        temp[i] = inputter.make_features(element=element[i] if element is not None else None, 
+                                        features=features[i] if features is not None else None, training=training)
+    src, labels = temp
     _shift_target_sequence(labels)
     if "noisy_ids" in labels:
       _shift_target_sequence(labels, prefix="noisy_")
