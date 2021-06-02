@@ -686,7 +686,7 @@ class Priming_SequenceToSequenceInputter(inputters.ExampleInputter):
 
   def make_features(self, element=None, features=None, training=None):
     src = self.features_inputter.make_features(element=element[0],training=training)
-    labels = self.features_inputter.make_features(element=element[1],training=training)
+    labels = self.labels_inputter.make_features(element=element[1],training=training)
 
     _shift_target_sequence(labels)
     if "noisy_ids" in labels:
