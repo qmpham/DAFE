@@ -700,11 +700,13 @@ class Priming_SequenceToSequenceInputter(inputters.ExampleInputter):
         features = [{} for _ in self.inputters]
     else:
         features = list(features)
+    print(features)
     for i, inputter in enumerate(self.inputters):
         features[i] = inputter.make_features(
         element=element[i] if element is not None else None,
         features=features[i],
         training=training)
+
     src, labels = features
     _shift_target_sequence(labels)
     if "noisy_ids" in labels:
