@@ -1,4 +1,5 @@
 import sys
+from numpy import dtype
 sys.path.append("/gpfsdswork/projects/rech/sfz/utt84zy/anaconda3/envs/huggingface/lib/python3.7/site-packages")
 
 from opennmt.inputters.text_inputter import WordEmbedder, _get_field, TextInputter
@@ -694,6 +695,8 @@ class Priming_SequenceToSequenceInputter(inputters.ExampleInputter):
     """
     print("element: ", element)
     print("feature: ", features)
+    print(self.inputters, "|", dtype(self.inputters))
+
     if features is None:
         features = [{} for _ in self.inputters]
     else:
