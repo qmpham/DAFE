@@ -688,7 +688,7 @@ class Priming_SequenceToSequenceInputter(inputters.ExampleInputter):
   def make_features(self, element=None, features=None, training=None):
     #src = self.features_inputter.make_features(element=element[0],training=training)
     #labels = self.labels_inputter.make_features(element=element[1],training=training)
-    temp = []
+    temp = [None]*len(self.inputters)
     print(element)
     print(features)
     for i, inputter in enumerate(self.inputters):
