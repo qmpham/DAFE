@@ -695,8 +695,7 @@ class Priming_SequenceToSequenceInputter(inputters.ExampleInputter):
     """
     print("element: ", element)
     print("feature: ", features)
-    print(self.inputters, "|", dtype(self.inputters))
-
+    print(self.inputters, "|", dtype(self.inputters),"|", len(self.inputters))
     if features is None:
         features = [{} for _ in self.inputters]
     else:
