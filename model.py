@@ -2721,8 +2721,8 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     features = self.examples_inputter.make_features(features=features)
     print("features: ",features)
     # Add the batch dimension back before calling the model.
-    [features, sims, pres], labels = tf.nest.map_structure(lambda x: tf.expand_dims(x, 0), features)
-    _ = self(features, pres, labels=labels, training=True, step=0)
+    features, labels = tf.nest.map_structure(lambda x: tf.expand_dims(x, 0), features)
+    _ = self(features, labels=labels, training=True, step=0)
 
     if optimizer is not None:
       _ = optimizer.iterations
