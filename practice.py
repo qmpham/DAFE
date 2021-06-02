@@ -60,7 +60,8 @@ def main():
   data_config = {
       "source_vocabulary": config["src_vocab"],
       "source_1_vocabulary": config["src_vocab"],
-      "source_2_vocabulary": config["tgt_vocab"],
+      "source_2_vocabulary": config["src_vocab"],
+      "source_3_vocabulary": config["tgt_vocab"],
       "target_vocabulary": config["tgt_vocab"]
     }
 
