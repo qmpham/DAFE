@@ -1239,7 +1239,11 @@ def main():
         version=config.get("version",1)))
   elif experiment=="priming_nmt_2":
     model = Priming_SequenceToSequence(
-    source_inputter = onmt.inputters.ParallelInputter([onmt.inputters.WordEmbedder(embedding_size=512), onmt.inputters.WordEmbedder(embedding_size=512), onmt.inputters.WordEmbedder(embedding_size=512)]),
+    source_inputter = onmt.inputters.ParallelInputter([onmt.inputters.WordEmbedder(embedding_size=512), 
+                                                      onmt.inputters.WordEmbedder(embedding_size=512), 
+                                                      onmt.inputters.WordEmbedder(embedding_size=512)], 
+                                                      share_parameters=False,
+                                                      combine_features=False),
     target_inputter = onmt.inputters.WordEmbedder(embedding_size=512),
     encoder = onmt.encoders.SelfAttentionEncoder(
               num_layers=6,
