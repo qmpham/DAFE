@@ -684,8 +684,12 @@ class Priming_SequenceToSequenceInputter(inputters.ExampleInputter):
     return tf.data.Dataset.zip(tuple([feature_dataset,label_dataset]))
 
   def make_features(self, element=None, features=None, training=None):
+    """
     features, labels = super(Priming_SequenceToSequenceInputter, self).make_features(
         element=element, features=features, training=training)
+    """
+    features = self.features_inputter.make_features(element=element[0], features=features, training=training)
+    labels = self.labels_inputter.make_features(element=element[1], features=features, training=training)
     _shift_target_sequence(labels)
     if "noisy_ids" in labels:
       _shift_target_sequence(labels, prefix="noisy_")
