@@ -136,6 +136,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
   def call(self, inputs, memory=None, mask=None, cache=None, training=None):  # pylint: disable=arguments-differ
     def _compute_kv(x):
+      print("x: ",x)
       keys = self.linear_keys(x)
       keys = split_heads(keys, self.num_heads)
       values = self.linear_values(x)
@@ -363,7 +364,6 @@ class SelfAttentionDecoderLayer(tf.keras.layers.Layer):
       memory_cache = cache.get("memory_kv")
       if memory_cache is None:
         memory_cache = [None] * len(self.attention)
-      print(self.attention, memory, memory_mask, memory_cache)
       for layer, mem, mem_mask, mem_cache in zip(
           self.attention, memory, memory_mask, memory_cache):
         result = layer(
