@@ -15914,7 +15914,8 @@ def priming_train(config,
     training_loss = tf.reduce_sum(outputs)
     variables = model.trainable_variables
     print("var numb: ", len(variables))
-    
+    for v in variables:
+      print(v.name)
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
