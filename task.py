@@ -171,6 +171,100 @@ def translate(source_file,
     else:
       return score
 
+def priming_translate(source_files,
+              reference,
+              model,
+              checkpoint_manager,
+              checkpoint,              
+              domain,
+              output_file,
+              length_penalty,
+              is_noisy=1,
+              checkpoint_path=None,
+              probs_file=None,
+              experiment="ldr",
+              score_type="MultiBLEU",
+              batch_size=5,
+              beam_size=5):
+  
+  # Create the inference dataset.
+  if checkpoint_path == None:
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
+  checkpoint.restore(checkpoint_path)
+  dataset = model.examples_inputter.make_inference_dataset(source_files, batch_size)
+  iterator = iter(dataset)
+
+  # Create the mapping for target ids to tokens.
+  ids_to_tokens = model.labels_inputter.ids_to_tokens
+
+  @tf.function
+  def predict_next():    
+    source = next(iterator)
+    source_length = source["length"]
+    batch_size = tf.shape(source_length)[0]
+    source_inputs = model.features_inputter(source)
+    encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
+
+    # Prepare the decoding strategy.
+    if beam_size > 1:
+      encoder_outputs, pre_encoder_outputs = encoder_outputs
+      source_length, pre_source_length = source_length
+
+      encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
+      source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
+
+      pre_encoder_outputs = tfa.seq2seq.tile_batch(pre_encoder_outputs, beam_size)
+      pre_source_length = tfa.seq2seq.tile_batch(pre_source_length, beam_size)
+
+      encoder_outputs = [encoder_outputs, pre_encoder_outputs]
+      source_length = [source_length, pre_source_length]
+      decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
+    else:
+      decoding_strategy = onmt.utils.GreedySearch()
+
+    # Run dynamic decoding.
+    decoder_state = model.decoder.initial_state(
+        memory=encoder_outputs,
+        memory_sequence_length=source_length)
+    map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
+    decoded = model.decoder.dynamic_decode(
+        map_input_fn,
+        tf.fill([batch_size], START_OF_SENTENCE_ID),
+        end_id=END_OF_SENTENCE_ID,
+        initial_state=decoder_state,
+        decoding_strategy=decoding_strategy,
+        maximum_iterations=250)
+    target_lengths = decoded.lengths
+    target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64))
+    return target_tokens, target_lengths
+
+  # Iterates on the dataset.
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  print("output file: ", output_file)
+  with open(output_file, "w") as output_:
+    while True:    
+      try:
+        batch_tokens, batch_length = predict_next()
+        for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
+          sentence = b" ".join(tokens[0][:length[0]])
+          print_bytes(sentence, output_)
+          #print_bytes(sentence)
+      except tf.errors.OutOfRangeError:
+        break
+  if reference!=None:
+    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_files[0]), scorer(reference, output_file))
+    score = scorer(reference, output_file)
+    if score is None:
+      return 0.0
+    else:
+      return score
+
 def debug(config,
           optimizer,          
           learning_rate,
@@ -16005,17 +16099,9 @@ def priming_train(config,
         tf.summary.experimental.set_step(step)
         output_files = []
         new_bleu = 0.0
-        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-          output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-          score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-          tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
-          output_files.append(output_file)
-        ##### BLEU on concat dev set.
-        output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
-        score = scorer(ref_eval_concat, output_file_concat)
-        print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
+        output_file = os.path.join(config["model_dir"],"eval",os.path.basename(config["eval_src"]) + ".trans." + os.path.basename(checkpoint_path))
+        score = priming_translate([config["eval_src"], config["eval_pre"]], config["eval_tgt"], model, checkpoint_manager, checkpoint, 0, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
         new_bleu = score
-        tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
         #############################
         if new_bleu >= current_max_eval_bleu:
           current_max_eval_bleu = new_bleu
