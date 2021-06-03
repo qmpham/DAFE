@@ -15896,7 +15896,7 @@ def priming_train(config,
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     
-  def _accumulate_gradients(source, sim, target, pre):
+  def _accumulate_gradients(source, target):
     outputs, _ = model(
         source,
         labels=target,
@@ -15932,9 +15932,9 @@ def priming_train(config,
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
-      (per_replica_source, per_replica_xsource, per_replica_xtarget), per_replica_target = next_fn()
+      per_replica_source, per_replica_target = next_fn()
       per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
-          _accumulate_gradients, args=(per_replica_source, per_replica_xsource, per_replica_target, per_replica_xtarget))
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
