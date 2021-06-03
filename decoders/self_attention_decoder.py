@@ -6288,14 +6288,15 @@ class Priming_SelfAttentionDecoder(Decoder):
           tf.sequence_mask(pre_mem_length, maxlen=tf.shape(pre_mem)[1])
           for pre_mem, pre_mem_length in zip(pre_memory, pre_memory_sequence_length)]
 
+
     # Run each layer.
     new_cache = []
     for i, layer in enumerate(self.layers):
       inputs, layer_cache, attention = layer(
           inputs,
           mask=mask,
-          memory=memory,
-          memory_mask=memory_mask,
+          memory=[memory, pre_memory],
+          memory_mask=[memory_mask, pre_memory_mask],
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
