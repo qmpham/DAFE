@@ -204,21 +204,31 @@ def priming_translate(source_files,
     source_length = model.features_inputter.get_length(source) #source["length"]
     batch_size = tf.shape(source_length[0])[0]
     source_inputs = model.features_inputter(source)
-    encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
+
+    source_length, pre_length = source_length
+    source_inputs, pre_inputs = source_inputs
+
+    encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
+        source_inputs, sequence_length=source_length, training=False)
+
+    pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
+        pre_inputs, sequence_length=pre_length, training=False)
+    
+    #encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
 
     # Prepare the decoding strategy.
     if beam_size > 1:
-      encoder_outputs, pre_encoder_outputs = encoder_outputs
-      source_length, pre_source_length = source_length
+      #encoder_outputs, pre_encoder_outputs = encoder_outputs
+      #source_length, pre_source_length = source_length
 
       encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
       source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
 
       pre_encoder_outputs = tfa.seq2seq.tile_batch(pre_encoder_outputs, beam_size)
-      pre_source_length = tfa.seq2seq.tile_batch(pre_source_length, beam_size)
+      pre_length = tfa.seq2seq.tile_batch(pre_length, beam_size)
 
       encoder_outputs = [encoder_outputs, pre_encoder_outputs]
-      source_length = [source_length, pre_source_length]
+      source_length = [source_length, pre_length]
       decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
     else:
       decoding_strategy = onmt.utils.GreedySearch()
