@@ -6,6 +6,7 @@ import numpy as np
 
 from layers import common
 from opennmt.utils import misc
+from opennmt.layers import Dense
 
 def _lower_triangle_mask(sequence_length, maximum_length=None, dtype=tf.bool):
   batch_size = tf.shape(sequence_length)[0]
@@ -103,10 +104,10 @@ class MultiHeadAttention(tf.keras.layers.Layer):
                        " multiple of %s" % num_heads)
     self.num_heads = num_heads
     self.num_units = num_units
-    self.linear_queries = common.Dense(num_units)
-    self.linear_keys = common.Dense(num_units)
-    self.linear_values = common.Dense(num_units)
-    self.linear_output = common.Dense(num_units)
+    self.linear_queries = Dense(num_units)
+    self.linear_keys = Dense(num_units)
+    self.linear_values = Dense(num_units)
+    self.linear_output = Dense(num_units)
     self.dropout = dropout
     self.return_attention = return_attention
 
