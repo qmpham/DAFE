@@ -680,7 +680,6 @@ class Priming_SequenceToSequenceInputter(inputters.ExampleInputter):
   def make_dataset(self, data_file, training=None):
     dataset = super(Priming_SequenceToSequenceInputter, self).make_dataset(
         data_file, training=training)
-    print("file numb: ",len(data_file))
     label_dataset = self.labels_inputter.make_dataset(data_file[1])
     feature_dataset = self.features_inputter.make_dataset(data_file[0])
     return tf.data.Dataset.zip(tuple([feature_dataset,label_dataset]))
