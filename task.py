@@ -201,8 +201,8 @@ def priming_translate(source_files,
   @tf.function
   def predict_next():    
     source = next(iterator)
-    source_length = source["length"]
-    batch_size = tf.shape(source_length)[0]
+    source_length = model.features_inputter.get_length(source) #source["length"]
+    batch_size = tf.shape(source_length[0])[0]
     source_inputs = model.features_inputter(source)
     encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
 
