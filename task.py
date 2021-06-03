@@ -15902,6 +15902,7 @@ def priming_train(config,
         labels=target,
         training=True,
         step=optimizer.iterations)
+    """
     loss = model.compute_loss(outputs, target, training=True)
 
     if isinstance(loss, tuple):
@@ -15909,7 +15910,8 @@ def priming_train(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    
+    """
+    training_loss = tf.reduce_sum(outputs)
     variables = model.trainable_variables
     print("var numb: ", len(variables))
     
@@ -15917,7 +15919,7 @@ def priming_train(config,
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples
+    return 0,0 #reported_loss, num_examples
   
   def _apply_gradients():
     variables = model.trainable_variables
