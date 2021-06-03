@@ -35,7 +35,7 @@ def main():
   np.random.seed(seed) 
   #tf.random.set_seed(seed)
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train","priming_train","CL_marine","train_domain_mixing_residual","train_L2W","train_IW_v0","train_NGD_L2W_v1","train_L2W_v2","train_L2W_g","train_L2W_v3","debug_L2W_v1","debug_L2W_v2","debug_L2W_v3","train_L2W_v1","train_NGD_L2W","debug_NGD","train_NGD", "continue_NGD", "score", "EWC_stat", "EWC_res_stat", "translate_farajan", "translate_farajan_residual", "train_adv", "train_wada", "finetune_noisy_v1", "finetune_wada", "finetune_wada_v1", "proxy", "debug_slurm_train", "metatrainv16", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train","priming_translate","priming_train","CL_marine","train_domain_mixing_residual","train_L2W","train_IW_v0","train_NGD_L2W_v1","train_L2W_v2","train_L2W_g","train_L2W_v3","debug_L2W_v1","debug_L2W_v2","debug_L2W_v3","train_L2W_v1","train_NGD_L2W","debug_NGD","train_NGD", "continue_NGD", "score", "EWC_stat", "EWC_res_stat", "translate_farajan", "translate_farajan_residual", "train_adv", "train_wada", "finetune_noisy_v1", "finetune_wada", "finetune_wada_v1", "proxy", "debug_slurm_train", "metatrainv16", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
   parser.add_argument("--config", help="configuration file")
   parser.add_argument("--config_root")
   parser.add_argument("--src")
@@ -1430,6 +1430,17 @@ def main():
       print("output_file: ", output_file)
       task.averaged_checkpoint_translate(config, src_file, None, model, checkpoint_manager,
               checkpoint, int(domain), output_file, length_penalty=0.6, experiment=experiment, max_count=translate_config.get("max_count",3))
+  elif args.run == "priming_translate":
+    model.create_variables()
+    translate_config_file = args.src
+    with open(translate_config_file, "r") as stream:
+      translate_config = yaml.load(stream)
+    for src_file, pre_file in zip(translate_config["src"],translate_config["pre"]):      
+      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src_file) + ".trans")
+      print("translating %s"%(src_file))
+      print("output_file: ", output_file)
+      task.priming_avg_ckpt_translate(config, [src_file, pre_file], None, model, checkpoint_manager,
+              checkpoint, int(0), output_file, length_penalty=0.6, experiment=experiment, max_count=translate_config.get("max_count",3))
   elif args.run == "translate_farajan":
     source_file = args.src
     reference = args.ref
