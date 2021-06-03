@@ -15887,7 +15887,7 @@ def priming_train(config,
   
   print("There are %d in-domain corpora"%len(source_file))
   
-  train_dataset = create_priming_trainining_dataset(strategy, model, source_file, target_file, pre_file, batch_train_size, batch_type, shuffle_buffer_size, 
+  train_dataset = create_priming_trainining_dataset(strategy, model, source_file, sim_file, target_file, pre_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
   
@@ -15902,7 +15902,7 @@ def priming_train(config,
         labels=target,
         training=True,
         step=optimizer.iterations)
-    """
+    
     loss = model.compute_loss(outputs, target, training=True)
 
     if isinstance(loss, tuple):
@@ -15910,17 +15910,15 @@ def priming_train(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
-    """
-    training_loss = tf.reduce_sum(outputs)
+    
     variables = model.trainable_variables
     print("var numb: ", len(variables))
-    for v in variables:
-      print(v.name)
+    
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return 0,0 #reported_loss, num_examples
+    return reported_loss, num_examples
   
   def _apply_gradients():
     variables = model.trainable_variables

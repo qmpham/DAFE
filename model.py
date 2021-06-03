@@ -2770,7 +2770,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           pre_encoder_state,
           pre_encoder_sequence_length)
 
-    return pre_encoder_outputs, None #outputs, predictions
+    return outputs, predictions
 
   def _decode_target(self,
                      labels,
