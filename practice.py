@@ -1269,7 +1269,7 @@ def main():
               dropout=0.1,
               attention_dropout=0.1,
               ffn_dropout=0.1,
-              num_sources=1,))
+              num_sources=2))
   elif experiment=="pretrain":
     return
   warmup_steps = config.get("warmup_steps",4000)

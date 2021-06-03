@@ -6196,7 +6196,7 @@ class Priming_SelfAttentionDecoder(Decoder):
                ffn_dropout=0.1,
                ffn_activation=tf.nn.relu,
                position_encoder_class=SinusoidalPositionEncoder,
-               num_sources=1,
+               num_sources=2,
                **kwargs):
     
     super(Priming_SelfAttentionDecoder, self).__init__(num_sources=num_sources, **kwargs)
