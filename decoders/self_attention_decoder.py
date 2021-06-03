@@ -6295,8 +6295,8 @@ class Priming_SelfAttentionDecoder(Decoder):
       inputs, layer_cache, attention = layer(
           inputs,
           mask=mask,
-          memory=[memory, pre_memory],
-          memory_mask=[memory_mask, pre_memory_mask],
+          memory= tuple(list(memory) + list(pre_memory)),
+          memory_mask= tuple(list(memory_mask) + list(pre_memory_mask)),
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
