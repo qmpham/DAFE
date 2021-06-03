@@ -2734,8 +2734,8 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
 
-    source_length, _, pre_length = source_length
-    source_inputs, _, pre_inputs = source_inputs
+    source_length, pre_length = source_length
+    source_inputs, pre_inputs = source_inputs
 
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         source_inputs, sequence_length=source_length, training=training)
