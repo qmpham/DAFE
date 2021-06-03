@@ -6267,10 +6267,7 @@ class Priming_SelfAttentionDecoder(Decoder):
     pre_memory_mask = None
     memory, pre_memory = memory
     memory_sequence_length, pre_memory_sequence_length = memory_sequence_length
-    print("memory_sequence_length: ",memory_sequence_length)
-    print("pre_memory_sequence_length: ",pre_memory_sequence_length)
-    print("memory: ",memory)
-    print("pre_memory: ", pre_memory)
+    
     if memory is not None:
       if not isinstance(memory, (list, tuple)):
         memory = (memory,)
