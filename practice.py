@@ -1242,9 +1242,8 @@ def main():
     source_inputter = onmt.inputters.ParallelInputter([onmt.inputters.WordEmbedder(embedding_size=512),  
                                                       onmt.inputters.WordEmbedder(embedding_size=512)], 
                                                       share_parameters=False,
-                                                      combine_features=False,
-                                                      name="source_inputter"),
-    target_inputter = onmt.inputters.WordEmbedder(embedding_size=512, name="target_inputter"),
+                                                      combine_features=False),
+    target_inputter = onmt.inputters.WordEmbedder(embedding_size=512),
     encoder = onmt.encoders.SelfAttentionEncoder(
               num_layers=6,
               num_units=512,
