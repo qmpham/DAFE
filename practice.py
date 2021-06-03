@@ -1261,14 +1261,15 @@ def main():
               dropout=0.1,
               attention_dropout=0.1,
               ffn_dropout=0.1),
-    decoder = onmt.decoders.SelfAttentionDecoder(
+    decoder = Priming_SelfAttentionDecoder(
               num_layers=6,
               num_units=512,
               num_heads=8,
               ffn_inner_dim=2048,
               dropout=0.1,
               attention_dropout=0.1,
-              ffn_dropout=0.1))
+              ffn_dropout=0.1,
+              num_sources=1,))
   elif experiment=="pretrain":
     return
   warmup_steps = config.get("warmup_steps",4000)
