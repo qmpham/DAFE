@@ -15965,7 +15965,7 @@ def priming_train(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  _, _, _ = next(train_data_flow)
+  _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
@@ -15984,7 +15984,7 @@ def priming_train(config,
     while True:
       #####Training batch
       #for _ in range(int(config.get("accumulation_step",1))):
-      loss, _domain, num_examples = next(train_data_flow)    
+      loss, num_examples = next(train_data_flow)    
       _loss.append(loss.numpy())
       _number_examples.append(num_examples.numpy())
       _step()  

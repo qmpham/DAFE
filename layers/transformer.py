@@ -362,6 +362,7 @@ class SelfAttentionDecoderLayer(tf.keras.layers.Layer):
       memory_cache = cache.get("memory_kv")
       if memory_cache is None:
         memory_cache = [None] * len(self.attention)
+      print(self.attention, memory, memory_mask, memory_cache)
       for layer, mem, mem_mask, mem_cache in zip(
           self.attention, memory, memory_mask, memory_cache):
         result = layer(
