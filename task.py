@@ -15932,7 +15932,7 @@ def priming_train(config,
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
-      per_replica_source, per_replica_xsource, per_replica_target, per_replica_xtarget = next_fn()
+      (per_replica_source, per_replica_xsource, per_replica_xtarget), per_replica_target = next_fn()
       per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
           _accumulate_gradients, args=(per_replica_source, per_replica_xsource, per_replica_target, per_replica_xtarget))
       # TODO: these reductions could be delayed until _step is called.
