@@ -2797,7 +2797,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     initial_state = self.decoder.initial_state(
         memory=[encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
-        initial_state= [encoder_state, pre_encoder_state])
+        initial_state= None)
 
     logits, _, attention = self.decoder(
         target_inputs,
@@ -2849,7 +2849,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     initial_state = self.decoder.initial_state(
         memory= [encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
-        initial_state= [encoder_state, pre_encoder_state])
+        initial_state= None)
 
     sampled_ids, sampled_length, log_probs, alignment, _ = self.decoder.dynamic_decode(
         self.labels_inputter,
