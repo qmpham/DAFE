@@ -15977,7 +15977,6 @@ def priming_train(config,
   source_file = config["src"]
   target_file = config["tgt"]
   pre_file = config["pre"]
-  sim_file = config["sim"]
   
   print("There are %d in-domain corpora"%len(source_file))
   
