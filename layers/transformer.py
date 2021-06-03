@@ -136,7 +136,6 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
   def call(self, inputs, memory=None, mask=None, cache=None, training=None):  # pylint: disable=arguments-differ
     def _compute_kv(x):
-      print("x: ",x)
       keys = self.linear_keys(x)
       keys = split_heads(keys, self.num_heads)
       values = self.linear_values(x)
