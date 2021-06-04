@@ -497,15 +497,27 @@ class Priming_SelfAttentionDecoderLayer(tf.keras.layers.Layer):
     self.self_attention = TransformerLayerWrapper(
         self.self_attention, dropout)
     self.attention = []
-    for _ in range(num_sources):
-      attention = MultiHeadAttention(
-          num_heads,
-          num_units,
-          dropout=attention_dropout,
-          return_attention=num_sources == 1)
-      attention = TransformerLayerWrapper(
-          attention, dropout)
-      self.attention.append(attention)
+    #############
+    attention = MultiHeadAttention(
+        num_heads,
+        num_units,
+        dropout=attention_dropout,
+        return_attention=num_sources == 1)
+    attention = TransformerLayerWrapper(
+        attention, dropout)
+    self.attention.append(attention)
+    #############
+
+    attention = Priming_MultiHeadAttention(
+        num_heads,
+        num_units,
+        dropout=attention_dropout,
+        return_attention=num_sources == 1)
+    attention = TransformerLayerWrapper(
+        attention, dropout)
+    self.attention.append(attention)
+
+    #############
     self.ffn = FeedForwardNetwork(
         ffn_inner_dim,
         num_units,
@@ -564,56 +576,101 @@ class Priming_SelfAttentionDecoderLayer(tf.keras.layers.Layer):
     cache = dict(self_kv=self_kv, memory_kv=memory_kv)
     return outputs, cache, attention
 
-  def forward_fn(self,
-           inputs,
-           args_dict,
-           mask=None,
-           memory=None,
-           memory_mask=None,
-           cache=None,
-           training=None):
-    """Runs the decoder layer."""
-    if cache is None:
-      cache = {}
+  
 
-    outputs, self_kv = self.self_attention.forward_fn(
-        inputs,
-        args_dict,
-        mask=mask,
-        cache=cache.get("self_kv"),
-        training=training)
+class Priming_MultiHeadAttention(tf.keras.layers.Layer):
 
-    attention = None
-    memory_kv = []
-    if memory is not None:
-      memory_cache = cache.get("memory_kv")
-      if memory_cache is None:
-        memory_cache = [None] * len(self.attention)
-      for layer, mem, mem_mask, mem_cache in zip(
-          self.attention, memory, memory_mask, memory_cache):
-        result = layer.forward_fn(
-            outputs,
-            args_dict,
-            memory=mem,
-            mask=mem_mask,
-            cache=mem_cache,
-            training=training)
-        if len(result) == 3:
-          outputs, memory_kv_i, attention = result
-          attention = attention[:, 0]  # Use the first head for the attention vector.
-        else:
-          outputs, memory_kv_i = result
-        memory_kv.append(memory_kv_i)
+  def __init__(self,
+               num_heads,
+               num_units,
+               dropout=0.1,
+               return_attention=False,
+               **kwargs):
+    
+    super(MultiHeadAttention, self).__init__(**kwargs)
+    if num_units % num_heads != 0:
+      raise ValueError("Multi head attention requires that num_units is a"
+                       " multiple of %s" % num_heads)
+    self.num_heads = num_heads
+    self.num_units = num_units
+    self.linear_queries = Dense(num_units)
+    self.linear_keys = Dense(num_units)
+    self.linear_values = Dense(num_units)
+    self.linear_output = Dense(num_units)
+    self.dropout = dropout
+    self.return_attention = return_attention
 
-    outputs = self.ffn.forward_fn(outputs, args_dict, training=training)
-    cache = dict(self_kv=self_kv, memory_kv=memory_kv)
-    return outputs, cache, attention
+  def map_v1_weights(self, weights):
+    # V1 used conv1d layers that have a leading dimensions.
+    weights = tf.nest.map_structure(np.squeeze, weights)
 
+    # V1 used fused linear projections, so the weights should be split accordingly.
+    def _partial_weights(key, num_splits, index):
+      return tf.nest.map_structure(
+          lambda w: np.split(w, num_splits, axis=0 if w.ndim == 1 else 1)[index],
+          weights[key])
 
+    m = []
+    if "conv1d_2" not in weights:  # Case self-attention.
+      m += self.linear_queries.map_v1_weights(_partial_weights("conv1d", 3, 0))
+      m += self.linear_keys.map_v1_weights(_partial_weights("conv1d", 3, 1))
+      m += self.linear_values.map_v1_weights(_partial_weights("conv1d", 3, 2))
+      m += self.linear_output.map_v1_weights(weights["conv1d_1"])
+    else:
+      m += self.linear_queries.map_v1_weights(weights["conv1d"])
+      m += self.linear_keys.map_v1_weights(_partial_weights("conv1d_1", 2, 0))
+      m += self.linear_values.map_v1_weights(_partial_weights("conv1d_1", 2, 1))
+      m += self.linear_output.map_v1_weights(weights["conv1d_2"])
+    return m
 
+  def call(self, inputs, memory=None, mask=None, cache=None, training=None):  # pylint: disable=arguments-differ
+    def _compute_kv(x):
+      keys = self.linear_keys(x)
+      keys = split_heads(keys, self.num_heads)
+      values = self.linear_values(x)
+      values = split_heads(values, self.num_heads)
+      return keys, values
 
+    # Compute queries.
+    queries = self.linear_queries(inputs)
+    queries = split_heads(queries, self.num_heads)
+    queries *= (self.num_units // self.num_heads)**-0.5
 
+    # Compute keys and values.
+    if memory is None:
+      keys, values = _compute_kv(inputs)
+      if cache:
+        keys = tf.concat([cache[0], keys], axis=2)
+        values = tf.concat([cache[1], values], axis=2)
+    else:
+      if cache:
+        keys, values = tf.cond(
+            tf.equal(tf.shape(cache[0])[2], 0),
+            true_fn=lambda: _compute_kv(memory),
+            false_fn=lambda: cache)
+      else:
+        keys, values = _compute_kv(memory)
 
+    cache = (keys, values)
+
+    # Dot product attention.
+    dot = tf.matmul(queries, keys, transpose_b=True)
+    if mask is not None:
+      mask = tf.cast(mask, tf.float32)
+      if mask.shape.rank == 2:
+        mask = tf.expand_dims(mask, 1)  # Broadcast on time dimension.
+      mask = tf.expand_dims(mask, 1)  # Broadcast on head dimension.
+      dot = tf.cast(tf.cast(dot, tf.float32) * mask + ((1.0 - mask) * tf.float32.min), dot.dtype)
+    attn = tf.math.multiply(tf.cast(tf.nn.softmax(tf.cast(dot, tf.float32)), dot.dtype) * tf.expand_dims(tf.reduce_max(tf.cast(dot, tf.float32),-1),1))
+    drop_attn = common.dropout(attn, self.dropout, training=training)
+    heads = tf.matmul(drop_attn, values)
+
+    # Concatenate all heads output.
+    combined = combine_heads(heads)
+    outputs = self.linear_output(combined)
+    if self.return_attention:
+      return outputs, cache, attn
+    return outputs, cache
 
 
 
