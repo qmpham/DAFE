@@ -2746,6 +2746,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
         pre_inputs, sequence_length=pre_length, training=training)
     elif self.version==2:
+      print("version: ", self.version)
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
         pre_inputs, source_inputs, source_length, sequence_length=pre_length, training=training)
     else:
