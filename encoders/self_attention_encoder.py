@@ -1973,7 +1973,7 @@ class Priming_SelfAttentionEncoder(Encoder):
       self.position_encoder = position_encoder_class()
     self.layer_norm = LayerNorm()
     self.layers = [
-        transformer.SelfAttentionEncoderLayer(
+        transformer.Cross_SelfAttentionEncoderLayer(
             num_units,
             num_heads,
             ffn_inner_dim,
@@ -1983,17 +1983,17 @@ class Priming_SelfAttentionEncoder(Encoder):
             ffn_activation=ffn_activation)
         for i in range(num_layers)]
 
-  def call(self, inputs, sequence_length=None, training=None):
+  def call(self, inputs, xinputs, x_sequence_length, sequence_length=None, training=None):
     inputs = inputs
     inputs *= self.num_units**0.5
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs)
     inputs = common.dropout(inputs, self.dropout, training=training)
     mask = self.build_mask(inputs, sequence_length=sequence_length)
-
+    xmask = self.build_mask(xinputs, sequence_length=x_sequence_length)
     #for layer in self.layers:
     for layer in self.layers:
-      inputs = layer(inputs, mask=mask, training=training)
+      inputs = layer(inputs, xinputs, xmask, mask=mask, training=training)
       
     outputs = self.layer_norm(inputs)
     return outputs, None, sequence_length

@@ -576,8 +576,6 @@ class Priming_SelfAttentionDecoderLayer(tf.keras.layers.Layer):
     cache = dict(self_kv=self_kv, memory_kv=memory_kv)
     return outputs, cache, attention
 
-  
-
 class Priming_MultiHeadAttention(tf.keras.layers.Layer):
 
   def __init__(self,
@@ -672,7 +670,61 @@ class Priming_MultiHeadAttention(tf.keras.layers.Layer):
       return outputs, cache, attn
     return outputs, cache
 
+class Cross_SelfAttentionEncoderLayer(tf.keras.layers.Layer):
+  """Implements one self-attention encoding layer."""
 
+  def __init__(self,
+               num_units,
+               num_heads,
+               ffn_inner_dim,
+               dropout=0.1,
+               attention_dropout=0.1,
+               ffn_dropout=0.1,
+               ffn_activation=tf.nn.relu,
+               **kwargs):
+    
+    super(Cross_SelfAttentionEncoderLayer, self).__init__(**kwargs)
+
+    self.self_attention = MultiHeadAttention(
+        num_heads, num_units, dropout=attention_dropout)
+    self.self_attention = TransformerLayerWrapper(
+        self.self_attention, dropout)
+
+    self.self_xattention = MultiHeadAttention(
+        num_heads, num_units, dropout=attention_dropout)
+    self.self_xattention = TransformerLayerWrapper(
+        self.self_xattention, dropout)
+
+    self.ffn = FeedForwardNetwork(
+        ffn_inner_dim,
+        num_units,
+        dropout=ffn_dropout,
+        activation=ffn_activation)
+    self.ffn = TransformerLayerWrapper(
+        self.ffn, dropout)
+    
+    self.xffn = FeedForwardNetwork(
+        ffn_inner_dim,
+        num_units,
+        dropout=ffn_dropout,
+        activation=ffn_activation)
+    self.xffn = TransformerLayerWrapper(
+        self.xffn, dropout)
+
+
+  def call(self, x, pre, pre_mask, mask=None, training=None):  # pylint: disable=arguments-differ
+    """Runs the encoder layer."""
+    y, _ = self.self_attention(x, mask=mask, training=training)
+    y = self.ffn(y, training=training)
+    y, _ = self.self_xattention(y, memory=pre, mask=pre_mask, training=training)
+    y = self.xffn(y, training=training)
+    return y
+
+  def map_v1_weights(self, weights):
+    m = []
+    m += self.self_attention.map_v1_weights(weights["multi_head"])
+    m += self.ffn.map_v1_weights(weights["ffn"])
+    return m
 
 
 

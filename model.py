@@ -2,6 +2,7 @@
 
 """Standard sequence-to-sequence model."""
 import sys
+from numpy import source
 sys.path.append("/gpfsdswork/projects/rech/sfz/utt84zy/anaconda3/envs/huggingface/lib/python3.7/site-packages")
 
 import six
@@ -2617,6 +2618,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
                encoder,
                pre_encoder,
                decoder,
+               version=1,
                share_embeddings=EmbeddingsSharingLevel.NONE):
     """Initializes a sequence-to-sequence model.
 
@@ -2660,7 +2662,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     self.pre_encoder = pre_encoder
     self.decoder = decoder
     self.share_embeddings = share_embeddings
-
+    self.version = version
   def auto_config(self, num_replicas=1):
     config = super(Priming_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
@@ -2740,8 +2742,14 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         source_inputs, sequence_length=source_length, training=training)
 
-    pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
+    if self.version ==1:
+      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
         pre_inputs, sequence_length=pre_length, training=training)
+    elif self.version==2:
+      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
+        pre_inputs, source_inputs, source_length, sequence_length=pre_length, training=training)
+    else:
+      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = None, None, None
     
     outputs = None
     predictions = None
