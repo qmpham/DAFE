@@ -212,9 +212,15 @@ def priming_translate(source_files,
     encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
         source_inputs, sequence_length=source_length, training=False)
 
-    pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
+    if model.version == 1:
+      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
         pre_inputs, sequence_length=pre_length, training=False)
-    
+    elif model.version == 2:
+      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
+        pre_inputs, source_inputs, source_length, sequence_length=pre_length, training=False)
+    else:
+      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = None, None, None
+
     #encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
 
     # Prepare the decoding strategy.
@@ -316,8 +322,14 @@ def priming_avg_ckpt_translate(config, source_files,
     encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
         source_inputs, sequence_length=source_length, training=False)
 
-    pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
+    if model.version == 1:
+      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
         pre_inputs, sequence_length=pre_length, training=False)
+    elif model.version == 2:
+      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
+        pre_inputs, source_inputs, source_length, sequence_length=pre_length, training=False)
+    else:
+      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = None, None, None
     
     #encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
 
