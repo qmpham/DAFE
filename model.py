@@ -31,7 +31,7 @@ from opennmt.layers import common
 from layers.layers import Classification_layer
 from opennmt.utils.losses import _softmax_cross_entropy
 from utils.my_inputter import My_inputter
-from encoders.self_attention_encoder import Multi_domain_SelfAttentionEncoder_v1, Multi_domain_SelfAttentionEncoder_v16, Multi_domain_SelfAttentionEncoder_v2, Multi_domain_SelfAttentionEncoder_v12, Multi_domain_SelfAttentionEncoder_v15
+from encoders.self_attention_encoder import Priming_SelfAttentionEncoder, Multi_domain_SelfAttentionEncoder_v1, Multi_domain_SelfAttentionEncoder_v16, Multi_domain_SelfAttentionEncoder_v2, Multi_domain_SelfAttentionEncoder_v12, Multi_domain_SelfAttentionEncoder_v15
 
 class Multi_domain_SequenceToSequence(model.SequenceGenerator):
 
@@ -2663,6 +2663,15 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     self.decoder = decoder
     self.share_embeddings = share_embeddings
     self.version = version
+    if self.version == 2:
+      self.pre_encoder = Priming_SelfAttentionEncoder(
+              num_layers=6,
+              num_units=512,
+              num_heads=8,
+              ffn_inner_dim=2048,
+              dropout=0.1,
+              attention_dropout=0.1,
+              ffn_dropout=0.1)
   def auto_config(self, num_replicas=1):
     config = super(Priming_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
