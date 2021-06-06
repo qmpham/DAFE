@@ -2672,6 +2672,15 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
               dropout=0.1,
               attention_dropout=0.1,
               ffn_dropout=0.1)
+    if self.version==3:
+      self.encoder = Priming_SelfAttentionEncoder(
+              num_layers=6,
+              num_units=512,
+              num_heads=8,
+              ffn_inner_dim=2048,
+              dropout=0.1,
+              attention_dropout=0.1,
+              ffn_dropout=0.1)
   def auto_config(self, num_replicas=1):
     config = super(Priming_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
@@ -2748,17 +2757,26 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     source_length, pre_length = source_length
     source_inputs, pre_inputs = source_inputs
 
-    encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
-        source_inputs, sequence_length=source_length, training=training)
-
     if self.version ==1:
+      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
+        source_inputs, sequence_length=source_length, training=training)
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
         pre_inputs, sequence_length=pre_length, training=training)
     elif self.version==2:
       print("version: ", self.version)
+      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
+        source_inputs, sequence_length=source_length, training=training)
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
         pre_inputs, source_inputs, source_length, sequence_length=pre_length, training=training)
+    elif self.version==3:
+      print("version: ", self.version)
+      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
+        pre_inputs, sequence_length=pre_length, training=training)
+      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
+        source_inputs, pre_encoder_outputs, pre_length, sequence_length=source_length, training=training)
     else:
+      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
+        source_inputs, sequence_length=source_length, training=training)
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = None, None, None
     
     outputs = None
