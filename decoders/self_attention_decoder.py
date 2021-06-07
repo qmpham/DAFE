@@ -6266,8 +6266,9 @@ class Priming_SelfAttentionDecoder(Decoder):
     # Prepare memory mask.
     memory_mask = None
     pre_memory_mask = None
-    memory, pre_memory = memory
-    memory_sequence_length, pre_memory_sequence_length = memory_sequence_length
+    if self.num_sources == 2:
+      memory, pre_memory = memory
+      memory_sequence_length, pre_memory_sequence_length = memory_sequence_length
     
     if memory is not None:
       if not isinstance(memory, (list, tuple)):
@@ -6278,16 +6279,16 @@ class Priming_SelfAttentionDecoder(Decoder):
       memory_mask = [
           tf.sequence_mask(mem_length, maxlen=tf.shape(mem)[1])
           for mem, mem_length in zip(memory, memory_sequence_length)]
-
-    if pre_memory is not None:
-      if not isinstance(pre_memory, (list, tuple)):
-        pre_memory = (pre_memory,)
-    if pre_memory_sequence_length is not None:
-      if not isinstance(pre_memory_sequence_length, (list, tuple)):
-        pre_memory_sequence_length = (pre_memory_sequence_length,)
-      pre_memory_mask = [
-          tf.sequence_mask(pre_mem_length, maxlen=tf.shape(pre_mem)[1])
-          for pre_mem, pre_mem_length in zip(pre_memory, pre_memory_sequence_length)]
+    if self.num_sources == 2:
+      if pre_memory is not None:
+        if not isinstance(pre_memory, (list, tuple)):
+          pre_memory = (pre_memory,)
+      if pre_memory_sequence_length is not None:
+        if not isinstance(pre_memory_sequence_length, (list, tuple)):
+          pre_memory_sequence_length = (pre_memory_sequence_length,)
+        pre_memory_mask = [
+            tf.sequence_mask(pre_mem_length, maxlen=tf.shape(pre_mem)[1])
+            for pre_mem, pre_mem_length in zip(pre_memory, pre_memory_sequence_length)]
 
     # Run each layer.
     new_cache = []
