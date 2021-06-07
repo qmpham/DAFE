@@ -338,20 +338,7 @@ def priming_avg_ckpt_translate(config, source_files,
 
     source_length, pre_length = source_length
     source_inputs, pre_inputs = source_inputs
-    """
-    encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
-        source_inputs, sequence_length=source_length, training=False)
 
-    if model.version == 1:
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
-        pre_inputs, sequence_length=pre_length, training=False)
-    elif model.version == 2:
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
-        pre_inputs, source_inputs, source_length, sequence_length=pre_length, training=False)
-    
-    else:
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = None, None, None
-    """
     if model.version ==1:
       encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
         source_inputs, sequence_length=source_length, training=False)
@@ -371,9 +358,7 @@ def priming_avg_ckpt_translate(config, source_files,
       encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
         source_inputs, sequence_length=source_length, training=False)
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = None, None, None
-
-    #encoder_outputs, _, _ = model.encoder(source_inputs, source_length, training=False)
-
+    
     # Prepare the decoding strategy.
     if beam_size > 1:
       #encoder_outputs, pre_encoder_outputs = encoder_outputs
@@ -385,16 +370,40 @@ def priming_avg_ckpt_translate(config, source_files,
       pre_encoder_outputs = tfa.seq2seq.tile_batch(pre_encoder_outputs, beam_size)
       pre_length = tfa.seq2seq.tile_batch(pre_length, beam_size)
 
-      encoder_outputs = [encoder_outputs, pre_encoder_outputs]
-      source_length = [source_length, pre_length]
+      #encoder_outputs = [encoder_outputs, pre_encoder_outputs]
+      #source_length = [source_length, pre_length]
       decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
     else:
       decoding_strategy = onmt.utils.GreedySearch()
 
     # Run dynamic decoding.
-    decoder_state = model.decoder.initial_state(
+    if model.version ==1:
+      decoder_state = model.decoder.initial_state(
+        memory=[encoder_outputs, pre_encoder_outputs],
+        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        initial_state= None)
+    elif model.version==2:
+      print("version: ", model.version)
+      decoder_state = model.decoder.initial_state(
+        memory=[encoder_outputs, pre_encoder_outputs],
+        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        initial_state= None)
+    elif model.version==3:
+      print("version: ", model.version)
+      decoder_state = model.decoder.initial_state(
+        memory= encoder_outputs,
+        memory_sequence_length= encoder_sequence_length,
+        initial_state= None)
+    else:
+      decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
-        memory_sequence_length=source_length)
+        memory_sequence_length= encoder_sequence_length,
+        initial_state= None)
+
+    # decoder_state = model.decoder.initial_state(
+    #     memory=encoder_outputs,
+    #     memory_sequence_length=source_length)
+    
     map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
     decoded = model.decoder.dynamic_decode(
         map_input_fn,
@@ -403,6 +412,7 @@ def priming_avg_ckpt_translate(config, source_files,
         initial_state=decoder_state,
         decoding_strategy=decoding_strategy,
         maximum_iterations=250)
+        
     target_lengths = decoded.lengths
     target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64))
     return target_tokens, target_lengths

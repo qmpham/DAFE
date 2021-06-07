@@ -2830,10 +2830,28 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           schedule_type=params.get("scheduled_sampling_type"),
           k=params.get("scheduled_sampling_k"))
 
-    initial_state = self.decoder.initial_state(
+    if self.version ==1:
+      initial_state = self.decoder.initial_state(
         memory=[encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
         initial_state= None)
+    elif self.version==2:
+      print("version: ", self.version)
+      initial_state = self.decoder.initial_state(
+        memory=[encoder_outputs, pre_encoder_outputs],
+        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        initial_state= None)
+    elif self.version==3:
+      print("version: ", self.version)
+      initial_state = self.decoder.initial_state(
+        memory= encoder_outputs,
+        memory_sequence_length= encoder_sequence_length,
+        initial_state= None)
+    else:
+      initial_state = self.decoder.initial_state(
+        memory=encoder_outputs,
+        memory_sequence_length= encoder_sequence_length,
+        initial_state= None)    
 
     logits, _, attention = self.decoder(
         target_inputs,
@@ -2880,11 +2898,28 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
       if encoder_state is not None:
         pre_encoder_state = tfa.seq2seq.tile_batch(pre_encoder_state, beam_size)
       
-
     # Dynamically decodes from the encoder outputs.
-    initial_state = self.decoder.initial_state(
-        memory= [encoder_outputs, pre_encoder_outputs],
+    if self.version ==1:
+      initial_state = self.decoder.initial_state(
+        memory=[encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        initial_state= None)
+    elif self.version==2:
+      print("version: ", self.version)
+      initial_state = self.decoder.initial_state(
+        memory=[encoder_outputs, pre_encoder_outputs],
+        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        initial_state= None)
+    elif self.version==3:
+      print("version: ", self.version)
+      initial_state = self.decoder.initial_state(
+        memory= encoder_outputs,
+        memory_sequence_length= encoder_sequence_length,
+        initial_state= None)
+    else:
+      initial_state = self.decoder.initial_state(
+        memory=encoder_outputs,
+        memory_sequence_length= encoder_sequence_length,
         initial_state= None)
 
     sampled_ids, sampled_length, log_probs, alignment, _ = self.decoder.dynamic_decode(
