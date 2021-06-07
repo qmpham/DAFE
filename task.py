@@ -249,24 +249,24 @@ def priming_translate(source_files,
     if model.version ==1:
       decoder_state = model.decoder.initial_state(
         memory=[encoder_outputs, pre_encoder_outputs],
-        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        memory_sequence_length= [source_length, pre_length],
         initial_state= None)
     elif model.version==2:
       print("version: ", model.version)
       decoder_state = model.decoder.initial_state(
         memory=[encoder_outputs, pre_encoder_outputs],
-        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        memory_sequence_length= [source_length, pre_length],
         initial_state= None)
     elif model.version==3:
       print("version: ", model.version)
       decoder_state = model.decoder.initial_state(
         memory= encoder_outputs,
-        memory_sequence_length= encoder_sequence_length,
+        memory_sequence_length= source_length,
         initial_state= None)
     else:
       decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
-        memory_sequence_length= encoder_sequence_length,
+        memory_sequence_length= source_length,
         initial_state= None)
 
     # decoder_state = model.decoder.initial_state(
@@ -388,24 +388,24 @@ def priming_avg_ckpt_translate(config, source_files,
     if model.version ==1:
       decoder_state = model.decoder.initial_state(
         memory=[encoder_outputs, pre_encoder_outputs],
-        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        memory_sequence_length= [source_length, pre_length],
         initial_state= None)
     elif model.version==2:
       print("version: ", model.version)
       decoder_state = model.decoder.initial_state(
         memory=[encoder_outputs, pre_encoder_outputs],
-        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        memory_sequence_length= [source_length, pre_length],
         initial_state= None)
     elif model.version==3:
       print("version: ", model.version)
       decoder_state = model.decoder.initial_state(
         memory= encoder_outputs,
-        memory_sequence_length= encoder_sequence_length,
+        memory_sequence_length= source_length,
         initial_state= None)
     else:
       decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
-        memory_sequence_length= encoder_sequence_length,
+        memory_sequence_length= source_length,
         initial_state= None)
 
     # decoder_state = model.decoder.initial_state(
