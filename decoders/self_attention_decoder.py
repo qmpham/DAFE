@@ -6299,6 +6299,7 @@ class Priming_SelfAttentionDecoder(Decoder):
       final_memory = memory
       final_memory_mask = memory_mask
     for i, layer in enumerate(self.layers):
+      print("final_memory: ",final_memory)
       inputs, layer_cache, attention = layer(
           inputs,
           mask=mask,
