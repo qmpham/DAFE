@@ -1268,7 +1268,7 @@ def main():
               dropout=0.1,
               attention_dropout=0.1,
               ffn_dropout=0.1,
-              num_sources=2),
+              num_sources=config.get("decoder_source_num",2)),
     version=config.get("version",1))
   elif experiment=="pretrain":
     return
