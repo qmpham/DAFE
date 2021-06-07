@@ -6248,7 +6248,7 @@ class Priming_SelfAttentionDecoder(Decoder):
            step=None,
            training=None):
     # Process inputs.
-    print("decoder_source_num: ", self.num_sources)
+    #print("decoder_source_num: ", self.num_sources)
     inputs *= self.num_units**0.5
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs, position=step + 1 if step is not None else None)
