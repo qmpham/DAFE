@@ -6248,6 +6248,7 @@ class Priming_SelfAttentionDecoder(Decoder):
            step=None,
            training=None):
     # Process inputs.
+    print("decoder_source_num: ", self.num_sources)
     inputs *= self.num_units**0.5
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs, position=step + 1 if step is not None else None)
@@ -6288,15 +6289,20 @@ class Priming_SelfAttentionDecoder(Decoder):
           tf.sequence_mask(pre_mem_length, maxlen=tf.shape(pre_mem)[1])
           for pre_mem, pre_mem_length in zip(pre_memory, pre_memory_sequence_length)]
 
-
     # Run each layer.
     new_cache = []
+    if self.num_sources == 2:
+      final_memory = tuple(list(memory) + list(pre_memory))
+      final_memory_mask = tuple(list(memory_mask) + list(pre_memory_mask))
+    elif self.num_sources==1:
+      final_memory = memory
+      final_memory_mask = memory_mask
     for i, layer in enumerate(self.layers):
       inputs, layer_cache, attention = layer(
           inputs,
           mask=mask,
-          memory= tuple(list(memory) + list(pre_memory)),
-          memory_mask= tuple(list(memory_mask) + list(pre_memory_mask)),
+          memory= final_memory,
+          memory_mask= final_memory_mask,
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
