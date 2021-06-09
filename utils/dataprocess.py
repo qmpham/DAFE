@@ -1,5 +1,6 @@
 """Dataset creation and transformations."""
 import sys
+from typing import List
 sys.path.append("/gpfsdswork/projects/rech/sfz/utt84zy/anaconda3/envs/huggingface/lib/python3.7/site-packages")
 
 import numpy as np
@@ -755,7 +756,8 @@ def create_priming_trainining_dataset(strategy, model, source_file, target_file,
 
   print("maximum_length: ", maximum_length)
   print("shuffle_buffer_size: ", shuffle_buffer_size)
-  train_dataset = model.examples_inputter.make_training_dataset([source_file, pre_file], target_file,
+  if not isinstance(target_file, List):
+    train_dataset = model.examples_inputter.make_training_dataset([source_file, pre_file], target_file,
               batch_size=batch_train_size,
               batch_type=batch_type,
               single_pass=single_pass,
@@ -763,6 +765,22 @@ def create_priming_trainining_dataset(strategy, model, source_file, target_file,
               length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
               maximum_features_length=maximum_length,
               maximum_labels_length=maximum_length)
+  else:
+    assert isinstance(source_file, List)
+    assert isinstance(pre_file, List)
+    assert len(source_file) == len(target_file)
+    assert len(pre_file) == len(target_file)
+    train_datasets = []
+    for src, pre, tgt in zip(source_file, pre_file, target_file):
+      train_datasets.append(model.examples_inputter.make_training_dataset([src, pre], tgt,
+              batch_size=batch_train_size,
+              batch_type=batch_type,
+              single_pass=single_pass,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length))
+    train_dataset = tf.data.experimental.sample_from_datasets(train_datasets, weights=picking_prob)
     
   with strategy.scope():
     base_dataset = train_dataset
