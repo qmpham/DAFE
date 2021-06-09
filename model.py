@@ -2620,27 +2620,6 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
                decoder,
                version=1,
                share_embeddings=EmbeddingsSharingLevel.NONE):
-    """Initializes a sequence-to-sequence model.
-
-    Args:
-      source_inputter: A :class:`opennmt.inputters.Inputter` to process
-        the source data.
-      target_inputter: A :class:`opennmt.inputters.Inputter` to process
-        the target data. Currently, only the
-        :class:`opennmt.inputters.WordEmbedder` is supported.
-      encoder: A :class:`opennmt.encoders.Encoder` to encode the source.
-      decoder: A :class:`opennmt.decoders.Decoder` to decode the target.
-      share_embeddings: Level of embeddings sharing, see
-        :class:`opennmt.models.EmbeddingsSharingLevel`
-        for possible values.
-
-    Raises:
-      TypeError: if :obj:`target_inputter` is not a
-        :class:`opennmt.inputters.WordEmbedder` (same for
-        :obj:`source_inputter` when embeddings sharing is enabled) or if
-        :obj:`source_inputter` and :obj:`target_inputter` do not have the same
-        ``dtype``.
-    """
     if not isinstance(target_inputter, inputters.WordEmbedder):
       raise TypeError("Target inputter must be a WordEmbedder")
     if EmbeddingsSharingLevel.share_input_embeddings(share_embeddings):
@@ -2681,6 +2660,8 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
               dropout=0.1,
               attention_dropout=0.1,
               ffn_dropout=0.1)
+    if self.version==5:
+      self.pre_encoder = self.encoder
   def auto_config(self, num_replicas=1):
     config = super(Priming_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
@@ -2757,7 +2738,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     source_length, pre_length = source_length
     source_inputs, pre_inputs = source_inputs
 
-    if self.version ==1:
+    if self.version in [1,5]:
       encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         source_inputs, sequence_length=source_length, training=training)
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
