@@ -770,6 +770,7 @@ def create_priming_trainining_dataset(strategy, model, source_file, target_file,
     assert isinstance(pre_file, List)
     assert len(source_file) == len(target_file)
     assert len(pre_file) == len(target_file)
+    print("detected multiple input files")
     train_datasets = []
     for src, pre, tgt in zip(source_file, pre_file, target_file):
       train_datasets.append(model.examples_inputter.make_training_dataset([src, pre], tgt,
