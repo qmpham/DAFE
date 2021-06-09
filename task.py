@@ -209,7 +209,7 @@ def priming_translate(source_files,
     source_length, pre_length = source_length
     source_inputs, pre_inputs = source_inputs
     
-    if model.version ==1:
+    if model.version in [1,5]:
       encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
         source_inputs, sequence_length=source_length, training=False)
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
@@ -246,7 +246,7 @@ def priming_translate(source_files,
 
     # Run dynamic decoding.
 
-    if model.version ==1:
+    if model.version in [1,5]:
       decoder_state = model.decoder.initial_state(
         memory=[encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [source_length, pre_length],
@@ -347,7 +347,7 @@ def priming_avg_ckpt_translate(config, source_files,
     source_length, pre_length = source_length
     source_inputs, pre_inputs = source_inputs
 
-    if model.version ==1:
+    if model.version in [1,5]:
       encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
         source_inputs, sequence_length=source_length, training=False)
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
@@ -385,7 +385,7 @@ def priming_avg_ckpt_translate(config, source_files,
       decoding_strategy = onmt.utils.GreedySearch()
 
     # Run dynamic decoding.
-    if model.version ==1:
+    if model.version in [1,5]:
       decoder_state = model.decoder.initial_state(
         memory=[encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [source_length, pre_length],

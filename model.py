@@ -2811,7 +2811,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
           schedule_type=params.get("scheduled_sampling_type"),
           k=params.get("scheduled_sampling_k"))
 
-    if self.version ==1:
+    if self.version in [1,5]:
       initial_state = self.decoder.initial_state(
         memory=[encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
@@ -2880,7 +2880,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         pre_encoder_state = tfa.seq2seq.tile_batch(pre_encoder_state, beam_size)
       
     # Dynamically decodes from the encoder outputs.
-    if self.version ==1:
+    if self.version in [1,5]:
       initial_state = self.decoder.initial_state(
         memory=[encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
