@@ -214,21 +214,7 @@ def priming_translate(source_files,
         source_inputs, sequence_length=source_length, training=False)
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
         pre_inputs, sequence_length=pre_length, training=False)
-    elif model.version==2:
-      encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
-        source_inputs, sequence_length=source_length, training=False)
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
-        pre_inputs, source_inputs, source_length, sequence_length=pre_length, training=False)
-    elif model.version==3:
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
-        pre_inputs, sequence_length=pre_length, training=False)
-      encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
-        source_inputs, pre_encoder_outputs, pre_length, sequence_length=source_length, training=False)
-    else:
-      encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
-        source_inputs, sequence_length=source_length, training=False)
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = None, None, None
-
+    
     # Prepare the decoding strategy.
     if beam_size > 1:
 
@@ -251,27 +237,7 @@ def priming_translate(source_files,
         memory=[encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [source_length, pre_length],
         initial_state= None)
-    elif model.version==2:
-      print("version: ", model.version)
-      decoder_state = model.decoder.initial_state(
-        memory=[encoder_outputs, pre_encoder_outputs],
-        memory_sequence_length= [source_length, pre_length],
-        initial_state= None)
-    elif model.version==3:
-      print("version: ", model.version)
-      decoder_state = model.decoder.initial_state(
-        memory= encoder_outputs,
-        memory_sequence_length= source_length,
-        initial_state= None)
-    else:
-      decoder_state = model.decoder.initial_state(
-        memory=encoder_outputs,
-        memory_sequence_length= source_length,
-        initial_state= None)
-
-    # decoder_state = model.decoder.initial_state(
-    #     memory=encoder_outputs,
-    #     memory_sequence_length=source_length)
+    
     map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
     decoded = model.decoder.dynamic_decode(
         map_input_fn,
@@ -352,34 +318,16 @@ def priming_avg_ckpt_translate(config, source_files,
         source_inputs, sequence_length=source_length, training=False)
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
         pre_inputs, sequence_length=pre_length, training=False)
-    elif model.version==2:
-      encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
-        source_inputs, sequence_length=source_length, training=False)
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
-        pre_inputs, source_inputs, source_length, sequence_length=pre_length, training=False)
-    elif model.version==3:
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
-        pre_inputs, sequence_length=pre_length, training=False)
-      encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
-        source_inputs, pre_encoder_outputs, pre_length, sequence_length=source_length, training=False)
-    else:
-      encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
-        source_inputs, sequence_length=source_length, training=False)
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = None, None, None
     
     # Prepare the decoding strategy.
     if beam_size > 1:
-      #encoder_outputs, pre_encoder_outputs = encoder_outputs
-      #source_length, pre_source_length = source_length
-
+      
       encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
       source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
 
       pre_encoder_outputs = tfa.seq2seq.tile_batch(pre_encoder_outputs, beam_size)
       pre_length = tfa.seq2seq.tile_batch(pre_length, beam_size)
 
-      #encoder_outputs = [encoder_outputs, pre_encoder_outputs]
-      #source_length = [source_length, pre_length]
       decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
     else:
       decoding_strategy = onmt.utils.GreedySearch()
@@ -390,28 +338,7 @@ def priming_avg_ckpt_translate(config, source_files,
         memory=[encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [source_length, pre_length],
         initial_state= None)
-    elif model.version==2:
-      print("version: ", model.version)
-      decoder_state = model.decoder.initial_state(
-        memory=[encoder_outputs, pre_encoder_outputs],
-        memory_sequence_length= [source_length, pre_length],
-        initial_state= None)
-    elif model.version==3:
-      print("version: ", model.version)
-      decoder_state = model.decoder.initial_state(
-        memory= encoder_outputs,
-        memory_sequence_length= source_length,
-        initial_state= None)
-    else:
-      decoder_state = model.decoder.initial_state(
-        memory=encoder_outputs,
-        memory_sequence_length= source_length,
-        initial_state= None)
-
-    # decoder_state = model.decoder.initial_state(
-    #     memory=encoder_outputs,
-    #     memory_sequence_length=source_length)
-    
+        
     map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
     decoded = model.decoder.dynamic_decode(
         map_input_fn,

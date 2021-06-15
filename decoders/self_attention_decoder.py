@@ -6279,6 +6279,7 @@ class Priming_SelfAttentionDecoder(Decoder):
       memory_mask = [
           tf.sequence_mask(mem_length, maxlen=tf.shape(mem)[1])
           for mem, mem_length in zip(memory, memory_sequence_length)]
+          
     if self.num_sources == 2:
       if pre_memory is not None:
         if not isinstance(pre_memory, (list, tuple)):

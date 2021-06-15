@@ -2642,26 +2642,10 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     self.decoder = decoder
     self.share_embeddings = share_embeddings
     self.version = version
-    if self.version == 2:
-      self.pre_encoder = Priming_SelfAttentionEncoder(
-              num_layers=6,
-              num_units=512,
-              num_heads=8,
-              ffn_inner_dim=2048,
-              dropout=0.1,
-              attention_dropout=0.1,
-              ffn_dropout=0.1)
-    if self.version==3:
-      self.encoder = Priming_SelfAttentionEncoder(
-              num_layers=6,
-              num_units=512,
-              num_heads=8,
-              ffn_inner_dim=2048,
-              dropout=0.1,
-              attention_dropout=0.1,
-              ffn_dropout=0.1)
     if self.version==5:
+      print("share encoder")
       self.pre_encoder = self.encoder
+  
   def auto_config(self, num_replicas=1):
     config = super(Priming_SequenceToSequence, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
@@ -2743,22 +2727,6 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         source_inputs, sequence_length=source_length, training=training)
       pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
         pre_inputs, sequence_length=pre_length, training=training)
-    elif self.version==2:
-      print("version: ", self.version)
-      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
-        source_inputs, sequence_length=source_length, training=training)
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
-        pre_inputs, source_inputs, source_length, sequence_length=pre_length, training=training)
-    elif self.version==3:
-      print("version: ", self.version)
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
-        pre_inputs, sequence_length=pre_length, training=training)
-      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
-        source_inputs, pre_encoder_outputs, pre_length, sequence_length=source_length, training=training)
-    else:
-      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
-        source_inputs, sequence_length=source_length, training=training)
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = None, None, None
     
     outputs = None
     predictions = None
@@ -2816,23 +2784,6 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         memory=[encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
         initial_state= None)
-    elif self.version==2:
-      print("version: ", self.version)
-      initial_state = self.decoder.initial_state(
-        memory=[encoder_outputs, pre_encoder_outputs],
-        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
-        initial_state= None)
-    elif self.version==3:
-      print("version: ", self.version)
-      initial_state = self.decoder.initial_state(
-        memory= encoder_outputs,
-        memory_sequence_length= encoder_sequence_length,
-        initial_state= None)
-    else:
-      initial_state = self.decoder.initial_state(
-        memory=encoder_outputs,
-        memory_sequence_length= encoder_sequence_length,
-        initial_state= None)    
 
     logits, _, attention = self.decoder(
         target_inputs,
@@ -2843,19 +2794,6 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         training=training)
     outputs = dict(logits=logits, attention=attention)
 
-    noisy_ids = labels.get("noisy_ids")
-    if noisy_ids is not None and params.get("contrastive_learning"):
-      # In case of contrastive learning, also forward the erroneous
-      # translation to compute its log likelihood later.
-      noisy_inputs = self.labels_inputter({"ids": noisy_ids}, training=training)
-      noisy_logits, _, _ = self.decoder(
-          noisy_inputs,
-          labels["noisy_length"],
-          state=initial_state,
-          input_fn=input_fn,
-          sampling_probability=sampling_probability,
-          training=training)
-      outputs["noisy_logits"] = noisy_logits
     return outputs
 
   def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length, pre_encoder_outputs,
@@ -2885,23 +2823,6 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         memory=[encoder_outputs, pre_encoder_outputs],
         memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
         initial_state= None)
-    elif self.version==2:
-      print("version: ", self.version)
-      initial_state = self.decoder.initial_state(
-        memory=[encoder_outputs, pre_encoder_outputs],
-        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
-        initial_state= None)
-    elif self.version==3:
-      print("version: ", self.version)
-      initial_state = self.decoder.initial_state(
-        memory= encoder_outputs,
-        memory_sequence_length= encoder_sequence_length,
-        initial_state= None)
-    else:
-      initial_state = self.decoder.initial_state(
-        memory=encoder_outputs,
-        memory_sequence_length= encoder_sequence_length,
-        initial_state= None)
 
     sampled_ids, sampled_length, log_probs, alignment, _ = self.decoder.dynamic_decode(
         self.labels_inputter,
@@ -2912,40 +2833,6 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
         maximum_iterations=params.get("maximum_decoding_length", 250),
         minimum_iterations=params.get("minimum_decoding_length", 0))
     target_tokens = self.labels_inputter.ids_to_tokens.lookup(tf.cast(sampled_ids, tf.int64))
-
-    # Maybe replace unknown targets by the source tokens with the highest attention weight.
-    if params.get("replace_unknown_target", False):
-      if alignment is None:
-        raise TypeError("replace_unknown_target is not compatible with decoders "
-                        "that don't return alignment history")
-      if not isinstance(self.features_inputter, inputters.WordEmbedder):
-        raise TypeError("replace_unknown_target is only defined when the source "
-                        "inputter is a WordEmbedder")
-      source_tokens = features["tokens"]
-      if beam_size > 1:
-        source_tokens = tfa.seq2seq.tile_batch(source_tokens, beam_size)
-      # Merge batch and beam dimensions.
-      original_shape = tf.shape(target_tokens)
-      target_tokens = tf.reshape(target_tokens, [-1, original_shape[-1]])
-      align_shape = shape_list(alignment)
-      attention = tf.reshape(
-          alignment, [align_shape[0] * align_shape[1], align_shape[2], align_shape[3]])
-      # We don't have attention for </s> but ensure that the attention time dimension matches
-      # the tokens time dimension.
-      attention = reducer.align_in_time(attention, tf.shape(target_tokens)[1])
-      replaced_target_tokens = replace_unknown_target(target_tokens, source_tokens, attention)
-      target_tokens = tf.reshape(replaced_target_tokens, original_shape)
-
-    # Maybe add noise to the predictions.
-    decoding_noise = params.get("decoding_noise")
-    if decoding_noise:
-      target_tokens, sampled_length = _add_noise(
-          target_tokens,
-          sampled_length,
-          decoding_noise,
-          params.get("decoding_subword_token", "￭"),
-          params.get("decoding_subword_token_is_spacer"))
-      alignment = None  # Invalidate alignments.
 
     predictions = {
         "tokens": target_tokens,
