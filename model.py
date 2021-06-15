@@ -2781,7 +2781,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
 
     if self.version in [1,5]:
       initial_state = self.decoder.initial_state(
-        memory=[encoder_outputs, pre_encoder_outputs],
+        memory=[pre_encoder_outputs, encoder_outputs],
         memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
         initial_state= None)
 
@@ -2820,7 +2820,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     # Dynamically decodes from the encoder outputs.
     if self.version in [1,5]:
       initial_state = self.decoder.initial_state(
-        memory=[encoder_outputs, pre_encoder_outputs],
+        memory=[pre_encoder_outputs, encoder_outputs],
         memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
         initial_state= None)
 

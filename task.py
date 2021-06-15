@@ -234,7 +234,7 @@ def priming_translate(source_files,
 
     if model.version in [1,5]:
       decoder_state = model.decoder.initial_state(
-        memory=[encoder_outputs, pre_encoder_outputs],
+        memory=[pre_encoder_outputs, encoder_outputs],
         memory_sequence_length= [source_length, pre_length],
         initial_state= None)
     
@@ -335,7 +335,7 @@ def priming_avg_ckpt_translate(config, source_files,
     # Run dynamic decoding.
     if model.version in [1,5]:
       decoder_state = model.decoder.initial_state(
-        memory=[encoder_outputs, pre_encoder_outputs],
+        memory=[pre_encoder_outputs, encoder_outputs],
         memory_sequence_length= [source_length, pre_length],
         initial_state= None)
         
