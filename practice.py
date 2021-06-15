@@ -1270,40 +1270,6 @@ def main():
               ffn_dropout=0.1,
               num_sources=config.get("decoder_source_num",2)),
     version=config.get("version",1))
-  elif experiment=="priming_nmt_3":
-    model = Priming_SequenceToSequence(
-    source_inputter = onmt.inputters.ParallelInputter([onmt.inputters.WordEmbedder(embedding_size=512),  
-                                                      onmt.inputters.WordEmbedder(embedding_size=512),
-                                                      onmt.inputters.WordEmbedder(embedding_size=512)], 
-                                                      share_parameters=False,
-                                                      combine_features=False),
-    target_inputter = onmt.inputters.WordEmbedder(embedding_size=512),
-    encoder = onmt.encoders.SelfAttentionEncoder(
-              num_layers=6,
-              num_units=512,
-              num_heads=8,
-              ffn_inner_dim=2048,
-              dropout=0.1,
-              attention_dropout=0.1,
-              ffn_dropout=0.1),
-    pre_encoder = onmt.encoders.SelfAttentionEncoder(
-              num_layers=6,
-              num_units=512,
-              num_heads=8,
-              ffn_inner_dim=2048,
-              dropout=0.1,
-              attention_dropout=0.1,
-              ffn_dropout=0.1),
-    decoder = Priming_SelfAttentionDecoder(
-              num_layers=6,
-              num_units=512,
-              num_heads=8,
-              ffn_inner_dim=2048,
-              dropout=0.1,
-              attention_dropout=0.1,
-              ffn_dropout=0.1,
-              num_sources=config.get("decoder_source_num",2)),
-    version=config.get("version",1))
   elif experiment=="pretrain":
     return
   warmup_steps = config.get("warmup_steps",4000)
