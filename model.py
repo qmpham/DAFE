@@ -2781,7 +2781,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     if self.version in [1,5]:
       initial_state = self.decoder.initial_state(
         memory=tf.concat([encoder_outputs, pre_encoder_outputs], axis=1),
-        memory_sequence_length= tf.concat([encoder_sequence_length, pre_encoder_sequence_length], axis=1),
+        memory_sequence_length= [l1+l2 for l1,l2 in zip(encoder_sequence_length, pre_encoder_sequence_length)],
         initial_state= None)
 
     logits, _, attention = self.decoder(
@@ -2820,7 +2820,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     if self.version in [1,5]:
       initial_state = self.decoder.initial_state(
         memory=tf.concat([encoder_outputs, pre_encoder_outputs], axis=1),
-        memory_sequence_length= tf.concat([encoder_sequence_length, pre_encoder_sequence_length], axis=1),
+        memory_sequence_length= [l1+l2 for l1,l2 in zip(encoder_sequence_length, pre_encoder_sequence_length)],
         initial_state= None)
 
     sampled_ids, sampled_length, log_probs, alignment, _ = self.decoder.dynamic_decode(
