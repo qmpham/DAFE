@@ -209,11 +209,10 @@ def priming_translate(source_files,
     source_length, pre_length = source_length
     source_inputs, pre_inputs = source_inputs
     
-    if model.version in [1,5]:
-      encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
-        source_inputs, sequence_length=source_length, training=False)
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
-        pre_inputs, sequence_length=pre_length, training=False)
+    encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
+      source_inputs, sequence_length=source_length, training=False)
+    pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
+      pre_inputs, sequence_length=pre_length, training=False)
     
     # Prepare the decoding strategy.
     if beam_size > 1:
@@ -234,8 +233,8 @@ def priming_translate(source_files,
 
     if model.version in [1,5]:
       decoder_state = model.decoder.initial_state(
-        memory=[pre_encoder_outputs, encoder_outputs],
-        memory_sequence_length= [source_length, pre_length],
+        memory=tf.concat([encoder_outputs, pre_encoder_outputs], axis=1),
+        memory_sequence_length= tf.concat([encoder_sequence_length, pre_encoder_sequence_length], axis=1),
         initial_state= None)
     
     map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
@@ -313,11 +312,11 @@ def priming_avg_ckpt_translate(config, source_files,
     source_length, pre_length = source_length
     source_inputs, pre_inputs = source_inputs
 
-    if model.version in [1,5]:
-      encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
-        source_inputs, sequence_length=source_length, training=False)
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
-        pre_inputs, sequence_length=pre_length, training=False)
+    
+    encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
+      source_inputs, sequence_length=source_length, training=False)
+    pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
+      pre_inputs, sequence_length=pre_length, training=False)
     
     # Prepare the decoding strategy.
     if beam_size > 1:
@@ -335,8 +334,8 @@ def priming_avg_ckpt_translate(config, source_files,
     # Run dynamic decoding.
     if model.version in [1,5]:
       decoder_state = model.decoder.initial_state(
-        memory=[pre_encoder_outputs, encoder_outputs],
-        memory_sequence_length= [source_length, pre_length],
+        memory=tf.concat([encoder_outputs, pre_encoder_outputs], axis=1),
+        memory_sequence_length= tf.concat([encoder_sequence_length, pre_encoder_sequence_length], axis=1),
         initial_state= None)
         
     map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)

@@ -1260,15 +1260,14 @@ def main():
               dropout=0.1,
               attention_dropout=0.1,
               ffn_dropout=0.1),
-    decoder = Priming_SelfAttentionDecoder(
+    decoder = onmt.decoders.SelfAttentionDecoder(
               num_layers=6,
               num_units=512,
               num_heads=8,
               ffn_inner_dim=2048,
               dropout=0.1,
               attention_dropout=0.1,
-              ffn_dropout=0.1,
-              num_sources=config.get("decoder_source_num",2)),
+              ffn_dropout=0.1),
     version=config.get("version",1))
   elif experiment=="pretrain":
     return

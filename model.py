@@ -2722,11 +2722,10 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     source_length, pre_length = source_length
     source_inputs, pre_inputs = source_inputs
 
-    if self.version in [1,5]:
-      encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
-        source_inputs, sequence_length=source_length, training=training)
-      pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
-        pre_inputs, sequence_length=pre_length, training=training)
+    encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
+      source_inputs, sequence_length=source_length, training=training)
+    pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = self.pre_encoder(
+      pre_inputs, sequence_length=pre_length, training=training)
     
     outputs = None
     predictions = None
@@ -2781,8 +2780,8 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
 
     if self.version in [1,5]:
       initial_state = self.decoder.initial_state(
-        memory=[pre_encoder_outputs, encoder_outputs],
-        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        memory=tf.concat([encoder_outputs, pre_encoder_outputs], axis=1),
+        memory_sequence_length= tf.concat([encoder_sequence_length, pre_encoder_sequence_length], axis=1),
         initial_state= None)
 
     logits, _, attention = self.decoder(
@@ -2820,8 +2819,8 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     # Dynamically decodes from the encoder outputs.
     if self.version in [1,5]:
       initial_state = self.decoder.initial_state(
-        memory=[pre_encoder_outputs, encoder_outputs],
-        memory_sequence_length= [encoder_sequence_length, pre_encoder_sequence_length],
+        memory=tf.concat([encoder_outputs, pre_encoder_outputs], axis=1),
+        memory_sequence_length= tf.concat([encoder_sequence_length, pre_encoder_sequence_length], axis=1),
         initial_state= None)
 
     sampled_ids, sampled_length, log_probs, alignment, _ = self.decoder.dynamic_decode(
