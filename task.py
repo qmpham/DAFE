@@ -234,7 +234,7 @@ def priming_translate(source_files,
     if model.version in [1,5]:
       decoder_state = model.decoder.initial_state(
         memory=tf.concat([encoder_outputs, pre_encoder_outputs], axis=1),
-        memory_sequence_length= [l1+l2 for l1,l2 in zip(encoder_sequence_length, pre_encoder_sequence_length)],
+        memory_sequence_length= encoder_sequence_length + pre_encoder_sequence_length, #[l1+l2 for l1,l2 in zip(encoder_sequence_length, pre_encoder_sequence_length)],
         initial_state= None)
     
     map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
@@ -335,7 +335,7 @@ def priming_avg_ckpt_translate(config, source_files,
     if model.version in [1,5]:
       decoder_state = model.decoder.initial_state(
         memory=tf.concat([encoder_outputs, pre_encoder_outputs], axis=1),
-        memory_sequence_length= [l1+l2 for l1,l2 in zip(encoder_sequence_length, pre_encoder_sequence_length)],
+        memory_sequence_length= encoder_sequence_length + pre_encoder_sequence_length, #[l1+l2 for l1,l2 in zip(encoder_sequence_length, pre_encoder_sequence_length)],
         initial_state= None)
         
     map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
