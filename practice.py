@@ -1291,8 +1291,7 @@ def main():
               ffn_inner_dim=2048,
               dropout=0.1,
               attention_dropout=0.1,
-              ffn_dropout=0.1),
-    version=config.get("version",1))
+              ffn_dropout=0.1))
   elif experiment=="pretrain":
     return
   warmup_steps = config.get("warmup_steps",4000)
