@@ -16590,7 +16590,7 @@ def priming_train_chasing(config,
         tf.summary.experimental.set_step(step)
         output_files = []
         new_bleu = 0.0
-        output_file = os.path.join(config["model_dir"],"eval",os.path.basename(config["eval_src"]) + ".trans." + os.path.basename(checkpoint_path))
+        output_file = os.path.join(config["model_dir"],"eval",os.path.basename(config["eval_pre"]) + ".trans." + os.path.basename(checkpoint_path))
         score = priming_translate_v1([config["eval_pre"], config["eval_hide"]], config["eval_tgt"], model, checkpoint_manager, checkpoint, 0, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
         new_bleu = score
         #############################
