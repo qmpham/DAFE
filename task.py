@@ -275,6 +275,103 @@ def priming_translate(source_files,
     else:
       return score
 
+def priming_translate_v1(source_files,
+              reference,
+              model,
+              checkpoint_manager,
+              checkpoint,              
+              domain,
+              output_file,
+              length_penalty,
+              is_noisy=1,
+              checkpoint_path=None,
+              probs_file=None,
+              experiment="ldr",
+              score_type="MultiBLEU",
+              batch_size=5,
+              beam_size=5):
+  
+  # Create the inference dataset.
+  if checkpoint_path == None:
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+    
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
+  checkpoint.restore(checkpoint_path)
+  dataset = model.examples_inputter.make_inference_dataset(source_files, batch_size)
+  iterator = iter(dataset)
+
+  # Create the mapping for target ids to tokens.
+  ids_to_tokens = model.labels_inputter.ids_to_tokens
+
+  @tf.function
+  def predict_next():    
+    source = next(iterator)
+    source_lengths = model.features_inputter.get_length(source) #source["length"]
+    batch_size = tf.shape(source_lengths[0])[0]
+    source_inputs = model.features_inputter(source)
+
+    source_pre_length, source_hide_length = source_lengths
+    source_pre_inputs, source_hide_inputs = source_inputs
+
+    encoder_hide_outputs, encoder_hide_state, encoder_hide_sequence_length = model.encoder(
+        source_hide_inputs, sequence_length=source_hide_length, training=False)
+    
+    encoder_outputs = encoder_hide_outputs
+    source_length = encoder_hide_sequence_length
+
+    # Prepare the decoding strategy.
+    if beam_size > 1:
+      encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
+      source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
+      decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
+    else:
+      decoding_strategy = onmt.utils.GreedySearch()
+
+    # Run dynamic decoding.
+    
+    decoder_state = model.decoder.initial_state(
+      memory= encoder_outputs ,
+      memory_sequence_length= source_length,
+      initial_state= None)
+    
+    map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
+    decoded = model.decoder.dynamic_decode(
+        map_input_fn,
+        tf.fill([batch_size], START_OF_SENTENCE_ID),
+        end_id=END_OF_SENTENCE_ID,
+        initial_state=decoder_state,
+        decoding_strategy=decoding_strategy,
+        maximum_iterations=250)
+    target_lengths = decoded.lengths
+    target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64))
+    return target_tokens, target_lengths
+
+  # Iterates on the dataset.
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  print("output file: ", output_file)
+  with open(output_file, "w") as output_:
+    while True:    
+      try:
+        batch_tokens, batch_length = predict_next()
+        for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
+          sentence = b" ".join(tokens[0][:length[0]])
+          print_bytes(sentence, output_)
+          #print_bytes(sentence)
+      except tf.errors.OutOfRangeError:
+        break
+  if reference!=None:
+    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_files[0]), scorer(reference, output_file))
+    score = scorer(reference, output_file)
+    if score is None:
+      return 0.0
+    else:
+      return score
+
 def priming_avg_ckpt_translate(config, source_files,
               reference,
               model,
@@ -312,7 +409,6 @@ def priming_avg_ckpt_translate(config, source_files,
     source_length, pre_length = source_length
     source_inputs, pre_inputs = source_inputs
 
-    
     encoder_outputs, encoder_state, encoder_sequence_length = model.encoder(
       source_inputs, sequence_length=source_length, training=False)
     pre_encoder_outputs, pre_encoder_state, pre_encoder_sequence_length = model.pre_encoder(
@@ -337,6 +433,104 @@ def priming_avg_ckpt_translate(config, source_files,
         memory=tf.concat([encoder_outputs, pre_encoder_outputs], axis=1),
         memory_sequence_length= [encoder_sequence_length,pre_encoder_sequence_length],
         initial_state = None)
+        
+    map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
+    decoded = model.decoder.dynamic_decode(
+        map_input_fn,
+        tf.fill([batch_size], START_OF_SENTENCE_ID),
+        end_id=END_OF_SENTENCE_ID,
+        initial_state=decoder_state,
+        decoding_strategy=decoding_strategy,
+        maximum_iterations=250)
+
+    target_lengths = decoded.lengths
+    target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64))
+    return target_tokens, target_lengths
+
+  # Iterates on the dataset.
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  print("output file: ", output_file)
+  with open(output_file, "w") as output_:
+    while True:    
+      try:
+        batch_tokens, batch_length = predict_next()
+        for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
+          sentence = b" ".join(tokens[0][:length[0]])
+          print_bytes(sentence, output_)
+          #print_bytes(sentence)
+      except tf.errors.OutOfRangeError:
+        break
+  if reference!=None:
+    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_files[0]), scorer(reference, output_file))
+    score = scorer(reference, output_file)
+    if score is None:
+      return 0.0
+    else:
+      return score
+
+def priming_avg_ckpt_translate_v1(config, source_files,
+              reference,
+              model,
+              checkpoint_manager,
+              checkpoint,
+              domain,
+              output_file,
+              length_penalty,
+              is_noisy=1,
+              experiment="ldr",
+              score_type="MultiBLEU",
+              batch_size=10,
+              beam_size=10,
+              max_count=3):
+  
+  # Create the inference dataset.
+  new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+                        max_count=max_count,
+                        model_key="model")
+  checkpoint.restore(new_checkpoint_manager.latest_checkpoint)
+  tf.get_logger().info("Evaluating model %s", new_checkpoint_manager.latest_checkpoint)
+  dataset = model.examples_inputter.make_inference_dataset(source_files, batch_size)
+  iterator = iter(dataset)
+
+  # Create the mapping for target ids to tokens.
+  ids_to_tokens = model.labels_inputter.ids_to_tokens
+
+  @tf.function
+  def predict_next():    
+    source = next(iterator)
+    source_lengths = model.features_inputter.get_length(source) #source["length"]
+    batch_size = tf.shape(source_lengths[0])[0]
+    source_inputs = model.features_inputter(source)
+
+    source_pre_length, source_hide_length = source_lengths
+    source_pre_inputs, source_hide_inputs = source_inputs
+
+    encoder_hide_outputs, encoder_hide_state, encoder_hide_sequence_length = model.encoder(
+        source_hide_inputs, sequence_length=source_hide_length, training=False)
+    
+    encoder_outputs = encoder_hide_outputs
+    source_length = encoder_hide_sequence_length
+    
+    # Prepare the decoding strategy.
+    if beam_size > 1:
+      
+      encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
+      source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
+      decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
+    else:
+      decoding_strategy = onmt.utils.GreedySearch()
+
+    # Run dynamic decoding.
+    
+    decoder_state = model.decoder.initial_state(
+      memory= encoder_outputs,
+      memory_sequence_length= source_length,
+      initial_state = None)
         
     map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, training=False)
     decoded = model.decoder.dynamic_decode(
@@ -16397,7 +16591,7 @@ def priming_train_chasing(config,
         output_files = []
         new_bleu = 0.0
         output_file = os.path.join(config["model_dir"],"eval",os.path.basename(config["eval_src"]) + ".trans." + os.path.basename(checkpoint_path))
-        score = priming_translate([config["eval_src"], config["eval_pre"]], config["eval_tgt"], model, checkpoint_manager, checkpoint, 0, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+        score = priming_translate_v1([config["eval_pre"], config["eval_hide"]], config["eval_tgt"], model, checkpoint_manager, checkpoint, 0, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
         new_bleu = score
         #############################
         if new_bleu >= current_max_eval_bleu:
