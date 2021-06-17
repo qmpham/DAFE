@@ -3090,13 +3090,14 @@ class Priming_SequenceToSequence_v1(model.SequenceGenerator):
         memory=encoder_outputs,
         memory_sequence_length=encoder_sequence_length,
         initial_state=encoder_state)
-    logits, _, attention, decoder_outputs = self.decoder(
+    logits, _, attention = self.decoder(
         target_inputs,
         self.labels_inputter.get_length(labels),
         state=initial_state,
         input_fn=input_fn,
         sampling_probability=sampling_probability,
         training=training)
+    logits, decoder_outputs = logits
     outputs = dict(logits=logits, attention=attention)
 
     return outputs, decoder_outputs

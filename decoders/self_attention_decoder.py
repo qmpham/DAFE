@@ -6308,7 +6308,7 @@ class SelfAttentionDecoder_v1(Decoder):
         memory_sequence_length=memory_sequence_length,
         training=training)
     logits = self.output_layer(outputs)
-    return logits, state, attention, outputs
+    return (logits, outputs), state, attention
 
   def step(self,
            inputs,
