@@ -2973,7 +2973,7 @@ class Priming_SequenceToSequence_v1(model.SequenceGenerator):
           raise TypeError("Sharing embeddings requires all inputters to be a "
                           "WordEmbedder")
 
-    examples_inputter = SequenceToSequenceInputter(
+    examples_inputter = Priming_SequenceToSequenceInputter(
         source_inputter,
         target_inputter,
         share_parameters=EmbeddingsSharingLevel.share_input_embeddings(share_embeddings))
