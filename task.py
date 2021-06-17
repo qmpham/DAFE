@@ -16265,13 +16265,13 @@ def priming_train_chasing(config,
   ######
   batch_train_size = config["batch_train_size"]  
   batch_type = batch_type
-  source_file = config["src"]
+  source_pre_file = config["src_pre"]
+  source_hide_file = config["src_hide"]
   target_file = config["tgt"]
-  pre_file = config["pre"]
   
-  print("There are %d in-domain corpora"%len(source_file))
+  print("There are %d in-domain corpora"%len(source_pre_file))
   
-  train_dataset = create_priming_trainining_dataset(strategy, model, source_file, target_file, pre_file, batch_train_size, batch_type, shuffle_buffer_size, 
+  train_dataset = create_priming_trainining_dataset(strategy, model, source_pre_file, target_file, source_hide_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
 
