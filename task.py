@@ -16497,8 +16497,8 @@ def priming_train_chasing(config,
 
     variables = model.trainable_variables
     print("var numb: ", len(variables))
-    for var in variables:
-      print(var.name)
+    #for var in variables:
+    #  print(var.name)
     
     gradients = optimizer.get_gradients(training_loss, variables)
     gradient_accumulator(gradients)
