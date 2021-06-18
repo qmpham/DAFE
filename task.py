@@ -490,11 +490,11 @@ def priming_avg_ckpt_translate_v1(config, source_files,
               max_count=3):
   
   # Create the inference dataset.
-  new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+  """ new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
                         max_count=max_count,
-                        model_key="model")
-  checkpoint.restore(new_checkpoint_manager.latest_checkpoint)
-  tf.get_logger().info("Evaluating model %s", new_checkpoint_manager.latest_checkpoint)
+                        model_key="model") """
+  checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  tf.get_logger().info("Evaluating model %s", checkpoint_manager.latest_checkpoint)
   dataset = model.examples_inputter.make_inference_dataset(source_files, batch_size)
   iterator = iter(dataset)
 

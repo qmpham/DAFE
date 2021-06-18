@@ -15,6 +15,7 @@ from opennmt import END_OF_SENTENCE_ID
 from opennmt.utils.misc import print_bytes
 from opennmt.data import dataset as dataset_util
 from opennmt.optimizers import utils as optimizer_util
+from utils.utils_ import average_checkpoints
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter, ProbInputter, ProbInputter_v1
 from opennmt.models.sequence_to_sequence import SequenceToSequence
@@ -1471,11 +1472,14 @@ def main():
     translate_config_file = args.src
     with open(translate_config_file, "r") as stream:
       translate_config = yaml.load(stream)
+    new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+                        max_count=translate_config.get("max_count",3),
+                        model_key="model")
     for src_pre_file, source_hide_file in zip(translate_config["src_pre"],translate_config["src_hide"]):      
       output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src_pre_file) + ".trans")
       print("translating %s"%(src_pre_file))
       print("output_file: ", output_file)
-      task.priming_avg_ckpt_translate_v1(config, [src_pre_file, source_hide_file], None, model, checkpoint_manager,
+      task.priming_avg_ckpt_translate_v1(config, [src_pre_file, source_hide_file], None, model, new_checkpoint_manager,
               checkpoint, int(0), output_file, length_penalty=0.6, experiment=experiment, max_count=translate_config.get("max_count",3))
   elif args.run == "translate_farajan":
     source_file = args.src
