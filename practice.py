@@ -1476,7 +1476,7 @@ def main():
                         max_count=translate_config.get("max_count",3),
                         model_key="model")
     for src_pre_file, source_hide_file in zip(translate_config["src_pre"],translate_config["src_hide"]):      
-      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src_pre_file) + ".trans")
+      output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src_pre_file) + ".%s.trans"%("translate_with_hide" if translate_config.get("translate_with_hide",True) else "translate_with_pre"))
       print("translating %s"%(src_pre_file))
       print("output_file: ", output_file)
       task.priming_avg_ckpt_translate_v1(config, [src_pre_file, source_hide_file], None, model, new_checkpoint_manager,
