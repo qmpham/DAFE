@@ -1480,7 +1480,7 @@ def main():
       print("translating %s"%(src_pre_file))
       print("output_file: ", output_file)
       task.priming_avg_ckpt_translate_v1(config, [src_pre_file, source_hide_file], None, model, new_checkpoint_manager,
-              checkpoint, int(0), output_file, length_penalty=0.6, experiment=experiment, max_count=translate_config.get("max_count",3))
+              checkpoint, int(0), output_file, translate_with_hide= translate_config.get("translate_with_hide",True), length_penalty=0.6, experiment=experiment, max_count=translate_config.get("max_count",3))
   elif args.run == "translate_farajan":
     source_file = args.src
     reference = args.ref
