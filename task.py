@@ -481,6 +481,7 @@ def priming_avg_ckpt_translate_v1(config, source_files,
               domain,
               output_file,
               length_penalty,
+              translate_with_hide=True,
               is_noisy=1,
               experiment="ldr",
               score_type="MultiBLEU",
@@ -510,11 +511,16 @@ def priming_avg_ckpt_translate_v1(config, source_files,
     source_pre_length, source_hide_length = source_lengths
     source_pre_inputs, source_hide_inputs = source_inputs
 
-    encoder_hide_outputs, encoder_hide_state, encoder_hide_sequence_length = model.encoder(
+    if translate_with_hide:
+      encoder_hide_outputs, encoder_hide_state, encoder_hide_sequence_length = model.encoder(
         source_hide_inputs, sequence_length=source_hide_length, training=False)
-    
-    encoder_outputs = encoder_hide_outputs
-    source_length = encoder_hide_sequence_length
+      encoder_outputs = encoder_hide_outputs
+      source_length = encoder_hide_sequence_length
+    else:
+      encoder_pre_outputs, encoder_pre_state, encoder_pre_sequence_length = model.encoder(
+        source_pre_inputs, sequence_length=source_pre_length, training=False)
+      encoder_outputs = encoder_pre_outputs
+      source_length = encoder_pre_sequence_length
     
     # Prepare the decoding strategy.
     if beam_size > 1:
@@ -16475,7 +16481,7 @@ def priming_train_chasing(config,
     gradient_accumulator = optimizer_util.GradientAccumulator()  
     
   def _accumulate_gradients(source, target):
-    hide_outputs, predictions, pre_decoder_outputs, hide_decoder_outputs = model(
+    hide_outputs, _, pre_decoder_outputs, hide_decoder_outputs = model(
         source,
         labels=target,
         training=True,
