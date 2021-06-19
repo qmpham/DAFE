@@ -16468,7 +16468,7 @@ def priming_train_chasing(config,
   source_pre_file = config["src_pre"]
   source_hide_file = config["src_hide"]
   target_file = config["tgt"]
-  
+  chasing_alpha = config.get("chasing_alpha",0.0005)
   print("There are %d in-domain corpora"%len(source_pre_file))
   
   train_dataset = create_priming_trainining_dataset(strategy, model, source_pre_file, target_file, source_hide_file, batch_train_size, batch_type, shuffle_buffer_size, 
@@ -16499,7 +16499,7 @@ def priming_train_chasing(config,
     else:
       training_loss, reported_loss = loss, loss
     
-    training_loss += tf.reduce_sum(tf.reduce_sum((pre_decoder_outputs - tf.stop_gradient(hide_decoder_outputs))**2, -1) * weights) * 0.0005
+    training_loss += tf.reduce_sum(tf.reduce_sum((pre_decoder_outputs - tf.stop_gradient(hide_decoder_outputs))**2, -1) * weights) * chasing_alpha
 
     variables = model.trainable_variables
     print("var numb: ", len(variables))
