@@ -16469,6 +16469,7 @@ def priming_train_chasing(config,
   source_hide_file = config["src_hide"]
   target_file = config["tgt"]
   chasing_alpha = config.get("chasing_alpha",0.0005)
+  chasing_alpha_step = config.get("chasing_alpha_step",30000)
   print("There are %d in-domain corpora"%len(source_pre_file))
   
   train_dataset = create_priming_trainining_dataset(strategy, model, source_pre_file, target_file, source_hide_file, batch_train_size, batch_type, shuffle_buffer_size, 
@@ -16605,6 +16606,10 @@ def priming_train_chasing(config,
           descending_streak = 0
         else:
           descending_streak += 1
+      if step % chasing_alpha_step == 0:
+        print("updata chasing_alpha")
+        chasing_alpha.assign(chasing_alpha*2)
+        print("new chasing_alpha: %f"%chasing_alpha.numpy())
       if descending_streak >= 5:
         break
       tf.summary.flush()
