@@ -16468,7 +16468,7 @@ def priming_train_chasing(config,
   source_pre_file = config["src_pre"]
   source_hide_file = config["src_hide"]
   target_file = config["tgt"]
-  chasing_alpha = config.get("chasing_alpha",0.0005)
+  chasing_alpha = tf.constant(config.get("chasing_alpha",0.0005))
   chasing_alpha_step = config.get("chasing_alpha_step",30000)
   print("There are %d in-domain corpora"%len(source_pre_file))
   
@@ -16607,7 +16607,7 @@ def priming_train_chasing(config,
         else:
           descending_streak += 1
       if step % chasing_alpha_step == 0:
-        print("updata chasing_alpha")
+        print("update chasing_alpha")
         chasing_alpha.assign(chasing_alpha*2)
         print("new chasing_alpha: %f"%chasing_alpha.numpy())
       if descending_streak >= 5:
