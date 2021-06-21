@@ -1450,12 +1450,16 @@ def main():
     translate_config_file = args.src
     with open(translate_config_file, "r") as stream:
       translate_config = yaml.load(stream)
+    new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+                        max_count=translate_config.get("max_count",3),
+                        model_key="model")
     for src_file, domain in zip(translate_config["src"], translate_config["domain"]):      
       output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src_file) + ".trans")
       print("translating %s in domain %d"%(src_file, domain))
       print("output_file: ", output_file)
-      task.averaged_checkpoint_translate(config, src_file, None, model, checkpoint_manager,
-              checkpoint, int(domain), output_file, length_penalty=0.6, experiment=experiment, max_count=translate_config.get("max_count",3))
+      """ task.averaged_checkpoint_translate(config, src_file, None, model, checkpoint_manager,
+              checkpoint, int(domain), output_file, length_penalty=0.6, experiment=experiment, max_count=translate_config.get("max_count",3)) """
+      task.translate(src_file, None, model, new_checkpoint_manager, checkpoint, int(domain), output_file, length_penalty=0.6, experiment=experiment)
   elif args.run == "priming_translate":
     model.create_variables()
     translate_config_file = args.src
