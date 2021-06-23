@@ -94,7 +94,8 @@ def main():
       if not os.path.exists(os.path.join(config["model_dir"],"eval")):
         os.makedirs(os.path.join(config["model_dir"],"eval"))
     else:
-      tf.debugging.set_log_device_placement(True)
+      gpus = tf.config.list_physical_devices('GPU')
+      tf.config.experimental.set_visible_devices(gpus[0], 'GPU')
 
   experiment = config.get("experiment","residual")
   print("running experiment: ", experiment)
