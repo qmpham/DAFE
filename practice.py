@@ -93,6 +93,8 @@ def main():
       strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
       if not os.path.exists(os.path.join(config["model_dir"],"eval")):
         os.makedirs(os.path.join(config["model_dir"],"eval"))
+    else:
+      tf.debugging.set_log_device_placement(True)
 
   experiment = config.get("experiment","residual")
   print("running experiment: ", experiment)
