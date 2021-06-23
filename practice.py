@@ -52,7 +52,7 @@ def main():
   parser.add_argument("--ref", default=None)
   parser.add_argument("--maxcount",default=3)
   parser.add_argument("--translation_file",default=None)
-  parser.add_argument("--gpus_num",default=None)
+  parser.add_argument("--gpu_id",default=None)
   args = parser.parse_args()
   print("Running mode: ", args.run)
   config_file = args.config
@@ -91,7 +91,7 @@ def main():
         os.makedirs(os.path.join(config["model_dir"],"eval"))
     else:
       gpus = tf.config.list_physical_devices('GPU')
-      tf.config.experimental.set_visible_devices(gpus[0], 'GPU')
+      tf.config.experimental.set_visible_devices(gpus[int(args.gpu_id)], 'GPU')
 
   experiment = config.get("experiment","residual")
   print("running experiment: ", experiment)
