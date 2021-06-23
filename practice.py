@@ -52,6 +52,7 @@ def main():
   parser.add_argument("--ref", default=None)
   parser.add_argument("--maxcount",default=3)
   parser.add_argument("--translation_file",default=None)
+  parser.add_argument("--gpus_num",default=None)
   args = parser.parse_args()
   print("Running mode: ", args.run)
   config_file = args.config
@@ -81,6 +82,10 @@ def main():
 
   else:
     gpus = tf.config.list_physical_devices('GPU')
+    if args.gpus_num:
+      assert int(args.gpus_num) <= len(gpus)
+      gpus = tf.config.list_physical_devices('GPU')[:int(args.gpus_num)]
+      print("using %d over %d found gpus"%(int(args.gpus_num), len(tf.config.list_physical_devices('GPU'))))
     for gpu in gpus:
       tf.config.experimental.set_memory_growth(gpu, True)
     devices = tf.config.experimental.list_logical_devices(device_type="GPU")
@@ -1286,6 +1291,29 @@ def main():
               attention_dropout=0.1,
               ffn_dropout=0.1),
     decoder = SelfAttentionDecoder_v1(
+              num_layers=6,
+              num_units=512,
+              num_heads=8,
+              ffn_inner_dim=2048,
+              dropout=0.1,
+              attention_dropout=0.1,
+              ffn_dropout=0.1))
+  elif experiment=="priming_nmt_adv":
+    model = Priming_SequenceToSequence_v1(
+    source_inputter = onmt.inputters.WordEmbedder(embedding_size=512),
+    target_inputter = onmt.inputters.ParallelInputter([onmt.inputters.WordEmbedder(embedding_size=512),  
+                                                      onmt.inputters.WordEmbedder(embedding_size=512)], 
+                                                      share_parameters=True,
+                                                      combine_features=False),
+    encoder = onmt.encoders.SelfAttentionEncoder(
+              num_layers=6,
+              num_units=512,
+              num_heads=8,
+              ffn_inner_dim=2048,
+              dropout=0.1,
+              attention_dropout=0.1,
+              ffn_dropout=0.1),
+    decoder = SelfAttentionDecoder(
               num_layers=6,
               num_units=512,
               num_heads=8,

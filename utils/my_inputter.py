@@ -698,6 +698,43 @@ class Priming_SequenceToSequenceInputter(inputters.ExampleInputter):
       _shift_target_sequence(labels, prefix="noisy_")
     return src, labels
 
+class Priming_SequenceToSequenceInputter_adv(inputters.ExampleInputter):
+  """A custom :class:`opennmt.inputters.ExampleInputter` for sequence to
+  sequence models.
+  """
+
+  def __init__(self,
+               features_inputter,
+               labels_inputter,
+               share_parameters=False):
+    super(Priming_SequenceToSequenceInputter, self).__init__(
+        features_inputter, labels_inputter, share_parameters=share_parameters)
+
+  def initialize(self, data_config, asset_prefix=""):
+    super(Priming_SequenceToSequenceInputter, self).initialize(data_config, asset_prefix=asset_prefix)
+
+  def make_dataset(self, data_file, training=None):
+    dataset = super(Priming_SequenceToSequenceInputter, self).make_dataset(
+        data_file, training=training)
+    label_dataset = self.labels_inputter.make_dataset(data_file[1])
+    feature_dataset = self.features_inputter.make_dataset(data_file[0])
+    return tf.data.Dataset.zip(tuple([feature_dataset,label_dataset]))
+
+  def make_features(self, element=None, features=None, training=None):
+    #src = self.features_inputter.make_features(element=element[0],training=training)
+    #labels = self.labels_inputter.make_features(element=element[1],training=training)
+    temp = [None]*len(self.inputters)
+    
+    for i, inputter in enumerate(self.inputters):        
+        temp[i] = inputter.make_features(element=element[i] if element is not None else None, 
+                                        features=features[i] if features is not None else None, training=training)
+    src, labels = temp
+    for sub_label in labels:
+        _shift_target_sequence(sub_label)
+    if "noisy_ids" in labels:
+      _shift_target_sequence(labels, prefix="noisy_")
+    return src, labels
+
 
 
 
