@@ -88,8 +88,8 @@ def main():
       print("using %d over %d found gpus"%(int(args.gpus_num), len(tf.config.list_physical_devices('GPU'))))
     for gpu in gpus:
       tf.config.experimental.set_memory_growth(gpu, True)
-    devices = tf.config.experimental.list_logical_devices(device_type="GPU")
-    strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in devices])
+    #devices = tf.config.experimental.list_logical_devices(device_type="GPU")
+    strategy = tf.distribute.MirroredStrategy(devices=[d.name for d in gpus])
     if not os.path.exists(os.path.join(config["model_dir"],"eval")):
       os.makedirs(os.path.join(config["model_dir"],"eval"))
 
