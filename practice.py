@@ -83,10 +83,6 @@ def main():
   else:
     if not "translate" in args.run:
       gpus = tf.config.list_physical_devices('GPU')
-      """ if args.gpus_num:
-        assert int(args.gpus_num) <= len(gpus)
-        gpus = gpus[0:int(args.gpus_num)]
-        print("using %d over %d found gpus"%(int(args.gpus_num), len(tf.config.list_physical_devices('GPU')))) """
       for gpu in gpus:
         tf.config.experimental.set_memory_growth(gpu, True)
       devices = tf.config.experimental.list_logical_devices(device_type="GPU")[0:int(args.gpus_num)]
