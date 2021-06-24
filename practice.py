@@ -52,7 +52,7 @@ def main():
   parser.add_argument("--ref", default=None)
   parser.add_argument("--maxcount",default=3)
   parser.add_argument("--translation_file",default=None)
-  parser.add_argument("--gpu_id",default=None)
+  parser.add_argument("--gpu_id",default=0)
   args = parser.parse_args()
   print("Running mode: ", args.run)
   config_file = args.config
