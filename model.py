@@ -2642,7 +2642,7 @@ class Priming_SequenceToSequence(model.SequenceGenerator):
     self.decoder = decoder
     self.share_embeddings = share_embeddings
     self.version = version
-    self.
+    
     if self.version==5:
       print("share encoder")
       self.pre_encoder = self.encoder
