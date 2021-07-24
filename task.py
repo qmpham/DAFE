@@ -119,7 +119,7 @@ def translate(source_file,
         memory_sequence_length=source_length)
     if experiment in ["residual","residualv2","DRO","residualv15","residualv25","residualv27","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv1","residualv3","residualv5","residualv6","residualv7","residualv13","residualv12","residualv11","residualv8","residualv9","baselinev1"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
-    elif experiment in ["DC"]:
+    elif experiment in ["DC","ldr"]:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain, training=False)
     elif experiment in ["WDC"]:
       e_r, _ = model.classification_layer(encoder_outputs, source_length, training=False)
@@ -6078,7 +6078,7 @@ def averaged_checkpoint_translate(config, source_file,
         memory_sequence_length=source_length)
     if experiment in ["residual","residualv15","residualv25","residualv27","residual_big_transformer","residualv26","gated_residual_v5","residualv16","residualv19","residualv20","residualv21","residualv22","residualv23","residualv17","residualv18","residualv2","residualv1","residualv3","residualv5","residualv6","residualv13","residualv12","residualv11","residualv7","residualv8","residualv9","baselinev1"]:
       map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64)]
-    elif experiment in ["DC"]:
+    elif experiment in ["DC","ldr"]:
       map_input_fn = lambda ids: model.labels_inputter({"ids": ids}, domain=domain)
     elif experiment in ["WDC"]:
       e_r, _ = model.classification_layer(encoder_outputs, source_length, training=False)
