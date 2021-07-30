@@ -11810,6 +11810,8 @@ def train_L2W_v1(config,
           tf.summary.scalar("domain_prob_%d"%i, new_picking_prob[i], description="probability of using training set %d"%(i))
         tf.summary.flush()
         # create new training course with updated domain distribution
+        del train_dataset
+        del train_data_flow
         train_dataset = tf.data.experimental.sample_from_datasets(train_datasets_p, weights=new_picking_prob)
         with strategy.scope():
           base_dataset = train_dataset
