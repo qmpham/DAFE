@@ -890,6 +890,18 @@ def main():
       attention_dropout=0.1,
       ffn_dropout=0.1,
       share_embeddings=onmt.models.EmbeddingsSharingLevel.TARGET)
+  elif experiment=="small_transformer":
+    model = onmt.models.Transformer(
+      source_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
+      target_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
+      num_layers=6,
+      num_units=512,
+      num_heads=4,
+      ffn_inner_dim=2048,
+      dropout=0.1,
+      attention_dropout=0.1,
+      ffn_dropout=0.1,
+      share_embeddings=onmt.models.EmbeddingsSharingLevel.TARGET)
   elif experiment=="rnn":
     model = SequenceToSequence(
     source_inputter=WordEmbedder(embedding_size=512),
