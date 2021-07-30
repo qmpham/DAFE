@@ -891,17 +891,47 @@ def main():
       ffn_dropout=0.1,
       share_embeddings=onmt.models.EmbeddingsSharingLevel.TARGET)
   elif experiment=="small_transformer":
-    model = onmt.models.Transformer(
-      source_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
-      target_inputter=onmt.inputters.WordEmbedder(embedding_size=512),
-      num_layers=6,
-      num_units=512,
-      num_heads=4,
-      ffn_inner_dim=2048,
-      dropout=0.1,
-      attention_dropout=0.1,
-      ffn_dropout=0.1,
-      share_embeddings=onmt.models.EmbeddingsSharingLevel.TARGET)
+    model = Multi_domain_SequenceToSequence(
+    source_inputter=My_inputter(embedding_size=512),
+    target_inputter=My_inputter(embedding_size=512),
+    num_domains=num_domains,
+    num_units=512,
+    encoder=Multi_domain_SelfAttentionEncoder_v15(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=d_classification_gate_stopping_gradient_enc,
+        num_units=512,
+        num_heads=4,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        training_res_using_rate=config.get("training_res_using_rate",1.0),
+        testing_res_using_rate=config.get("testing_res_using_rate",1.0),
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+        version=config.get("version"),
+        inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
+        stop_gradient_version=config.get("stop_gradient_version",1)),
+    decoder=Multi_domain_SelfAttentionDecoder_v17(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=d_classification_gate_stopping_gradient_dec,
+        num_units=512,
+        num_heads=4,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        training_res_using_rate=config.get("training_res_using_rate",1.0),
+        testing_res_using_rate=config.get("testing_res_using_rate",1.0),
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+        inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
+        version=config.get("version"),
+        stop_gradient_version=config.get("stop_gradient_version",1)))
   elif experiment=="rnn":
     model = SequenceToSequence(
     source_inputter=WordEmbedder(embedding_size=512),
