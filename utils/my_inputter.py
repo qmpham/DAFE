@@ -15,6 +15,7 @@ from utils.utils_ import make_domain_mask
 from opennmt.inputters.text_inputter import load_pretrained_embeddings
 from opennmt.layers import common
 from opennmt import constants, tokenizers
+from utils.utils_ import make_domain_mask
 
 class My_inputter(TextInputter):
     def __init__(self, embedding_size=None, dropout=0.0, **kwargs):        
@@ -167,6 +168,7 @@ class LDR_inputter(WordEmbedder):
         self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)
         self.num_domain_units = num_domain_units
         self.num_domains = num_domains
+        self.mask = make_domain_mask(self.num_domains,  num_units=num_units, num_domain_units=num_domain_units)
 
     def initialize(self, data_config, asset_prefix=""):
         super(LDR_inputter, self).initialize(data_config, asset_prefix=asset_prefix)
@@ -195,14 +197,16 @@ class LDR_inputter(WordEmbedder):
         if domain==None:
             domain = features["domain"][0]
             ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
-            ldr_inputs = ldr_inputs[:,:,self.num_domain_units * domain : self.num_domain_units * (domain+1)]
+            #ldr_inputs = ldr_inputs #ldr_inputs[:,:,self.num_domain_units * domain : self.num_domain_units * (domain+1)]
             outputs = tf.concat([outputs, ldr_inputs],-1)
-            outputs = tf.reshape(outputs, [tf.shape(outputs)[0], tf.shape(outputs)[1], 512])
+            #outputs = tf.reshape(outputs, [tf.shape(outputs)[0], tf.shape(outputs)[1], 512])
+            mask = tf.nn.embedding_lookup(self.mask, domain)
         else:
             ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
-            ldr_inputs = ldr_inputs[:,self.num_domain_units * domain : self.num_domain_units * (domain+1)]
+            #ldr_inputs = ldr_inputs[:,self.num_domain_units * domain : self.num_domain_units * (domain+1)]
             outputs = tf.concat([outputs, ldr_inputs],-1)
-            outputs = tf.reshape(outputs, [-1, 512])
+            mask = tf.nn.embedding_lookup(self.mask, domain)
+            #outputs = tf.reshape(outputs, [-1, 512])
         
         #tf.print("output shape: ", tf.shape(outputs))
         return outputs
@@ -211,6 +215,82 @@ class LDR_inputter(WordEmbedder):
         self.ldr_embed = self.add_weight(
                                 "domain_embedding",
                                 [self.vocabulary_size, self.num_domain_units * self.num_domains],
+                                initializer=None,
+                                trainable=True)
+        super(LDR_inputter, self).build(input_shape)
+
+    def make_inference_dataset(self,
+                             feature_file,
+                             batch_size,
+                             domain=1,
+                             is_noisy=False,
+                             length_bucket_width=None,
+                             num_threads=1,
+                             prefetch_buffer_size=None):
+    
+        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), domain=domain, training=False)
+        dataset = self.make_dataset(feature_file, training=False)
+        dataset = dataset.apply(dataset_util.inference_pipeline(
+            batch_size,
+            process_fn=map_func,
+            length_bucket_width=length_bucket_width,
+            length_fn=self.get_length,
+            num_threads=num_threads,
+            prefetch_buffer_size=prefetch_buffer_size))
+        return dataset
+
+class LLR_inputter(WordEmbedder):
+    def __init__(self, embedding_size=None, num_units=512 , num_src_langues=6, num_lang_units=8, dropout=0.0, **kwargs):        
+        super(LLR_inputter, self).__init__(**kwargs)
+        self.embedding_size = embedding_size
+        self.embedding_file = None
+        self.dropout = dropout
+        self.fusion_layer = tf.keras.layers.Dense(num_units, use_bias=False)
+        self.num_lang_units = num_lang_units
+        self.num_src_langues = num_src_langues
+
+    def initialize(self, data_config, asset_prefix=""):
+        super(LLR_inputter, self).initialize(data_config, asset_prefix=asset_prefix)
+        embedding = _get_field(data_config, "embedding", prefix=asset_prefix)
+        if embedding is None and self.embedding_size is None:
+            raise ValueError("embedding_size must be set")
+        if embedding is not None:
+            self.embedding_file = embedding["path"]
+            self.trainable = embedding.get("trainable", True)
+            self.embedding_file_with_header = embedding.get("with_header", True)
+            self.case_insensitive_embeddings = embedding.get("case_insensitive", True)
+    
+    def make_features(self, element=None, features=None, lang=1, training=None):
+        features = super(LLR_inputter, self).make_features(
+            element=element, features=features, training=training)
+        if "lang" in features:
+            return features
+        features["lang"] = tf.constant(lang)
+
+        return features
+
+    def call(self, features, lang=None, training=None):
+        outputs = tf.nn.embedding_lookup(self.embedding, features["ids"])
+        outputs = common.dropout(outputs, self.dropout, training=training)
+                
+        if lang==None:
+            lang = features["lang"][0]
+            llr_inputs = tf.nn.embedding_lookup(self.llr_embed, features["ids"])
+            llr_inputs = llr_inputs[:,:,self.num_lang_units * lang : self.num_lang_units * (lang+1)]
+            outputs = tf.concat([outputs, llr_inputs],-1)
+            outputs = tf.reshape(outputs, [tf.shape(outputs)[0], tf.shape(outputs)[1], 512])
+        else:
+            llr_inputs = tf.nn.embedding_lookup(self.llr_embed, features["ids"])
+            llr_inputs = llr_inputs[:,self.num_lang_units * lang : self.num_lang_units * (lang+1)]
+            outputs = tf.concat([outputs, llr_inputs],-1)
+            outputs = tf.reshape(outputs, [-1, 512])
+        
+        return outputs
+    
+    def build(self, input_shape):
+        self.llr_embed = self.add_weight(
+                                "language_embedding",
+                                [self.vocabulary_size, self.num_lang_units * self.num_src_langues],
                                 initializer=None,
                                 trainable=True)
         super(LDR_inputter, self).build(input_shape)
