@@ -251,7 +251,6 @@ def create_slurm_strategy():
   strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy()
   return strategy
   
-
 def get_checkpoint_variables(checkpoint_path):
   """Returns variables included in a checkpoint.
   Args:

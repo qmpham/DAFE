@@ -5235,7 +5235,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, fake_domain_prob= fake_domain_prob, noisy_prob=noisy_prob)
         for i in range(num_layers)]
     self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
-
+    if self.version==16:
+      self.lhuc_embedding = tf.Variable(tf.zeros(num_domains,num_units), trainable=True)
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution==None:
@@ -5266,7 +5267,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       print("version 12: h_1 = h_1 + adap(h_1)")
     elif self.version==15:
       print("version 15: h_{1..5} = h_{1..5} + adap(h_{1..5})")
-      
+    elif self.version==16:
+      print("version 16: h_{1..5} = h_{1..5} * lhuc(h_{1..5})")  
     self.ADAP_contribution = ADAP_contribution
     self.training_res_using_rate = training_res_using_rate
     self.testing_res_using_rate = testing_res_using_rate
@@ -5398,7 +5400,6 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     else:
       keeping = self.testing_res_using_rate
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
-
       inputs, layer_cache, attention = layer(
           inputs,
           mask=mask,
@@ -5425,7 +5426,10 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       if self.version == 15:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         inputs = inputs + tf.nn.dropout(adapt, 1-self.training_res_using_rate)
-
+      if self.version == 16:
+        lhuc_vector = tf.nn.embedding_lookup(self.lhuc_embedding, domain)
+        lhuc_scale = 2 * tf.math.sigmoid(lhuc_vector)
+        inputs = tf.math.multiply(inputs, lhuc_scale)
     if self.version not in [3,8,9,10,11,12,15]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:

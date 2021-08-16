@@ -1489,6 +1489,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution == None:
       ADAP_contribution = [1.0] * num_layers
+    if self.version==16:
+      self.lhuc_embedding = tf.Variable(tf.zeros(num_domains,num_units), trainable=True)
     self.ADAP_contribution = ADAP_contribution
     self.version = version
     self.stop_gradient_version = stop_gradient_version
@@ -1516,6 +1518,9 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       print("version 12: h_1 = h_1 + adap(h_1)")
     elif self.version==15:
       print("version 15: h_{1..5} = h_{1..5} + adap(h_{1..5})")
+    elif self.version==16:
+      print("version 16: h_{1..5} = h_{1..5} * lhuc(h_{1..5})")
+
     self.training_res_using_rate = training_res_using_rate
     self.testing_res_using_rate = testing_res_using_rate
     print("testing_res_using_rate: ", testing_res_using_rate)
@@ -1557,6 +1562,10 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         if adapter_activate:
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
           inputs = inputs + common.dropout(adapt, 1-self.training_res_using_rate, training=training)
+      if self.version == 16:
+        lhuc_vector = tf.nn.embedding_lookup(self.lhuc_embedding, domain)
+        lhuc_scale = 2 * tf.math.sigmoid(lhuc_vector)
+        inputs = tf.math.multiply(inputs, lhuc_scale)
     if self.version not in [3,8,9,10,11,12,15]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:

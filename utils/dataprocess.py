@@ -341,7 +341,7 @@ def create_meta_trainining_dataset(strategy, model, domain, source_file, target_
 
   return meta_train_dataset, meta_test_dataset
 
-def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, single_pass=False, length_bucket_width=None, multi_domain=True, picking_prob=None, temperature=1.0, pick_in_order=False, window_size=None):
+def create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, maximum_length, src_langue=None, tgt_langue=None, single_pass=False, length_bucket_width=None, multi_domain=True, multi_lingual=False, picking_prob=None, temperature=1.0, pick_in_order=False, window_size=None):
 
   print("maximum_length", maximum_length)
   train_datasets = [] 
@@ -352,6 +352,17 @@ def create_trainining_dataset(strategy, model, domain, source_file, target_file,
               batch_size=batch_train_size,
               batch_type=batch_type,
               domain=i,
+              single_pass=single_pass,
+              shuffle_buffer_size=shuffle_buffer_size,
+              length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
+              maximum_features_length=maximum_length,
+              maximum_labels_length=maximum_length))
+  elif multi_lingual:
+    for i,j, src,tgt in zip(src_langue, tgt_langue, source_file,target_file):
+      train_datasets.append(model.examples_inputter.make_training_dataset(src, tgt,
+              batch_size=batch_train_size,
+              batch_type=batch_type,
+              domain=(i,j),
               single_pass=single_pass,
               shuffle_buffer_size=shuffle_buffer_size,
               length_bucket_width=length_bucket_width,  # Bucketize sequences by the same length for efficiency.
