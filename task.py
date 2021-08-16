@@ -16853,7 +16853,9 @@ def multilingual_train(config,
   
   print("There are %d in-domain corpora"%len(source_file))
   
-  train_dataset = 
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
 
   #####
   with strategy.scope():
