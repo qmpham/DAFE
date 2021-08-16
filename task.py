@@ -1308,7 +1308,7 @@ def finetuning(config,
           training_loss += tf.reduce_sum(tf.square(v)) * lambda_
     variables = []
     for v in model.trainable_variables:
-      if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
+      if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name or "lhuc" in v.name:
         print(v.name)
         variables.append(v)
     print("var numb: ", len(variables))
