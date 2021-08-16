@@ -1322,7 +1322,7 @@ def finetuning(config,
   def _apply_gradients():
     variables = []
     for v in model.trainable_variables:
-      if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name:
+      if "ADAP_" in v.name or "ldr_embedding" in v.name or "ldr_inputter" in v.name or "lhuc" in v.name:
         variables.append(v)
     grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, variables):
