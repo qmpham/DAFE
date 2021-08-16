@@ -1463,6 +1463,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     self.num_units = num_units
     self.dropout = dropout
     self.position_encoder = None
+    self.num_domains = num_domains
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
     self.layer_norm = LayerNorm()
@@ -1489,8 +1490,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution == None:
       ADAP_contribution = [1.0] * num_layers
-    if version==16:
-      self.lhuc_embedding = tf.Variable(tf.zeros([num_domains,num_units]), trainable=True)
+    
     self.ADAP_contribution = ADAP_contribution
     self.version = version
     self.stop_gradient_version = stop_gradient_version
@@ -1526,6 +1526,12 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     print("testing_res_using_rate: ", testing_res_using_rate)
     print("training_res_using_rate: ", training_res_using_rate)
   
+  def build(self, input_shape):
+    super(Multi_domain_SelfAttentionEncoder_v15, self).build(input_shape)
+    scope_name = self.name_scope()
+    if self.version==16:
+      self.lhuc_embedding = self.add_weight("%s_lhuc"%scope_name, shape=[self.num_domains, self.num_units])
+
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False, adapter_activate=True):
     domain = inputs[1]
     domain = domain[0]
