@@ -5458,7 +5458,9 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       outputs = self.layer_norm(inputs)
     elif self.version == 15:
       outputs = self.layer_norm(inputs)
-      
+    elif self.version ==16:
+      outputs = self.layer_norm(inputs)
+
     return outputs, new_cache, attention
   
   def _adv_run(self,

@@ -1596,6 +1596,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       outputs = self.layer_norm(inputs)
     elif self.version ==15:
       outputs = self.layer_norm(inputs)
+    elif self.version ==16:
+      outputs = self.layer_norm(inputs)
 
     return outputs, None, sequence_length
 
