@@ -1489,7 +1489,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution == None:
       ADAP_contribution = [1.0] * num_layers
-    if self.version==16:
+    if version==16:
       self.lhuc_embedding = tf.Variable(tf.zeros(num_domains,num_units), trainable=True)
     self.ADAP_contribution = ADAP_contribution
     self.version = version

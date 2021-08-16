@@ -5235,7 +5235,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, fake_domain_prob= fake_domain_prob, noisy_prob=noisy_prob)
         for i in range(num_layers)]
     self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
-    if self.version==16:
+    if version==16:
       self.lhuc_embedding = tf.Variable(tf.zeros(num_domains,num_units), trainable=True)
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
