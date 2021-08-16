@@ -16972,8 +16972,8 @@ def multilingual_train(config,
         output_files = []
         new_bleu = 0.0
         output_file = os.path.join(config["model_dir"],"eval",os.path.basename(config["eval_src"]) + ".trans." + os.path.basename(checkpoint_path))
-        score = 
-        new_bleu = score
+        #score = 
+        #new_bleu = score
         #############################
         if new_bleu >= current_max_eval_bleu:
           current_max_eval_bleu = new_bleu
