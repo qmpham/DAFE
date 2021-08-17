@@ -35,6 +35,9 @@ from utils.utils_ import average_checkpoints, load_and_update_if_needed_from_ckp
 from utils.dataprocess import count_lines
 from opennmt.utils import misc
 
+def reward_rescale(rewards):
+  abs_max = max([abs(r) for r in rewards])
+  return [r/abs_max for r in rewards]
 
 def file_concatenate(files,name,dir_name=None):
   lines = []
@@ -12415,6 +12418,8 @@ def train_L2W_v2(config,
           
           weight_reset(snapshots)
           optimizer.iterations.assign(saved_step)
+        if config.get("reward_rescaling",False):
+          rewards = reward_rescale(rewards)
         domain_rewards.assign(tf.cast(tf.constant(rewards), dtype=domain_rewards.dtype))
         
         print("domain rewards", domain_rewards)
