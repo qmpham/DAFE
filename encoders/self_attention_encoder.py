@@ -1463,6 +1463,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     self.num_units = num_units
     self.dropout = dropout
     self.position_encoder = None
+    self.num_layers = num_layers
     self.num_domains = num_domains
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
@@ -1531,7 +1532,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     scope_name = self.name_scope()
     self.lhuc_embedding = []
     if self.version==16:
-      self.lhuc_embedding.append(self.add_weight("%s_lhuc"%scope_name, shape=[self.num_domains, self.num_units]))
+      for i in range(self.num_layers):
+        self.lhuc_embedding.append(self.add_weight("%s_lhuc_%d"%(scope_name,i), shape=[self.num_domains, self.num_units]))
 
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False, adapter_activate=True):
     domain = inputs[1]

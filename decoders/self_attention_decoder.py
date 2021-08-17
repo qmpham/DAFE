@@ -5212,6 +5212,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     self.num_units = num_units
     self.num_heads = num_heads
     self.num_domains = num_domains
+    self.num_layers = num_layers
     self.dropout = dropout
     self.position_encoder = None
     if position_encoder_class is not None:
@@ -5281,7 +5282,9 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     scope_name = self.name_scope()
     self.lhuc_embedding = []
     if self.version==16:
-      self.lhuc_embedding.append(self.add_weight("%s_lhuc"%scope_name, shape=[self.num_domains, self.num_units]))
+      for i in range(self.num_layers):
+        self.lhuc_embedding.append(self.add_weight("%s_lhuc_%d"%(scope_name,i), shape=[self.num_domains, self.num_units]))
+
       
   def initialize(self, vocab_size=None, output_layer=None):  
     if output_layer is not None:
