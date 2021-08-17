@@ -1529,8 +1529,9 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
   def build(self, input_shape):
     super(Multi_domain_SelfAttentionEncoder_v15, self).build(input_shape)
     scope_name = self.name_scope()
+    self.lhuc_embedding = []
     if self.version==16:
-      self.lhuc_embedding = self.add_weight("%s_lhuc"%scope_name, shape=[self.num_domains, self.num_units])
+      self.lhuc_embedding.append(self.add_weight("%s_lhuc"%scope_name, shape=[self.num_domains, self.num_units]))
 
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False, adapter_activate=True):
     domain = inputs[1]
@@ -1569,7 +1570,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
           inputs = inputs + common.dropout(adapt, 1-self.training_res_using_rate, training=training)
       if self.version == 16:
-        lhuc_vector = tf.nn.embedding_lookup(self.lhuc_embedding, domain)
+        lhuc_vector = tf.nn.embedding_lookup(self.lhuc_embedding[i], domain)
         lhuc_scale = 2 * tf.math.sigmoid(lhuc_vector)
         inputs = tf.math.multiply(inputs, lhuc_scale)
     if self.version not in [3,8,9,10,11,12,15,16]:
