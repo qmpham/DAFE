@@ -5440,7 +5440,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       if self.version == 16:
         lhuc_vector = tf.nn.embedding_lookup(self.lhuc_embedding[i], domain)
         lhuc_scale = 2 * tf.math.sigmoid(lhuc_vector)
-        inputs = tf.math.multiply(inputs, lhuc_scale)
+        inputs = tf.math.multiply(inputs, lhuc_scale) + inputs
     if self.version not in [3,8,9,10,11,12,15,16]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:
