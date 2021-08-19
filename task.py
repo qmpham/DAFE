@@ -8046,6 +8046,7 @@ def finetune_noisy_v1(config,
 def translate_farajan(source_file,
               context_src_file,
               context_tgt_file,
+              context_score,
               reference,
               model,
               config,
@@ -8073,7 +8074,7 @@ def translate_farajan(source_file,
   dataset = model.examples_inputter.make_inference_dataset(source_file, 1, domain)
   iterator = iter(dataset)
   if "baseline" in experiment:
-    context_dataset = model.examples_inputter.make_training_dataset(context_src_file, context_tgt_file, batch_size=1, batch_type="example")
+    context_dataset = model.examples_inputter.make_training_dataset(context_src_file, context_tgt_file, batch_size=1, batch_type="example", single_pass=True)
   else:
     context_dataset = model.examples_inputter.make_training_dataset(context_src_file, context_tgt_file, 1, domain, batch_type="example", single_pass=True)
   context_iteration = iter(context_dataset)

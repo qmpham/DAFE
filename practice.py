@@ -1558,11 +1558,11 @@ def main():
   elif args.run == "translate_farajan":
     source_file = args.src
     reference = args.ref
-    context_src_file, context_tgt_file = args.context
+    context_src_file, context_tgt_file, context_score = args.context
     checkpoint_path = args.ckpt
     output_file = args.output
     domain = args.domain
-    task.translate_farajan(source_file, context_src_file, context_tgt_file, reference, model, config, strategy, meta_test_optimizer, checkpoint_manager, checkpoint, int(domain), output_file, length_penalty=0.6, 
+    task.translate_farajan(source_file, context_src_file, context_tgt_file, context_score, reference, model, config, strategy, meta_test_optimizer, checkpoint_manager, checkpoint, int(domain), output_file, length_penalty=0.6, 
                   checkpoint_path=checkpoint_path, experiment=experiment)
   elif args.run == "translate_farajan_residual":
     source_file = args.src
