@@ -8079,10 +8079,11 @@ def translate_farajan(source_file,
     context_dataset = model.examples_inputter.make_training_dataset(context_src_file, context_tgt_file, 1, domain, batch_type="example", single_pass=True)
   context_iteration = iter(context_dataset)
   ids_to_tokens = model.labels_inputter.ids_to_tokens
-  optimizer = tfa.optimizers.LazyAdam(config.get("farajan_lr",0.001))
+  learning_rate = tf.Variable(config.get("farajan_lr",0.001),trainable=False)
+  optimizer = tfa.optimizers.LazyAdam(learning_rate)
   model.create_variables(optimizer=optimizer)
   @tf.function(experimental_relax_shapes=True)
-  def minifinetune(source, target):
+  def minifinetune(source, target, score):
     tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
     outputs, _ = model(
         source,
@@ -8098,9 +8099,26 @@ def translate_farajan(source_file,
     variables = model.trainable_variables
     gradients = optimizer.get_gradients(training_loss, variables)
     grads_and_vars = []
+    step_num = config.get("farajan_steps",9)
     for gradient, variable in zip(gradients, variables):
       grads_and_vars.append((gradient, variable))
-    for i in range(config.get("farajan_steps",9)):
+    if 0.5 <= score and score <= 0.6:
+      learning_rate.assign(0.001)
+      step_num = 6
+    elif 0.6 <= score and score <= 0.7:
+      learning_rate.assign(0.002)
+      step_num = 7
+    elif 0.7 <= score and score <= 0.8:
+      learning_rate.assign(0.003)
+      step_num = 8
+    elif 0.8 <= score and score <= 0.9:
+      learning_rate.assign(0.004)
+      step_num = 9
+    elif 0.9 <= score and score <= 1.0:
+      learning_rate.assign(0.005)
+      step_num = 9
+    
+    for i in range(step_num):
       optimizer.apply_gradients(grads_and_vars)
 
   @tf.function
@@ -8167,6 +8185,7 @@ def translate_farajan(source_file,
 
   print("output file: ", output_file)
   step = optimizer.iterations.numpy()
+  f_score = open(context_score,"r")
   with open(output_file, "w") as output_:
     while True:    
       try:
@@ -8174,8 +8193,10 @@ def translate_farajan(source_file,
         snapshots = [v.value() for v in model.trainable_variables]
         #finetuning phase
         src, tgt = next(context_iteration)
+        score = f_score.readline()
         if src["length"].numpy()>1:
-          minifinetune(src,tgt)
+          score = float(score)
+          minifinetune(src,tgt,score)
         #translating phase
         batch_tokens, batch_length = predict_next()
         #reset parameters
