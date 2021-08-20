@@ -8184,16 +8184,16 @@ def translate_farajan(source_file,
             learning_rate.assign(0.001)
             step_num = 6
           elif 0.6 <= score and score <= 0.7:
-            learning_rate.assign(0.002)
+            learning_rate.assign(0.001)
             step_num = 7
           elif 0.7 <= score and score <= 0.8:
-            learning_rate.assign(0.003)
+            learning_rate.assign(0.001)
             step_num = 8
           elif 0.8 <= score and score <= 0.9:
-            learning_rate.assign(0.004)
+            learning_rate.assign(0.001)
             step_num = 9
           elif 0.9 <= score and score <= 1.0:
-            learning_rate.assign(0.005)
+            learning_rate.assign(0.001)
             step_num = 9
           minifinetune(src,tgt,tf.constant(step_num))
         #translating phase
@@ -8207,6 +8207,8 @@ def translate_farajan(source_file,
           print_bytes(sentence, output_)
           #print_bytes(sentence)
       except tf.errors.OutOfRangeError:
+        break
+      except StopIteration: 
         break
   
   return 0
