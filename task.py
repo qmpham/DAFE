@@ -8081,8 +8081,8 @@ def translate_farajan(source_file,
   learning_rate = tf.Variable(config.get("farajan_lr",0.001),trainable=False)
   optimizer = tfa.optimizers.LazyAdam(learning_rate)
   model.create_variables(optimizer=optimizer)
-  #@tf.function(experimental_relax_shapes=True)
-  def minifinetune(source, target, score):
+  @tf.function(experimental_relax_shapes=True)
+  def minifinetune(source, target, step_num):
     tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
     outputs, _ = model(
         source,
@@ -8101,21 +8101,6 @@ def translate_farajan(source_file,
     step_num = config.get("farajan_steps",9)
     for gradient, variable in zip(gradients, variables):
       grads_and_vars.append((gradient, variable))
-    if 0.5 <= score and score <= 0.6:
-      learning_rate.assign(0.001)
-      step_num = 6
-    elif 0.6 <= score and score <= 0.7:
-      learning_rate.assign(0.002)
-      step_num = 7
-    elif 0.7 <= score and score <= 0.8:
-      learning_rate.assign(0.003)
-      step_num = 8
-    elif 0.8 <= score and score <= 0.9:
-      learning_rate.assign(0.004)
-      step_num = 9
-    elif 0.9 <= score and score <= 1.0:
-      learning_rate.assign(0.005)
-      step_num = 9
     
     for i in range(step_num):
       optimizer.apply_gradients(grads_and_vars)
@@ -8195,7 +8180,22 @@ def translate_farajan(source_file,
         score = f_score.readline()
         if src["length"].numpy()>1:
           score = float(score)
-          minifinetune(src,tgt,score)
+          if 0.5 <= score and score <= 0.6:
+            learning_rate.assign(0.001)
+            step_num = 6
+          elif 0.6 <= score and score <= 0.7:
+            learning_rate.assign(0.002)
+            step_num = 7
+          elif 0.7 <= score and score <= 0.8:
+            learning_rate.assign(0.003)
+            step_num = 8
+          elif 0.8 <= score and score <= 0.9:
+            learning_rate.assign(0.004)
+            step_num = 9
+          elif 0.9 <= score and score <= 1.0:
+            learning_rate.assign(0.005)
+            step_num = 9
+          minifinetune(src,tgt,tf.constant(step_num))
         #translating phase
         batch_tokens, batch_length = predict_next()
         #reset parameters
