@@ -8081,7 +8081,7 @@ def translate_farajan(source_file,
   learning_rate = tf.Variable(config.get("farajan_lr",0.001),trainable=False)
   optimizer = tfa.optimizers.LazyAdam(learning_rate)
   model.create_variables(optimizer=optimizer)
-  @tf.function(experimental_relax_shapes=True)
+  #@tf.function(experimental_relax_shapes=True)
   def minifinetune(source, target, score):
     tf.print("context_src: ", source["tokens"], "context_target: ", target["tokens"])
     outputs, _ = model(
