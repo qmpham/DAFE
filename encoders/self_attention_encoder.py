@@ -1604,6 +1604,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       z = tf.exp((g-1)*2/g)
       outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
     elif self.version==17:
+      print(total_adapt)
       for d in total_adapt:
         tf.print(d)
         total_adapt[d] = tf.add_n(total_adapt[d])
