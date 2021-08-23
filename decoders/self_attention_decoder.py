@@ -5472,6 +5472,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     elif self.version==17:
       all_values = list(total_adapt.values()) + [inputs]
       total_adapt = tf.math.reduce_sum(tf.concat(all_values,-1) * g,-1)
+      tf.print("total_adapt",tf.shape(total_adapt),total_adapt)
       outputs = self.layer_norm(total_adapt)
     elif self.version==7:
       outputs = self.layer_norm(inputs + tf.nn.dropout(total_adapt,1-self.training_res_using_rate))
