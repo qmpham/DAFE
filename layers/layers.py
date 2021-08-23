@@ -1789,7 +1789,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     #tf.print("%s outputs: "%(self.name_scope()), tf.math.softmax(logits),summarize=1000)
     outputs = tf.math.softmax(logits)
     outputs = tf.tile(tf.expand_dims(outputs,1),[1,self.output_dim,1])
-    tf.print("domain_logits:",outputs)
+    tf.print("domain_logits:",tf.shape(outputs), outputs)
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
 
