@@ -1609,7 +1609,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         tf.print(d)
         total_adapt[d] = tf.add_n(total_adapt[d])
         b = tf.shape(total_adapt[d])[0]
-        total_adapt = tf.expand_dims(tf.reshape(total_adapt[d],[b,-1]),-1)
+        total_adapt[d] = tf.expand_dims(tf.reshape(total_adapt[d],[b,-1]),-1)
       b = tf.shape(inputs)[0]
       inputs = tf.expand_dims(tf.reshape(inputs,[b,-1]),-1)
       all_values = list(total_adapt.values()) + [inputs]
