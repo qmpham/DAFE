@@ -5473,12 +5473,13 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       for d in total_adapt:
         total_adapt[d] = tf.add_n(total_adapt[d])
         b = tf.shape(total_adapt[d])[0]
-        total_adapt[d] = tf.expand_dims(tf.reshape(total_adapt[d],[b,-1]),-1)
+        total_adapt[d] = tf.expand_dims(tf.reshape(total_adapt[d],[b,-1]),1)
       b = tf.shape(inputs)[0]
-      inputs = tf.expand_dims(tf.reshape(inputs,[b,-1]),-1)
+      inputs = tf.expand_dims(tf.reshape(inputs,[b,-1]),1)
       all_values = list(total_adapt.values()) + [inputs]
-      total_adapt = tf.math.reduce_sum(tf.concat(all_values,-1) * g,-1)
-      tf.print("total_adapt",tf.shape(total_adapt),total_adapt)
+      tf.print("g:",g.shape,tf.concat(all_values,1).shape)
+      total_adapt = tf.math.reduce_sum(tf.concat(all_values,1) * g,1)
+      tf.print("total_adapt",tf.shape(total_adapt))
       outputs = self.layer_norm(total_adapt)
     elif self.version==7:
       outputs = self.layer_norm(inputs + tf.nn.dropout(total_adapt,1-self.training_res_using_rate))
