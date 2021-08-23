@@ -1790,6 +1790,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     outputs = tf.math.softmax(logits)
     outputs = tf.tile(tf.expand_dims(outputs,1),[1,self.output_dim,1])
     tf.print("domain_logits:",tf.shape(outputs), outputs)
+    print("input_shape:", shape)
     if rank > 2:
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
 
