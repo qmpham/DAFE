@@ -1546,6 +1546,9 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     inputs = common.dropout(inputs, self.dropout, training=training)
     mask = self.build_mask(inputs, sequence_length=sequence_length)
     total_adapt=[]
+    if self.version==17:
+      from collections import defaultdict
+      total_adapt = defaultdict(list)
     if training:
       keeping = tf.keras.backend.random_binomial([1], self.training_res_using_rate)
     else:
@@ -1555,6 +1558,10 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       if self.version not in [3,8,10,11,9,12,15,16]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
+      if self.version == 17:
+        for domain in range(self.num_domains):
+          adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+          total_adapt[domain].append(adapt)
       if self.version == 10:
         if i==3:
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
@@ -1583,7 +1590,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       if internal_node_printing:
         tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
-      
+    if self.version == 17:
+      g = self.multi_domain_gate.domain_logits(inputs, mask=mask, training=training)
     if self.version==1:
       outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     elif self.version==2:
@@ -1595,6 +1603,10 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     elif self.version==6:
       z = tf.exp((g-1)*2/g)
       outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
+    elif self.version==17:
+      all_values = total_adapt.values + [inputs]
+      total_adapt = tf.concat(all_values,-1) * g
+      outputs = self.layer_norm(total_adapt)
     elif self.version==7:
       outputs = self.layer_norm(inputs + common.dropout(total_adapt, 1-self.training_res_using_rate, training=training))
     elif self.version==9:

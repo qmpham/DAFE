@@ -5406,6 +5406,9 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     # Run each layer.
     new_cache = []
     total_adapt = []
+    if self.version==17:
+      from collections import defaultdict
+      total_adapt = defaultdict(list)
     if training:
       keeping = tf.keras.backend.random_binomial([1], self.training_res_using_rate)
     else:
@@ -5422,6 +5425,10 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       if self.version not in [3,8,9,10,11,12,15,16]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
+      if self.version == 17:
+        for domain in range(self.num_domains):
+          adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
+          total_adapt[domain].append(adapt)
       if self.version == 10:
         if i==3:
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
@@ -5441,13 +5448,16 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         lhuc_vector = tf.nn.embedding_lookup(self.lhuc_embedding[i], domain)
         lhuc_scale = 2 * tf.math.sigmoid(lhuc_vector)
         inputs = tf.math.multiply(inputs, lhuc_scale) + inputs
+
     if self.version not in [3,8,9,10,11,12,15,16]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:
       total_adapt = self.multi_domain_layers[-1](inputs, domain, mask=mask, training=training)
     if self.version not in [3,7,9,10,11,12,15,16]:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
-      
+    if self.version == 17:
+      g = self.multi_domain_gate.domain_logits(inputs, mask=mask, training=training)
+
     if self.version==1:
       outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
     elif self.version==2:
@@ -5459,6 +5469,10 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     elif self.version==6:
       z = tf.exp((g-1)*2/g)
       outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
+    elif self.version==17:
+      all_values = total_adapt.values + [inputs]
+      total_adapt = tf.concat(all_values,-1) * g
+      outputs = self.layer_norm(total_adapt)
     elif self.version==7:
       outputs = self.layer_norm(inputs + tf.nn.dropout(total_adapt,1-self.training_res_using_rate))
     elif self.version==9:
