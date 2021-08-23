@@ -1605,7 +1605,6 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       outputs = self.layer_norm(inputs * (1-z) + z * total_adapt)
     elif self.version==17:
       for d in total_adapt:
-        tf.print(d)
         total_adapt[d] = tf.add_n(total_adapt[d])
         b = tf.shape(total_adapt[d])[0]
         total_adapt[d] = tf.expand_dims(tf.reshape(total_adapt[d],[b,-1]),-1)
