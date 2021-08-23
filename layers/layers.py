@@ -1770,7 +1770,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
 
     return outputs
   
-  def domain_logits(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
+  def domain_logits(self, inputs, mask=None, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
     shape = shape_list(inputs)
     rank = len(shape)      
