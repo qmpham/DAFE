@@ -7586,6 +7586,7 @@ def finetune_wada_v1(config,
         step=optimizer.iterations)
     domain = source["domain"][0]    
     regularization_losses = model.losses
+    print(regularization_losses)
     d_classification_gate_losses = []
     d_classifier_weight_regularization_losses = []
     for loss_ in regularization_losses:
