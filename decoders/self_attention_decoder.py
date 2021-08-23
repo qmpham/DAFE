@@ -5456,7 +5456,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     if self.version not in [3,7,9,10,11,12,15,16,17]:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
     if self.version == 17:
-      g = self.multi_domain_gate.domain_logits(inputs, domain, mask=mask, training=training)
+      g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
 
     if self.version==1:
       outputs = self.layer_norm(inputs * (1-g) + total_adapt * g)
