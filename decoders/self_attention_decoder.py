@@ -5477,7 +5477,6 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       b = tf.shape(inputs)[0]
       inputs = tf.expand_dims(tf.reshape(inputs,[b,-1]),-1)
       all_values = list(total_adapt.values()) + [inputs]
-      tf.print("g:",tf.shape(g),tf.concat(all_values,-1).shape)
       total_adapt = tf.math.reduce_sum(tf.concat(all_values,-1) * g,-1)
       tf.print("total_adapt",tf.shape(total_adapt),total_adapt)
       outputs = self.layer_norm(total_adapt)
