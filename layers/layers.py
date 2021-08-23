@@ -1769,6 +1769,32 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
       outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
 
     return outputs
+  
+  def domain_logits(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
+    """Runs the layer."""
+    shape = shape_list(inputs)
+    rank = len(shape)      
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    inputs = self.layer_norm(inputs)
+    inputs = common.dropout(inputs, rate=0.3, training=training)
+    logits = self.ff_layer_1(inputs)
+    #tf.print("logits 1", logits)
+    logits = common.dropout(logits, rate=0.3, training=training)
+    logits = self.ff_layer_2(logits)
+    #tf.print("logits 2", logits)
+    logits = common.dropout(logits, rate=0.3, training=training)
+    logits = self.ff_layer_end(logits)
+    #tf.print("logits 3: ", logits, summarize=1000)
+    #tf.print("%s outputs: "%(self.name_scope()), tf.math.softmax(logits),summarize=1000)
+    outputs = tf.math.softmax(logits)
+    outputs = tf.tile(tf.expand_dims(outputs,1),[1,self.output_dim])
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
+
+    return outputs
+  
+
 
 class CondGRU(tf.keras.layers.Layer):
   def __init__(self,
