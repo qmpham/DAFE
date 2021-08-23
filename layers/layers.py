@@ -1794,15 +1794,13 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
       smoothed_labels = _smooth_one_hot_labels(logits, labels, label_smoothing)
       self.add_loss(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits)))
     if rank > 2:
-      tf.print("domain_logits:",tf.shape(outputs), outputs)
       outputs = tf.tile(tf.expand_dims(outputs,-1),[1,1,self.output_dim])
-      tf.print("domain_logits:",tf.shape(outputs), outputs)
+      tf.print("domain_logits:",tf.shape(outputs), outputs[0,:,:])
       print("input_shape:", shape)
       outputs = tf.reshape(outputs, [shape[0], self.domain_numb, -1])   
     else:
-      tf.print("domain_logits:",tf.shape(outputs), outputs)
       outputs = tf.tile(tf.expand_dims(outputs,-1),[1,1,self.output_dim])
-      tf.print("domain_logits:",tf.shape(outputs), outputs)
+      tf.print("domain_logits:",tf.shape(outputs), outputs[0,:,:])
       print("input_shape:", shape)
       outputs = tf.reshape(outputs, [shape[0], self.domain_numb,-1])
     return outputs
