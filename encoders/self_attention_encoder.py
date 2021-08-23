@@ -1613,7 +1613,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       all_values = list(total_adapt.values()) + [inputs]
       tf.print("g:",g.shape,tf.concat(all_values,-1).shape)
       total_adapt = tf.math.reduce_sum(tf.concat(tf.expand_dims(all_values,-1),-1) * g,1)
-      tf.print("total_adapt",tf.shape(total_adapt),total_adapt)
+      tf.print("total_adapt",tf.shape(total_adapt))
       outputs = self.layer_norm(total_adapt)
     elif self.version==7:
       outputs = self.layer_norm(inputs + common.dropout(total_adapt, 1-self.training_res_using_rate, training=training))
