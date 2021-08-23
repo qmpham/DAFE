@@ -1792,7 +1792,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
     tf.print("domain_logits:",tf.shape(outputs), outputs)
     print("input_shape:", shape)
     if rank > 2:
-      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
+      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim * self.domain_numb])   
 
     return outputs
   
