@@ -5431,9 +5431,9 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
       if self.version == 17:
-        for domain in range(self.num_domains-1):
-          adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
-          total_adapt[domain].append(adapt)
+        for d in range(self.num_domains-1):
+          adapt = multi_domain_layer(inputs, d, mask=mask, training=training)
+          total_adapt[d].append(adapt)
       if self.version == 10:
         if i==3:
           adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
