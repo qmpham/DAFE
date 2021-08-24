@@ -1769,7 +1769,7 @@ class Multi_domain_classification_gate_v2(tf.keras.layers.Layer):
     else:
       outputs = tf.tile(tf.expand_dims(outputs,-1),[1,1,self.output_dim])
       outputs = tf.reshape(outputs, [shape[0], self.domain_numb,-1])
-    tf.print("domain_logits:",tf.shape(outputs), outputs[0,:,:], summarize=-1)
+    #tf.print("domain_logits:",tf.shape(outputs), outputs[0,:,:], summarize=-1)
 
     return outputs
   
