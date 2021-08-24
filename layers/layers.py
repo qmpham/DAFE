@@ -1737,7 +1737,7 @@ class Multi_domain_classification_gate_v2(tf.keras.layers.Layer):
     self.ff_layer_end = common.Dense(domain_numb, use_bias=True, kernel_initializer='zeros', bias_initializer='zeros', kernel_regularizer=tf.keras.regularizers.l2(0.001), bias_regularizer=tf.keras.regularizers.l2(0.001))
   
   def build(self, input_shape):
-    super(Multi_domain_classification_gate, self).build(input_shape)
+    super(Multi_domain_classification_gate_v2, self).build(input_shape)
   
   def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
