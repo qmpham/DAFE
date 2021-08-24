@@ -12,7 +12,7 @@ from opennmt.layers.position import SinusoidalPositionEncoder
 from opennmt.layers import common
 from layers.common import LayerNorm, Multi_LayerNorm
 from utils.utils_ import make_domain_mask
-from layers.layers import Regulation_Gate, Multi_domain_classification_gate, Multi_domain_FeedForwardNetwork_v9, Multi_domain_FeedForwardNetwork_v6, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, Multi_domain_FeedForwardNetwork_v3, DAFE, Multi_domain_Gate, Multi_domain_Gate_v2
+from layers.layers import Regulation_Gate, Multi_domain_classification_gate, Multi_domain_classification_gate_v2, Multi_domain_FeedForwardNetwork_v9, Multi_domain_FeedForwardNetwork_v6, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, Multi_domain_FeedForwardNetwork_v3, DAFE, Multi_domain_Gate, Multi_domain_Gate_v2
 from opennmt.utils.misc import shape_list
 class Multi_domain_SelfAttentionEncoder(Encoder):
 
