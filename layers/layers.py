@@ -1712,7 +1712,7 @@ class Multi_domain_FeedForwardNetwork_v9(tf.keras.layers.Layer):
     #             tf.reduce_max(tf.abs(outputs)), "ADAP_min_abs_pooling: ", tf.reduce_min(tf.abs(outputs)), "domain: ", domain, "###", sep="|")    
     return outputs
 
-class Multi_domain_classification_gate(tf.keras.layers.Layer):
+class Multi_domain_classification_gate_v2(tf.keras.layers.Layer):
 
   def __init__(self,
                input_dim, 
@@ -1723,7 +1723,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
                outer_activation=None,
                **kwargs):
     
-    super(Multi_domain_classification_gate, self).__init__(**kwargs)
+    super(Multi_domain_classification_gate_v2, self).__init__(**kwargs)
     self.dropout = dropout
     self.domain_numb = domain_numb
     self.layer_norm = common.LayerNorm()
@@ -1738,37 +1738,7 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
   
   def build(self, input_shape):
     super(Multi_domain_classification_gate, self).build(input_shape)
-  """  
-  def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
-    shape = shape_list(inputs)
-    rank = len(shape)      
-    if rank > 2:
-      inputs = tf.reshape(inputs, [-1, shape[-1]])
-    inputs = self.layer_norm(inputs)
-    inputs = common.dropout(inputs, rate=0.3, training=training)
-    logits = self.ff_layer_1(inputs)
-    #tf.print("logits 1", logits)
-    logits = common.dropout(logits, rate=0.3, training=training)
-    logits = self.ff_layer_2(logits)
-    #tf.print("logits 2", logits)
-    logits = common.dropout(logits, rate=0.3, training=training)
-    logits = self.ff_layer_end(logits)
-    #tf.print("logits 3: ", logits, summarize=1000)
-    #tf.print("%s outputs: "%(self.name_scope()), tf.math.softmax(logits),summarize=1000)
-    outputs = tf.math.softmax(logits)[:,domain]
-    #tf.print("prediction loss", tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
-    if training:
-      label_smoothing = 0.1
-      labels = tf.fill([tf.shape(logits)[0]], domain)
-      smoothed_labels = _smooth_one_hot_labels(logits, labels, label_smoothing)
-      self.add_loss(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits)))
-
-    outputs = tf.tile(tf.expand_dims(outputs,1),[1,self.output_dim])
-    if rank > 2:
-      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
-
-    return outputs
-  """
+  
   def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
     """Runs the layer."""
     shape = shape_list(inputs)
@@ -1803,7 +1773,63 @@ class Multi_domain_classification_gate(tf.keras.layers.Layer):
 
     return outputs
   
+class Multi_domain_classification_gate(tf.keras.layers.Layer):
 
+  def __init__(self,
+               input_dim, 
+               num_units,
+               domain_numb=6,
+               dropout=0.1,
+               activation=tf.nn.sigmoid,
+               outer_activation=None,
+               **kwargs):
+    
+    super(Multi_domain_classification_gate, self).__init__(**kwargs)
+    self.dropout = dropout
+    self.domain_numb = domain_numb
+    self.layer_norm = common.LayerNorm()
+    self.inner_layer_norm = common.LayerNorm()
+    self.output_dim = num_units
+    self.outer_transpose = False
+    self.outer_use_bias = True
+    self.outer_activation = activation
+    self.ff_layer_1 = common.Dense(2048, use_bias=True, activation=tf.nn.relu, kernel_regularizer=tf.keras.regularizers.l2(0.001), bias_regularizer=tf.keras.regularizers.l2(0.001))
+    self.ff_layer_2 = common.Dense(2048, use_bias=True, activation=tf.nn.relu, kernel_regularizer=tf.keras.regularizers.l2(0.001), bias_regularizer=tf.keras.regularizers.l2(0.001))
+    self.ff_layer_end = common.Dense(domain_numb, use_bias=True, kernel_initializer='zeros', bias_initializer='zeros', kernel_regularizer=tf.keras.regularizers.l2(0.001), bias_regularizer=tf.keras.regularizers.l2(0.001))
+  
+  def build(self, input_shape):
+    super(Multi_domain_classification_gate, self).build(input_shape)
+    
+  def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
+    shape = shape_list(inputs)
+    rank = len(shape)      
+    if rank > 2:
+      inputs = tf.reshape(inputs, [-1, shape[-1]])
+    inputs = self.layer_norm(inputs)
+    inputs = common.dropout(inputs, rate=0.3, training=training)
+    logits = self.ff_layer_1(inputs)
+    #tf.print("logits 1", logits)
+    logits = common.dropout(logits, rate=0.3, training=training)
+    logits = self.ff_layer_2(logits)
+    #tf.print("logits 2", logits)
+    logits = common.dropout(logits, rate=0.3, training=training)
+    logits = self.ff_layer_end(logits)
+    #tf.print("logits 3: ", logits, summarize=1000)
+    #tf.print("%s outputs: "%(self.name_scope()), tf.math.softmax(logits),summarize=1000)
+    outputs = tf.math.softmax(logits)[:,domain]
+    #tf.print("prediction loss", tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
+    if training:
+      label_smoothing = 0.1
+      labels = tf.fill([tf.shape(logits)[0]], domain)
+      smoothed_labels = _smooth_one_hot_labels(logits, labels, label_smoothing)
+      self.add_loss(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits)))
+
+    outputs = tf.tile(tf.expand_dims(outputs,1),[1,self.output_dim])
+    if rank > 2:
+      outputs = tf.reshape(outputs, shape[:-1] + [self.output_dim])   
+
+    return outputs
+  
 
 class CondGRU(tf.keras.layers.Layer):
   def __init__(self,

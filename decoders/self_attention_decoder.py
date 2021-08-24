@@ -7,7 +7,7 @@ from opennmt.decoders.decoder import Decoder
 from opennmt.decoders.self_attention_decoder import SelfAttentionDecoder
 from layers import common, transformer
 from opennmt.layers.position import SinusoidalPositionEncoder
-from layers.layers import Regulation_Gate, Multi_domain_classification_gate, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v6, Multi_domain_Gate_v2, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_Gate, Multi_domain_FeedForwardNetwork_v3, Multi_domain_FeedForwardNetwork_v9
+from layers.layers import Multi_domain_classification_gate_v2, Regulation_Gate, Multi_domain_classification_gate, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v6, Multi_domain_Gate_v2, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_Gate, Multi_domain_FeedForwardNetwork_v3, Multi_domain_FeedForwardNetwork_v9
 from utils.utils_ import make_domain_mask
 from layers.common import Multi_LayerNorm
 from opennmt.utils import decoding
@@ -5236,7 +5236,12 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         if not(multi_domain_adapter_class in [Multi_domain_FeedForwardNetwork_v6, Multi_domain_FeedForwardNetwork_v8])
         else multi_domain_adapter_class(num_units, num_domain_units, num_units, domain_numb=num_domains, name="ADAP_%d"%i, fake_domain_prob= fake_domain_prob, noisy_prob=noisy_prob)
         for i in range(num_layers)]
-    self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
+
+    if version == 17:
+      self.multi_domain_gate = Multi_domain_classification_gate_v2(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
+    else:
+      self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
+
     
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
