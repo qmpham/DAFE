@@ -5377,7 +5377,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
            step=None,
            training=None,
            adapter_activate=True,
-           internal_node_printing=False):
+           internal_node_printing=True):
     # Process inputs.
     domain = inputs[1]
     domain = domain[0]
