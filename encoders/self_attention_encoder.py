@@ -1618,7 +1618,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       inputs = tf.expand_dims(tf.reshape(inputs,[-1,self.num_units]),0)
       all_values = list(total_adapt.values()) + [inputs]
       #tf.print("g:",g.shape,tf.concat(all_values,1).shape, g[:,0,:])
-      total_adapt = tf.math.reduce_sum(tf.concat(all_values,0) * g,0)
+      total_adapt = tf.math.reduce_sum(tf.concat(all_values,0) * tf.stop_gradient(g),0)
       total_adapt = tf.reshape(total_adapt,[b,-1,self.num_units])
       #tf.print("total_adapt",tf.shape(total_adapt))
       outputs = self.layer_norm(total_adapt)
