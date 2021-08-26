@@ -7510,9 +7510,7 @@ def finetune_wada_v1(config,
     else:
       training_loss, reported_loss = loss, loss
     domain = source["domain"][0]
-    if config.get("apply_importance_weight", False):
-      print("apply_importance_weight")
-      training_loss = training_loss * importance_weights[domain]
+    
     if config.get("ADAP_activity_regularizing",False):
         layer_activity_regularization_loss_scale = config.get("layer_activity_regularization_loss_scale",0.001)
         d_classification_gate_loss_scale = config.get("d_classification_gate_loss_scale",0.01)
@@ -7554,7 +7552,26 @@ def finetune_wada_v1(config,
         if (len(layer_activity_regularization_losses)>0) and layer_activity_regularization_loss_scale>0:
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
      
+    regularization_losses = model.losses
+    for loss_ in regularization_losses:
+      if "multi_adap__dense" in loss_.name:
+        continue
+      elif "ADAP_gate" in loss_.name: 
+        if "ActivityRegularizer" in loss_.name:
+          continue
+        elif "Regularizer" in loss_.name:
+          d_classifier_weight_regularization_losses.append(loss_)
+        else:
+          d_classification_gate_losses.append(loss_)
+    d_classifier_weight_regularization_losses_scale = config.get("d_classifier_weight_regularization_losses_scale",1.0)
+    training_loss += tf.add_n(d_classification_gate_losses) / importance_weights[domain]
+    if d_classifier_weight_regularization_losses_scale>0 and len(d_classifier_weight_regularization_losses)>0:
+      print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
+      training_loss += tf.add_n(d_classifier_weight_regularization_losses) * d_classifier_weight_regularization_losses_scale
+
+    
     variables = model.trainable_variables
+
     """ for v in variables:
       print(v.name) """
     model_vars = []
@@ -7567,12 +7584,12 @@ def finetune_wada_v1(config,
       elif "enc_layernorm_2" in var.name:
         model_vars.append(var)
     variables = model_vars + classifier_vars
-    print("model_vars numb: ", len(model_vars))
+    print("model_vars numb: ", len(variables))
     
-    for v in model_vars:
+    for v in variables:
       print(v.name)
    
-    model_gradients = optimizer.get_gradients(training_loss, model_vars)
+    model_gradients = optimizer.get_gradients(training_loss, variables)
     model_gradient_accumulator(model_gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
@@ -7636,7 +7653,7 @@ def finetune_wada_v1(config,
         model_vars.append(var)
     variables = model_vars + classifier_vars
     grads_and_vars = []
-    for gradient, variable in zip(model_gradient_accumulator.gradients, model_vars):
+    for gradient, variable in zip(model_gradient_accumulator.gradients, variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(model_gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
