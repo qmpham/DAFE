@@ -7567,9 +7567,9 @@ def finetune_wada_v1(config,
     training_loss += 0.3 * tf.add_n(d_classification_gate_losses) / importance_weights[domain]
     if d_classifier_weight_regularization_losses_scale>0 and len(d_classifier_weight_regularization_losses)>0:
       print("There are %d d_classifier_weight_regularization_losses"%len(d_classifier_weight_regularization_losses))
-      training_loss += tf.add_n(d_classifier_weight_regularization_losses) * d_classifier_weight_regularization_losses_scale
+      reported_loss_1 = tf.add_n(d_classifier_weight_regularization_losses) * d_classifier_weight_regularization_losses_scale
+      training_loss += reported_loss_1
 
-    
     variables = model.trainable_variables
 
     """ for v in variables:
@@ -7593,7 +7593,7 @@ def finetune_wada_v1(config,
     model_gradient_accumulator(model_gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples
+    return reported_loss, reported_loss_1, num_examples
 
   def _accumulate_classifier_gradients(source, target):
     _, _ = model(
@@ -7695,12 +7695,13 @@ def finetune_wada_v1(config,
   def _train_model_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_loss_1, per_replica_num_examples = strategy.experimental_run_v2(
           _accumulate_model_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)      
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)  
+      classification_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss_1, None)  
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, num_examples
+    return loss, classification_loss, num_examples
   
   @tf.function
   def _model_step():
@@ -7747,8 +7748,9 @@ def finetune_wada_v1(config,
         _number_examples.append(num_examples)
         _classifier_step()
       else:
-        loss, num_examples = next(train_model_data_flow)  
+        loss, classification_loss, num_examples = next(train_model_data_flow)  
         _loss.append(loss)  
+        _d_classfication_loss.append(classification_loss)
         _number_examples.append(num_examples)
         _model_step()
       step = optimizer.iterations.numpy()
@@ -7764,9 +7766,10 @@ def finetune_wada_v1(config,
         else:
           elapsed = time.time() - start
           tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+            "Step = %d ; Learning rate = %f ; Loss = %f; classification_loss = %f, number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.mean(_d_classfication_loss), np.sum(_number_examples), elapsed)
           _loss = []
+          _d_classfication_loss = []
           _number_examples = []
           start = time.time()
 
