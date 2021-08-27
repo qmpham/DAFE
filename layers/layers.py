@@ -1739,7 +1739,7 @@ class Multi_domain_classification_gate_v2(tf.keras.layers.Layer):
   def build(self, input_shape):
     super(Multi_domain_classification_gate_v2, self).build(input_shape)
   
-  def call(self, inputs, domain, mask=None, training=None):  # pylint: disable=arguments-differ
+  def call(self, inputs, domain, mask=None, training=None, tag=""):  # pylint: disable=arguments-differ
     """Runs the layer."""
     shape = shape_list(inputs)
     rank = len(shape)      
@@ -1757,7 +1757,7 @@ class Multi_domain_classification_gate_v2(tf.keras.layers.Layer):
     #tf.print("logits 3: ", logits, summarize=1000)
     #tf.print("%s outputs: "%(self.name_scope()), tf.math.softmax(logits),summarize=1000)
     outputs = tf.math.softmax(logits)
-    #tf.print("probs: ",tf.shape(outputs), outputs[:,domain], summarize=-1)
+    tf.print("%s##probs: "%tag,tf.shape(outputs), outputs[:,domain], summarize=-1)
     #tf.print("prediction loss", tf.nn.softmax_cross_entropy_with_logits(smoothed_labels, logits))
     if training:
       label_smoothing = 0.1

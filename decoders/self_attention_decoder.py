@@ -5461,7 +5461,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     if self.version not in [3,7,9,10,11,12,15,16,17]:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
     if self.version == 17:
-      g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
+      g = self.multi_domain_gate(inputs, domain, mask=mask, training=training, tag="decoder prediction")
       #if internal_node_printing:
       #tf.print("###decoder", self.name_scope(), "gate_mean_abs_pooling: ", g[domain,:,0], "domain: ", domain, "###", sep="|", summarize=-1)
     if self.version==1:
