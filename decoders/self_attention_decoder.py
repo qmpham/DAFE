@@ -5241,7 +5241,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       self.multi_domain_gate = Multi_domain_classification_gate_v2(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
     else:
       self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
-
+    if version==18:
+      self.mask = make_domain_mask(self.num_domains,  num_units=num_units, num_domain_units=num_domain_units)
     
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
@@ -5289,8 +5290,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     if self.version==16:
       for i in range(self.num_layers):
         self.lhuc_embedding.append(self.add_weight("%s_lhuc_%d"%(scope_name,i), shape=[self.num_domains, self.num_units]))
-
-      
+  
   def initialize(self, vocab_size=None, output_layer=None):  
     if output_layer is not None:
       self.output_layer = output_layer
@@ -5299,7 +5299,6 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         raise ValueError("One of vocab_size and output_layer must be set")
       self.output_layer = common.Dense(vocab_size)
     
-
   @property
   def minimum_sources(self):
     return 0
@@ -5386,7 +5385,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs, position=step + 1 if step is not None else None)
     inputs = common.dropout(inputs, self.dropout, training=training)
-
+    
     # Prepare query mask.
     mask = None
     if step is None:
@@ -5427,7 +5426,10 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           cache=cache[i] if cache is not None else None,
           training=training)
       new_cache.append(layer_cache)
-      if self.version not in [3,8,9,10,11,12,15,16,17]:
+      if self.version == 18:
+        mask = tf.nn.embedding_lookup(self.mask, domain)
+        inputs = tf.math.multiply(inputs,mask)
+      if self.version not in [3,8,9,10,11,12,15,16,17,18]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
       if self.version == 17:

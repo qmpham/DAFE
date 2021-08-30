@@ -196,18 +196,18 @@ class LDR_inputter(WordEmbedder):
                 
         if domain==None:
             domain = features["domain"][0]
-            ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
+            #ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
             #ldr_inputs = ldr_inputs #ldr_inputs[:,:,self.num_domain_units * domain : self.num_domain_units * (domain+1)]
-            outputs = tf.concat([outputs, ldr_inputs],-1)
+            #outputs = tf.concat([outputs, ldr_inputs],-1)
             #outputs = tf.reshape(outputs, [tf.shape(outputs)[0], tf.shape(outputs)[1], 512])
             mask = tf.nn.embedding_lookup(self.mask, domain)
         else:
-            ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
+            #ldr_inputs = tf.nn.embedding_lookup(self.ldr_embed, features["ids"])
             #ldr_inputs = ldr_inputs[:,self.num_domain_units * domain : self.num_domain_units * (domain+1)]
-            outputs = tf.concat([outputs, ldr_inputs],-1)
+            #outputs = tf.concat([outputs, ldr_inputs],-1)
             mask = tf.nn.embedding_lookup(self.mask, domain)
             #outputs = tf.reshape(outputs, [-1, 512])
-        
+        outputs = tf.math.multiply(outputs, mask)
         #tf.print("output shape: ", tf.shape(outputs))
         return outputs
     

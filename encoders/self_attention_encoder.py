@@ -1465,6 +1465,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     self.position_encoder = None
     self.num_layers = num_layers
     self.num_domains = num_domains
+    if version==18:
+      self.mask = make_domain_mask(self.num_domains,  num_units=num_units, num_domain_units=num_domain_units)
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
     self.layer_norm = LayerNorm()
@@ -1544,7 +1546,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     domain = domain[0]
     inputs = inputs[0]
     inputs *= self.num_units**0.5
-
+    
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs)
     inputs = common.dropout(inputs, self.dropout, training=training)
@@ -1559,7 +1561,12 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       keeping = self.testing_res_using_rate
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
       inputs = layer(inputs, mask=mask, training=training)
-      if self.version not in [3,8,10,11,9,12,15,16,17]:
+
+      if self.version == 18:
+        mask = tf.nn.embedding_lookup(self.mask, domain)
+        inputs = tf.math.multiply(inputs, mask)
+
+      if self.version not in [3,8,10,11,9,12,15,16,17,18]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
       if self.version == 17:
