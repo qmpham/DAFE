@@ -5427,7 +5427,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           training=training)
       new_cache.append(layer_cache)
       if self.version == 18:
-        domain_mask = tf.nn.embedding_lookup(self.mask, domain)
+        domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
         inputs = tf.math.multiply(inputs, domain_mask)
       if self.version not in [3,8,9,10,11,12,15,16,17,18]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
