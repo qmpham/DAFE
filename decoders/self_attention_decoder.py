@@ -5242,7 +5242,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     else:
       self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
     if version==18:
-      self.mask = make_domain_mask(self.num_domains,  num_units=num_units, num_domain_units=num_domain_units)
+      self.domain_mask = make_domain_mask(self.num_domains,  num_units=num_units, num_domain_units=num_domain_units)
     
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
@@ -5427,8 +5427,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           training=training)
       new_cache.append(layer_cache)
       if self.version == 18:
-        mask = tf.nn.embedding_lookup(self.mask, domain)
-        inputs = tf.math.multiply(inputs,mask)
+        domain_mask = tf.nn.embedding_lookup(self.mask, domain)
+        inputs = tf.math.multiply(inputs, domain_mask)
       if self.version not in [3,8,9,10,11,12,15,16,17,18]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
