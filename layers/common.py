@@ -388,7 +388,7 @@ class LayerWrapper_v1(tf.keras.layers.Layer):
                residual_connection=False,
                **kwargs):
     
-    super(LayerWrapper, self).__init__(**kwargs)
+    super(LayerWrapper_v1, self).__init__(**kwargs)
     self.layer = layer
     self.input_layer_norm = Multi_LayerNorm(domain_numb=domain_numb) if normalize_input else None
     self.output_layer_norm = Multi_LayerNorm(domain_numb=domain_numb) if normalize_output else None
@@ -432,7 +432,7 @@ class LayerWrapper_v1(tf.keras.layers.Layer):
         "output_dropout": self.output_dropout,
         "residual_connection": self.residual_connection
     }
-    base_config = super(LayerWrapper, self).get_config()
+    base_config = super(LayerWrapper_v1, self).get_config()
     return dict(list(base_config.items()) + list(config.items()))
 
   @classmethod
