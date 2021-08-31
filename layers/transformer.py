@@ -750,7 +750,7 @@ class SelfAttentionDecoderLayer_v1(tf.keras.layers.Layer):
                ffn_activation=tf.nn.relu,
                **kwargs):
     
-    super(SelfAttentionDecoderLayer, self).__init__(**kwargs)
+    super(SelfAttentionDecoderLayer_v1, self).__init__(**kwargs)
     self.self_attention = MultiHeadAttention(
         num_heads,
         num_units,
