@@ -1582,7 +1582,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         inputs = tf.math.multiply(inputs, domain_mask)
         
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
-      inputs = layer(inputs, mask=mask, training=training)
+      inputs = layer(inputs, domain, mask=mask, training=training)
 
       if self.version == 18:
         domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
@@ -1664,7 +1664,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     elif self.version ==16:
       outputs = self.layer_norm(inputs)
     elif self.version ==18:
-      outputs = self.layer_norm(inputs)
+      outputs = self.layer_norm(inputs, domain)
     return outputs, None, sequence_length
 
   def adv_call(self, inputs, sequence_length=None, training=None):

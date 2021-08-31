@@ -5438,6 +5438,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
       inputs, layer_cache, attention = layer(
           inputs,
+          domain,
           mask=mask,
           memory=memory,
           memory_mask=memory_mask,
@@ -5521,7 +5522,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     elif self.version ==16:
       outputs = self.layer_norm(inputs)
     elif self.version == 18:
-      outputs = self.layer_norm(inputs)
+      outputs = self.layer_norm(inputs, domain)
     return outputs, new_cache, attention
   
   def _adv_run(self,
