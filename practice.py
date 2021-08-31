@@ -1095,8 +1095,8 @@ def main():
         inner_layer_norm=Multi_LayerNorm))
   elif experiment=="residualv26":
     model = Multi_domain_SequenceToSequence(
-    source_inputter=My_inputter(embedding_size=512),
-    target_inputter=My_inputter(embedding_size=512),
+    source_inputter=My_inputter(embedding_size=config.get("num_units",512)),
+    target_inputter=My_inputter(embedding_size=config.get("num_units",512)),
     num_domains=num_domains,
     num_units=512,
     encoder=Multi_domain_SelfAttentionEncoder_v15(
