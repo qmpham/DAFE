@@ -5217,18 +5217,31 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     self.position_encoder = None
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
-    self.layer_norm = common.LayerNorm()
-    self.layers = [
-        transformer.SelfAttentionDecoderLayer(
-            self.num_units,
-            self.num_heads,
-            ffn_inner_dim,
-            num_sources=num_sources,
-            dropout=dropout,
-            attention_dropout=attention_dropout,
-            ffn_dropout=ffn_dropout,
-            ffn_activation=ffn_activation)
-        for i in range(num_layers)]
+    if version==18:
+      self.layer_norm = common.Multi_LayerNorm()
+
+      self.layers = [
+          transformer.SelfAttentionEncoderLayer_v1(
+              num_units,
+              num_heads,
+              ffn_inner_dim,
+              dropout=dropout,
+              attention_dropout=attention_dropout,
+              ffn_dropout=ffn_dropout,
+              ffn_activation=ffn_activation)
+          for i in range(num_layers)] 
+    else:
+      self.layer_norm = common.LayerNorm()
+      self.layers = [
+          transformer.SelfAttentionEncoderLayer(
+              num_units,
+              num_heads,
+              ffn_inner_dim,
+              dropout=dropout,
+              attention_dropout=attention_dropout,
+              ffn_dropout=ffn_dropout,
+              ffn_activation=ffn_activation)
+          for i in range(num_layers)] 
     print("inner_layer_norm: ", inner_layer_norm)
     print("num_domains: ", num_domains)
     self.multi_domain_layers = [

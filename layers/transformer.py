@@ -249,6 +249,23 @@ class TransformerLayerWrapper(common.LayerWrapper):
     m += self.layer.map_v1_weights(weights)
     return m
 
+class TransformerLayerWrapper_v1(common.LayerWrapper_v1):
+  
+  def __init__(self, layer, output_dropout, **kwargs):
+    
+    super(TransformerLayerWrapper_v1, self).__init__(
+        layer,
+        normalize_input=True,
+        output_dropout=output_dropout,
+        residual_connection=True,
+        **kwargs)
+
+  def map_v1_weights(self, weights):
+    m = []
+    m += self.input_layer_norm.map_v1_weights(weights["LayerNorm"])
+    m += self.layer.map_v1_weights(weights)
+    return m
+
 class SelfAttentionEncoderLayer(tf.keras.layers.Layer):
   """Implements one self-attention encoding layer."""
 
@@ -678,7 +695,43 @@ class Cross_SelfAttentionEncoderLayer(tf.keras.layers.Layer):
     m += self.ffn.map_v1_weights(weights["ffn"])
     return m
 
+class SelfAttentionEncoderLayer_v1(tf.keras.layers.Layer):
+  """Implements one self-attention encoding layer."""
 
+  def __init__(self,
+               num_units,
+               num_heads,
+               ffn_inner_dim,
+               dropout=0.1,
+               attention_dropout=0.1,
+               ffn_dropout=0.1,
+               ffn_activation=tf.nn.relu,
+               **kwargs):
+    
+    super(SelfAttentionEncoderLayer_v1, self).__init__(**kwargs)
+    self.self_attention = MultiHeadAttention(
+        num_heads, num_units, dropout=attention_dropout)
+    self.self_attention = TransformerLayerWrapper_v1(
+        self.self_attention, dropout)
+    self.ffn = FeedForwardNetwork(
+        ffn_inner_dim,
+        num_units,
+        dropout=ffn_dropout,
+        activation=ffn_activation)
+    self.ffn = TransformerLayerWrapper_v1(
+        self.ffn, dropout)
+
+  def call(self, x, domain, mask=None, training=None):  # pylint: disable=arguments-differ
+    """Runs the encoder layer."""
+    y, _ = self.self_attention(x, domain, mask=mask, training=training)
+    y = self.ffn(y, domain, training=training)
+    return y
+
+  def map_v1_weights(self, weights):
+    m = []
+    m += self.self_attention.map_v1_weights(weights["multi_head"])
+    m += self.ffn.map_v1_weights(weights["ffn"])
+    return m
 
 
 
