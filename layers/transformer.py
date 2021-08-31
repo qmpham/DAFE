@@ -755,7 +755,7 @@ class SelfAttentionDecoderLayer_v1(tf.keras.layers.Layer):
         num_heads,
         num_units,
         dropout=attention_dropout)
-    self.self_attention = TransformerLayerWrapper(
+    self.self_attention = TransformerLayerWrapper_v1(
         self.self_attention, dropout, domain_numb = domain_numb)
     self.attention = []
     for _ in range(num_sources):
@@ -764,7 +764,7 @@ class SelfAttentionDecoderLayer_v1(tf.keras.layers.Layer):
           num_units,
           dropout=attention_dropout,
           return_attention=num_sources == 1)
-      attention = TransformerLayerWrapper(
+      attention = TransformerLayerWrapper_v1(
           attention, dropout, domain_numb = domain_numb)
       self.attention.append(attention)
     self.ffn = FeedForwardNetwork(
@@ -772,7 +772,7 @@ class SelfAttentionDecoderLayer_v1(tf.keras.layers.Layer):
         num_units,
         dropout=ffn_dropout,
         activation=ffn_activation)
-    self.ffn = TransformerLayerWrapper(
+    self.ffn = TransformerLayerWrapper_v1(
         self.ffn, dropout, domain_numb = domain_numb)
 
   def map_v1_weights(self, weights):
