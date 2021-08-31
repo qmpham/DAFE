@@ -1471,20 +1471,21 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       self.position_encoder = position_encoder_class()
     
     if version==18:
-      self.layer_norm = Multi_LayerNorm()
+      self.layer_norm = Multi_LayerNorm(num_domains)
 
       self.layers = [
           transformer.SelfAttentionEncoderLayer_v1(
               num_units,
               num_heads,
               ffn_inner_dim,
+              domain_numb = num_domains,
               dropout=dropout,
               attention_dropout=attention_dropout,
               ffn_dropout=ffn_dropout,
               ffn_activation=ffn_activation)
           for i in range(num_layers)] 
     else:
-      self.layer_norm = LayerNorm()
+      self.layer_norm = LayerNorm(num_domains)
       self.layers = [
           transformer.SelfAttentionEncoderLayer(
               num_units,
