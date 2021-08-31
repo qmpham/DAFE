@@ -380,6 +380,7 @@ class LayerWrapper_v1(tf.keras.layers.Layer):
   
   def __init__(self,
                layer,
+               domain_numb = 5,
                normalize_input=False,
                normalize_output=False,
                input_dropout=0,
@@ -389,8 +390,8 @@ class LayerWrapper_v1(tf.keras.layers.Layer):
     
     super(LayerWrapper, self).__init__(**kwargs)
     self.layer = layer
-    self.input_layer_norm = Multi_LayerNorm() if normalize_input else None
-    self.output_layer_norm = Multi_LayerNorm() if normalize_output else None
+    self.input_layer_norm = Multi_LayerNorm(domain_numb=domain_numb) if normalize_input else None
+    self.output_layer_norm = Multi_LayerNorm(domain_numb=domain_numb) if normalize_output else None
     self.input_dropout = input_dropout
     self.output_dropout = output_dropout
     self.residual_connection = residual_connection

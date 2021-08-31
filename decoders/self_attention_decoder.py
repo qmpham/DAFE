@@ -5219,9 +5219,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       self.position_encoder = position_encoder_class()
     if version==18:
       self.layer_norm = common.Multi_LayerNorm()
-
       self.layers = [
-          transformer.SelfAttentionEncoderLayer_v1(
+          transformer.SelfAttentionDecoderLayer_v1(
               num_units,
               num_heads,
               ffn_inner_dim,
@@ -5233,7 +5232,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     else:
       self.layer_norm = common.LayerNorm()
       self.layers = [
-          transformer.SelfAttentionEncoderLayer(
+          transformer.SelfAttentionDecoderLayer(
               num_units,
               num_heads,
               ffn_inner_dim,
