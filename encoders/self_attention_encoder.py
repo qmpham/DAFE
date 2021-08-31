@@ -1559,6 +1559,11 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       keeping = tf.keras.backend.random_binomial([1], self.training_res_using_rate)
     else:
       keeping = self.testing_res_using_rate
+    
+    if self.version == 18:
+        domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
+        inputs = tf.math.multiply(inputs, domain_mask)
+        
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
       inputs = layer(inputs, mask=mask, training=training)
 
