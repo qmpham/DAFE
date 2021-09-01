@@ -5230,6 +5230,20 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
               ffn_dropout=ffn_dropout,
               ffn_activation=ffn_activation)
           for i in range(num_layers)] 
+    elif version==19:
+      self.layer_norm = common.Multi_LayerNorm(num_domains)
+      self.layers = [
+          transformer.SelfAttentionDecoderLayer_v2(
+              num_units,
+              num_heads,
+              ffn_inner_dim,
+              domain_numb = num_domains,
+              num_domain_units = num_domain_units,
+              dropout=dropout,
+              attention_dropout=attention_dropout,
+              ffn_dropout=ffn_dropout,
+              ffn_activation=ffn_activation)
+          for i in range(num_layers)] 
     else:
       self.layer_norm = common.LayerNorm()
       self.layers = [
@@ -5436,7 +5450,9 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         inputs = tf.math.multiply(inputs, domain_mask)
 
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
-      inputs, layer_cache, attention = layer(
+      
+      if self.version == 18:
+        inputs, layer_cache, attention = layer(
           inputs,
           domain,
           mask=mask,
@@ -5444,10 +5460,19 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           memory_mask=memory_mask,
           cache=cache[i] if cache is not None else None,
           training=training)
-      new_cache.append(layer_cache)
-      if self.version == 18:
+        new_cache.append(layer_cache)
         domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
         inputs = tf.math.multiply(inputs, domain_mask)
+      else:
+        inputs, layer_cache, attention = layer(
+          inputs,
+          mask=mask,
+          memory=memory,
+          memory_mask=memory_mask,
+          cache=cache[i] if cache is not None else None,
+          training=training)
+        new_cache.append(layer_cache)
+        
       if self.version not in [3,8,9,10,11,12,15,16,17,18]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)

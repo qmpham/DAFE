@@ -1484,6 +1484,20 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
               ffn_dropout=ffn_dropout,
               ffn_activation=ffn_activation)
           for i in range(num_layers)] 
+    elif version == 19:
+      self.layer_norm = Multi_LayerNorm(num_domains)
+      self.layers = [
+          transformer.SelfAttentionEncoderLayer_v2(
+              num_units,
+              num_heads,
+              ffn_inner_dim,
+              domain_numb = num_domains,
+              num_domain_units = num_domain_units,
+              dropout=dropout,
+              attention_dropout=attention_dropout,
+              ffn_dropout=ffn_dropout,
+              ffn_activation=ffn_activation)
+          for i in range(num_layers)] 
     else:
       self.layer_norm = LayerNorm(num_domains)
       self.layers = [
@@ -1582,11 +1596,13 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         inputs = tf.math.multiply(inputs, domain_mask)
         
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
-      inputs = layer(inputs, domain, mask=mask, training=training)
-
+      
       if self.version == 18:
+        inputs = layer(inputs, domain, mask=mask, training=training)
         domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
         inputs = tf.math.multiply(inputs, domain_mask)
+      else:
+        inputs = layer(inputs, mask=mask, training=training)
 
       if self.version not in [3,8,10,11,9,12,15,16,17,18]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
