@@ -5445,13 +5445,13 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     else:
       keeping = self.testing_res_using_rate
     
-    if self.version == 18:
+    if self.version in [18,19]:
         domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
         inputs = tf.math.multiply(inputs, domain_mask)
 
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
       
-      if self.version == 18:
+      if self.version in [18,19]:
         inputs, layer_cache, attention = layer(
           inputs,
           domain,
