@@ -1465,7 +1465,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     self.position_encoder = None
     self.num_layers = num_layers
     self.num_domains = num_domains
-    if version==18:
+    if version in [18,19]:
       self.domain_mask = make_domain_mask(self.num_domains,  num_units=num_units, num_domain_units=num_domain_units)
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
