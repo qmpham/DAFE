@@ -1681,6 +1681,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       outputs = self.layer_norm(inputs)
     elif self.version ==18:
       outputs = self.layer_norm(inputs, domain)
+    elif self.version ==19:
+      outputs = self.layer_norm(inputs, domain)
     return outputs, None, sequence_length
 
   def adv_call(self, inputs, sequence_length=None, training=None):
