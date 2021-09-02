@@ -1604,7 +1604,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       else:
         inputs = layer(inputs, mask=mask, training=training)
 
-      if self.version not in [3,8,10,11,9,12,15,16,17,18]:
+      if self.version not in [3,8,10,11,9,12,15,16,17,18,19]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
       if self.version == 17:
@@ -1631,11 +1631,11 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         lhuc_vector = tf.nn.embedding_lookup(self.lhuc_embedding[i], domain)
         lhuc_scale = 2 * tf.math.sigmoid(lhuc_vector)
         inputs = tf.math.multiply(inputs, lhuc_scale) + inputs
-    if self.version not in [3,8,9,10,11,12,15,16,17,18]:
+    if self.version not in [3,8,9,10,11,12,15,16,17,18,19]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:
       total_adapt = self.multi_domain_layers[-1](inputs, domain, mask=mask, training=training)
-    if self.version not in [3,7,9,10,11,12,15,16,17,18]:
+    if self.version not in [3,7,9,10,11,12,15,16,17,18,19]:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       if internal_node_printing:
         tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)

@@ -5473,7 +5473,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           training=training)
         new_cache.append(layer_cache)
         
-      if self.version not in [3,8,9,10,11,12,15,16,17,18]:
+      if self.version not in [3,8,9,10,11,12,15,16,17,18,19]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
       if self.version == 17:
@@ -5500,11 +5500,11 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         lhuc_scale = 2 * tf.math.sigmoid(lhuc_vector)
         inputs = tf.math.multiply(inputs, lhuc_scale) + inputs
 
-    if self.version not in [3,8,9,10,11,12,15,16,17,18]:
+    if self.version not in [3,8,9,10,11,12,15,16,17,18,19]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:
       total_adapt = self.multi_domain_layers[-1](inputs, domain, mask=mask, training=training)
-    if self.version not in [3,7,9,10,11,12,15,16,17,18]:
+    if self.version not in [3,7,9,10,11,12,15,16,17,18,19]:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
     if self.version == 17:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training, tag="decoder prediction")
