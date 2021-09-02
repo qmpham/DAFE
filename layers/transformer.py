@@ -854,7 +854,7 @@ class SelfAttentionDecoderLayer_v2(tf.keras.layers.Layer):
     self.self_attention = TransformerLayerWrapper_v1(
         self.self_attention, dropout, domain_numb = domain_numb)
     self.attention = []
-    self.domain_mask = make_domain_mask(num_domains,  num_units=num_units, num_domain_units=num_domain_units)
+    self.domain_mask = make_domain_mask(domain_numb,  num_units=num_units, num_domain_units=num_domain_units)
     for _ in range(num_sources):
       attention = MultiHeadAttention(
           num_heads,
@@ -948,7 +948,7 @@ class SelfAttentionEncoderLayer_v2(tf.keras.layers.Layer):
     self.self_attention = MultiHeadAttention(
         num_heads, num_units, dropout=attention_dropout)
     
-    self.domain_mask = make_domain_mask(num_domains,  num_units=num_units, num_domain_units=num_domain_units)
+    self.domain_mask = make_domain_mask(domain_numb,  num_units=num_units, num_domain_units=num_domain_units)
     self.self_attention = TransformerLayerWrapper_v1(
         self.self_attention, dropout, domain_numb=domain_numb)
     self.ffn = FeedForwardNetwork(
