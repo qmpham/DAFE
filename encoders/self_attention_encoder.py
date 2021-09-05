@@ -1488,8 +1488,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
       self.layer_norm = Multi_LayerNorm(num_domains)
 
       self.layers = [
-          transformer.SelfAttentionEncoderLayer_v1(
-              512,
+          transformer.SelfAttentionEncoderLayer_v3(
+              num_units,
               num_heads,
               ffn_inner_dim,
               domain_numb = num_domains,
