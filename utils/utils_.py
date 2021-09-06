@@ -10,13 +10,23 @@ import os
 import six
 import json
 import utils.misc as misc
-def make_domain_mask(num_domains, num_units, num_domain_units=8, dtype=tf.float32):
-  M = np.zeros((num_domains+1, num_domains * num_domain_units))
-  M_ = np.ones((num_domains+1, num_units - num_domains * num_domain_units))
-  for i in range(num_domains):
-    for j in range(i*num_domain_units, (i+1)*num_domain_units):
-      M[i,j] = 1
-  M = np.concatenate([M_,M],1) 
+
+def make_domain_mask(num_domains, num_units, num_domain_units=8, domain_region_sizes=None, dtype=tf.float32):
+  if not domain_region_sizes:
+    M = np.zeros((num_domains+1, num_domains * num_domain_units))
+    M_ = np.ones((num_domains+1, num_units - num_domains * num_domain_units))
+    for i in range(num_domains):
+      for j in range(i*num_domain_units, (i+1)*num_domain_units):
+        M[i,j] = 1
+    M = np.concatenate([M_,M],1)
+  else:
+    total_domain_units = sum(domain_region_sizes)
+    M = np.zeros((num_domains+1, total_domain_units))
+    M_ = np.ones((num_domains+1, num_units - total_domain_units))
+    for i in range(num_domains):
+      for j in range(sum(domain_region_sizes[:i]),sum(domain_region_sizes[:i+1])):
+        M[i,j] = 1
+    M = np.concatenate([M_,M],1)
   
   return tf.constant(M, dtype=dtype)
 

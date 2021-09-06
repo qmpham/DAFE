@@ -1437,6 +1437,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
                num_layers,
                num_domains=6,
                num_domain_units=128,
+               domain_region_sizes=None,
                ADAP_layer_stopping_gradient=False,
                ADAP_gate_stopping_gradient=False,
                num_units=512,
@@ -1465,8 +1466,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     self.position_encoder = None
     self.num_layers = num_layers
     self.num_domains = num_domains
-    if version in [18,19]:
-      self.domain_mask = make_domain_mask(self.num_domains,  num_units=num_units, num_domain_units=num_domain_units)
+    if version in [18,19,20]:
+      self.domain_mask = make_domain_mask(self.num_domains,  num_units=num_units, num_domain_units=num_domain_units, domain_region_sizes=domain_region_sizes)
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
     
@@ -1498,7 +1499,6 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
               ffn_dropout=ffn_dropout,
               ffn_activation=ffn_activation)
           for i in range(num_layers)] 
-
     elif version == 19:
       self.layer_norm = Multi_LayerNorm(num_domains)
       self.layers = [
