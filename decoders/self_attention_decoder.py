@@ -5467,6 +5467,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
       
       if self.version in [18,19,20]:
+        print(self.version)
         inputs, layer_cache, attention = layer(
           inputs,
           domain,
