@@ -5232,7 +5232,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
               ffn_dropout=ffn_dropout,
               ffn_activation=ffn_activation)
           for i in range(num_layers)] 
-      print(self.layers)
+      
     elif version==20:
       self.layer_norm = common.Multi_LayerNorm(num_domains)
       self.layers = [
@@ -5287,7 +5287,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     
     if version in [18,19,20]:
       self.domain_mask = make_domain_mask(self.num_domains,  num_units=num_units, num_domain_units=num_domain_units, domain_region_sizes=domain_region_sizes)
-    
+      with np.printoptions(threshold=np.inf):
+        print("domain_mask:",self.domain_mask)
     self.ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient
     self.ADAP_gate_stopping_gradient = ADAP_gate_stopping_gradient
     if ADAP_contribution==None:
