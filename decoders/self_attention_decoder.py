@@ -5233,7 +5233,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
               ffn_activation=ffn_activation)
           for i in range(num_layers)] 
       print(self.layers)
-    if version==20:
+    elif version==20:
       self.layer_norm = common.Multi_LayerNorm(num_domains)
       self.layers = [
           transformer.SelfAttentionDecoderLayer_v3(
