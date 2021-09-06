@@ -5282,7 +5282,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
       self.multi_domain_gate = Multi_domain_classification_gate_v2(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
     else:
       self.multi_domain_gate = multi_domain_adapter_gate_class(num_units, num_units, domain_numb=num_domains, name="ADAP_gate")
-    
+    print(self.layers)
     if version in [18,19,20]:
       self.domain_mask = make_domain_mask(self.num_domains,  num_units=num_units, num_domain_units=num_domain_units, domain_region_sizes=domain_region_sizes)
     
