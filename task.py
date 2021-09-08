@@ -12458,7 +12458,7 @@ def train_L2W_v2(config,
                 loss_ += strategy.reduce(tf.distribute.ReduceOp.MEAN, loss_per_device, None)
               print("average loss at theta_t+1 on %s: %f"%(config.get("eval_src")[j], loss_.numpy()/len(dev_batches[j])))
               loss_t_1[j] = loss_.numpy()/len(dev_batches[j])
-            rewards[i] = sum([(l-l1)*importance for l,l1,importance in zip(loss_t, loss_t_1, domain_importances)])
+            rewards[i] = sum([(max(0,l-l1))*importance for l,l1,importance in zip(loss_t, loss_t_1, domain_importances)])
           
           weight_reset(snapshots)
           optimizer.iterations.assign(saved_step)
