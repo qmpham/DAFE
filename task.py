@@ -3928,8 +3928,7 @@ def model_inspect(config,
         labels=target,
         training=False,
         step=optimizer.iterations)
-    
-  
+      
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
     with strategy.scope():
@@ -3945,12 +3944,14 @@ def model_inspect(config,
                         trackables={"model":model},
                         vocab_update=False,
                         model_key="model")
-  checkpoint_manager.save(checkpoint_number=0)
-  """
+  #checkpoint_manager.save(checkpoint_number=0)
+  
   for v in model.trainable_variables:
-    print(v.name)
-    print(v.numpy())
-    print(v.numpy().shape)
+    if "layer_norm" in v.name:
+      print(v.name)
+      print(v.numpy())
+      #print(v.numpy().shape)
+
   """
   checkpoint_path = checkpoint_manager.latest_checkpoint
   for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
@@ -3958,7 +3959,7 @@ def model_inspect(config,
     output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
     score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
     tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
-
+  """
 def src_wemb_pretrain(config,
           optimizer,          
           learning_rate,
