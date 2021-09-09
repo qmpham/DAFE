@@ -3945,11 +3945,11 @@ def model_inspect(config,
                         vocab_update=False,
                         model_key="model")
   #checkpoint_manager.save(checkpoint_number=0)
-  
-  for v in model.trainable_variables:
-    if "layer_norm" in v.name:
-      print(v.name)
-      print(v.numpy())
+  with np.set_printoptions(threshold=np.inf):
+    for v in model.trainable_variables:
+      if "layer_norm" in v.name:
+        print(v.name)
+        print(v.numpy())
       #print(v.numpy().shape)
 
   """
