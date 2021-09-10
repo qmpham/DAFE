@@ -3950,6 +3950,12 @@ def model_inspect(config,
       if "layer_norm" in v.name:
         print(v.name)
         print(v.numpy())
+        matrix = v.numpy()
+        m = v.numpy().shape[0]
+        dist = np.zeros((m,m))
+        for i in range(m):
+          for j in range(m):
+            dist[i,j] = np.sum((matrix[i,:] - matrix[j,:]) * (matrix[i,:] - matrix[j,:]))
       #print(v.numpy().shape)
 
   """
