@@ -5232,6 +5232,20 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
               ffn_dropout=ffn_dropout,
               ffn_activation=ffn_activation)
           for i in range(num_layers)] 
+
+    elif version==21:
+      self.layer_norm = common.Multi_LayerNorm(num_domains)
+      self.layers = [
+          transformer.SelfAttentionDecoderLayer_v1(
+              num_units,
+              num_heads,
+              ffn_inner_dim,
+              domain_numb = num_domains,
+              dropout=dropout,
+              attention_dropout=attention_dropout,
+              ffn_dropout=ffn_dropout,
+              ffn_activation=ffn_activation)
+          for i in range(num_layers)] 
       
     elif version==20:
       self.layer_norm = common.Multi_LayerNorm(num_domains)
@@ -5482,6 +5496,16 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         new_cache.append(layer_cache)
         domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
         inputs = tf.math.multiply(inputs, domain_mask)
+      elif self.version == 21:
+        inputs, layer_cache, attention = layer(
+          inputs,
+          domain,
+          mask=mask,
+          memory=memory,
+          memory_mask=memory_mask,
+          cache=cache[i] if cache is not None else None,
+          training=training)
+        new_cache.append(layer_cache)
       else:
         inputs, layer_cache, attention = layer(
           inputs,
@@ -5492,7 +5516,7 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           training=training)
         new_cache.append(layer_cache)
         
-      if self.version not in [3,8,9,10,11,12,15,16,17,18,19,20]:
+      if self.version not in [3,8,9,10,11,12,15,16,17,18,19,20,21]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
       if self.version == 17:
@@ -5519,11 +5543,11 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
         lhuc_scale = 2 * tf.math.sigmoid(lhuc_vector)
         inputs = tf.math.multiply(inputs, lhuc_scale) + inputs
 
-    if self.version not in [3,8,9,10,11,12,15,16,17,18,19,20]:
+    if self.version not in [3,8,9,10,11,12,15,16,17,18,19,20,21]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:
       total_adapt = self.multi_domain_layers[-1](inputs, domain, mask=mask, training=training)
-    if self.version not in [3,7,9,10,11,12,15,16,17,18,19,20]:
+    if self.version not in [3,7,9,10,11,12,15,16,17,18,19,20,21]:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
     if self.version == 17:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training, tag="decoder prediction")
@@ -5570,6 +5594,8 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
     elif self.version == 19:
       outputs = self.layer_norm(inputs, domain)
     elif self.version == 20:
+      outputs = self.layer_norm(inputs, domain)
+    elif self.version == 21:
       outputs = self.layer_norm(inputs, domain)
 
     return outputs, new_cache, attention

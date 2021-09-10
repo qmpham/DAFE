@@ -1485,6 +1485,20 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
               ffn_dropout=ffn_dropout,
               ffn_activation=ffn_activation)
           for i in range(num_layers)] 
+    elif version==21:
+      self.layer_norm = Multi_LayerNorm(num_domains)
+
+      self.layers = [
+          transformer.SelfAttentionEncoderLayer_v1(
+              num_units,
+              num_heads,
+              ffn_inner_dim,
+              domain_numb = num_domains,
+              dropout=dropout,
+              attention_dropout=attention_dropout,
+              ffn_dropout=ffn_dropout,
+              ffn_activation=ffn_activation)
+          for i in range(num_layers)] 
     elif version == 20:
       self.layer_norm = Multi_LayerNorm(num_domains)
 
@@ -1616,10 +1630,13 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         inputs = layer(inputs, domain, mask=mask, training=training)
         domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
         inputs = tf.math.multiply(inputs, domain_mask)
+      if self.version ==21:
+        inputs = layer(inputs, domain, mask=mask, training=training)
+        
       else:
         inputs = layer(inputs, mask=mask, training=training)
 
-      if self.version not in [3,8,10,11,9,12,15,16,17,18,19,20]:
+      if self.version not in [3,8,10,11,9,12,15,16,17,18,19,20,21]:
         adapt = multi_domain_layer(inputs, domain, mask=mask, training=training)
         total_adapt.append(adapt)
       if self.version == 17:
@@ -1647,11 +1664,11 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         lhuc_scale = 2 * tf.math.sigmoid(lhuc_vector)
         inputs = tf.math.multiply(inputs, lhuc_scale) + inputs
     
-    if self.version not in [3,8,9,10,11,12,15,16,17,18,19,20]:
+    if self.version not in [3,8,9,10,11,12,15,16,17,18,19,20,21]:
       total_adapt = tf.add_n(total_adapt)
     elif self.version in [8,9]:
       total_adapt = self.multi_domain_layers[-1](inputs, domain, mask=mask, training=training)
-    if self.version not in [3,7,9,10,11,12,15,16,17,18,19,20]:
+    if self.version not in [3,7,9,10,11,12,15,16,17,18,19,20,21]:
       g = self.multi_domain_gate(inputs, domain, mask=mask, training=training)
       if internal_node_printing:
         tf.print("###", self.name_scope(), "gate_mean_abs_pooling: ", tf.reduce_mean(g,-1)[0,:], "domain: ", domain, "###", sep="|", summarize=1000)
@@ -1700,6 +1717,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     elif self.version ==19:
       outputs = self.layer_norm(inputs, domain)
     elif self.version ==20:
+      outputs = self.layer_norm(inputs, domain)
+    elif self.version ==21:
       outputs = self.layer_norm(inputs, domain)
     return outputs, None, sequence_length
 
