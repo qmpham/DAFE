@@ -3404,7 +3404,6 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
 
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         [source_inputs, features["domain"], domain_dropout_mask], sequence_length=source_length, training=training)
-
     
     outputs = None
     predictions = None
