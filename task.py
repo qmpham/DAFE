@@ -17258,7 +17258,99 @@ def train_elbo_sparse_layer(config,
       if step > train_steps:
         break
 
+def translate(source_file,
+              reference,
+              model,
+              checkpoint_manager,
+              checkpoint,              
+              domain,
+              output_file,
+              length_penalty,
+              is_noisy=1,
+              checkpoint_path=None,
+              probs_file=None,
+              experiment="ldr",
+              score_type="MultiBLEU",
+              batch_size=5,
+              beam_size=5):
+  
+  # Create the inference dataset.
+  if checkpoint_path == None:
+    checkpoint_path = checkpoint_manager.latest_checkpoint
+  tf.get_logger().info("Evaluating model %s", checkpoint_path)
+  print("In domain %d"%domain)
+  checkpoint.restore(checkpoint_path)
+  dataset = model.examples_inputter.make_inference_dataset(source_file, batch_size, domain, is_noisy=is_noisy)
+  iterator = iter(dataset)
 
+  # Create the mapping for target ids to tokens.
+  ids_to_tokens = model.labels_inputter.ids_to_tokens
+
+  domain_one_logits = tf.nn.embedding_lookup(model.domain_one_logits,domain)
+  domain_zero_logits = tf.nn.embedding_lookup(model.domain_zero_logits,domain)
+  
+  unit_selection_logits = tf.reshape(tf.concat([tf.expand_dims(domain_one_logits,1),tf.expand_dims(domain_zero_logits,-1)],0),[2,-1])
+
+  domain_dropout_mask = tf.cast(tf.reshape(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),1),[model.unit_group_size,1]),[-1]),tf.float32)
+
+  @tf.function
+  def predict_next():    
+    source = next(iterator)
+    source_length = source["length"]
+    batch_size = tf.shape(source_length)[0]
+    source_inputs = model.features_inputter(source)
+    encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"], domain_dropout_mask], source_length, training=False, internal_node_printing=True)
+    
+    # Prepare the decoding strategy.
+    if beam_size > 1:
+      encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
+      source_length = tfa.seq2seq.tile_batch(source_length, beam_size)
+      decoding_strategy = onmt.utils.BeamSearch(beam_size, length_penalty=length_penalty)
+    else:
+      decoding_strategy = onmt.utils.GreedySearch()
+
+    # Run dynamic decoding.
+    decoder_state = model.decoder.initial_state(
+        memory=encoder_outputs,
+        memory_sequence_length=source_length)
+    map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64), domain_dropout_mask]
+    
+    decoded = model.decoder.dynamic_decode(
+        map_input_fn,
+        tf.fill([batch_size], START_OF_SENTENCE_ID),
+        end_id=END_OF_SENTENCE_ID,
+        initial_state=decoder_state,
+        decoding_strategy=decoding_strategy,
+        maximum_iterations=250)
+    target_lengths = decoded.lengths
+    target_tokens = ids_to_tokens.lookup(tf.cast(decoded.ids, tf.int64))
+    return target_tokens, target_lengths
+
+  # Iterates on the dataset.
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  print("output file: ", output_file)
+  with open(output_file, "w") as output_:
+    while True:    
+      try:
+        batch_tokens, batch_length = predict_next()
+        for tokens, length in zip(batch_tokens.numpy(), batch_length.numpy()):
+          sentence = b" ".join(tokens[0][:length[0]])
+          print_bytes(sentence, output_)
+          #print_bytes(sentence)
+      except tf.errors.OutOfRangeError:
+        break
+  if reference!=None:
+    print("score of model %s on test set %s: "%(checkpoint_manager.latest_checkpoint, source_file), scorer(reference, output_file))
+    score = scorer(reference, output_file)
+    if score is None:
+      return 0.0
+    else:
+      return score
 
 
 
