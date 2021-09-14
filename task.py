@@ -17295,7 +17295,7 @@ def translate_sparse_layer(source_file,
   domain_dropout_mask = tf.cast(tf.reshape(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),1),[model.unit_group_size,1]),[-1]),tf.float32)
   tf.print("dropout_mask:",domain_dropout_mask,summarize=-1)
   tf.print("dropout_logits",unit_selection_logits,summarize=-1)
-  tf.print(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),1),[model.unit_group_size,1]))
+  tf.print(tf.math.argmax(unit_selection_logits,1),summarize=-1)
   @tf.function
   def predict_next():    
     source = next(iterator)
