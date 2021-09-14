@@ -17206,7 +17206,7 @@ def train_elbo_sparse_layer(config,
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
   gumbel_temperature_decay = config.get("gumbel_temperature_decay",1000)
-  r = config.get("r_coeff",1e-4)
+  r = config.get("r_coeff",1e-5)
   with _summary_writer.as_default():
     while True:
       #####Training batch
@@ -17225,7 +17225,7 @@ def train_elbo_sparse_layer(config,
         _number_examples = []
         start = time.time()
       if step % gumbel_temperature_decay==0:
-        gumbel_temperature.assign(tf.math.maximum(0.5, tf.math.exp(-r*step)))
+        gumbel_temperature.assign(tf.cast(tf.math.maximum(0.5, tf.math.exp(-r*step)),tf.float32))
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
