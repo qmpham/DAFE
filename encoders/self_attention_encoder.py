@@ -1630,9 +1630,8 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         inputs = layer(inputs, domain, mask=mask, training=training)
         domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
         inputs = tf.math.multiply(inputs, domain_mask)
-      if self.version ==21:
-        inputs = layer(inputs, domain, mask=mask, training=training)
-        
+      elif self.version ==21:
+        inputs = layer(inputs, domain, mask=mask, training=training)        
       else:
         inputs = layer(inputs, mask=mask, training=training)
 
