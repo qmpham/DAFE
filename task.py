@@ -17274,6 +17274,7 @@ def translate_sparse_layer(source_file,
               batch_size=5,
               beam_size=5):
   
+  tfa.options.disable_custom_kernel()
   # Create the inference dataset.
   if checkpoint_path == None:
     checkpoint_path = checkpoint_manager.latest_checkpoint
