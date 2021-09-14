@@ -6660,15 +6660,7 @@ class Multi_domain_SelfAttentionDecoder_sparse(Decoder):
 
     # Run each layer.
     new_cache = []
-    total_adapt = []
-    if self.version==17:
-      from collections import defaultdict
-      total_adapt = defaultdict(list)
-    if training:
-      keeping = tf.keras.backend.random_binomial([1], self.training_res_using_rate)
-    else:
-      keeping = self.testing_res_using_rate
-    
+        
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
       
       inputs, layer_cache, attention = layer(
