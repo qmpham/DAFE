@@ -17258,7 +17258,7 @@ def train_elbo_sparse_layer(config,
       if step > train_steps:
         break
 
-def translate(source_file,
+def translate_sparse_layer(source_file,
               reference,
               model,
               checkpoint_manager,
