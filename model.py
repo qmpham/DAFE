@@ -3362,7 +3362,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     self.domain_one_logits = self.add_weight("domain_one_logits", shape=[self.num_domains, self.num_domain_unit_group])
     self.domain_zero_logits = self.add_weight("domain_zero_logits", shape=[self.num_domains, self.num_domain_unit_group])
 
-  def call(self, features, gumbel_temperature=0.5, labels=None, training=None, step=None, internal_node_printing=False, return_domain_classification_logits=False, return_embedding=False, adapter_activate=True, inference=True):
+  def call(self, features, gumbel_temperature, labels=None, training=None, step=None, internal_node_printing=False, return_domain_classification_logits=False, return_embedding=False, adapter_activate=True, inference=True):
     # Encode the source.
     assert isinstance(self.features_inputter, My_inputter)
     assert isinstance(self.labels_inputter, My_inputter)    
