@@ -17102,7 +17102,7 @@ def train_elbo_sparse_layer(config,
   def _accumulate_gradients(source, target):
     outputs, _, kl_term = model(
         source,
-        gumbel_temperature=gumbel_temperature,
+        gumbel_temperature,
         labels=target,
         training=True,
         step=optimizer.iterations)
