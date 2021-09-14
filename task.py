@@ -17095,8 +17095,10 @@ def train_elbo_sparse_layer(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator() 
-  gumbel_temperature = tf.constant(1.0)
+  gumbel_temperature = tf.Variable(1.0,trainable=False)
   
+  kl_term_coeff = config.get("kl_coeff",3.0)
+
   def _accumulate_gradients(source, target):
     outputs, _, kl_term = model(
         source,
@@ -17203,7 +17205,7 @@ def train_elbo_sparse_layer(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-
+  gumbel_temperature_decay = config.get("gumbel_temperature_decay",10000)
   with _summary_writer.as_default():
     while True:
       #####Training batch
@@ -17221,6 +17223,8 @@ def train_elbo_sparse_layer(config,
         _loss = []
         _number_examples = []
         start = time.time()
+      if step % gumbel_temperature_decay:
+        gumbel_temperature.assign(gumbel_temperature*0.85)
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
