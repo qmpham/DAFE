@@ -2149,11 +2149,9 @@ class Multi_domain_SelfAttentionEncoder_sparse(Encoder):
         
     for i, layer in enumerate(self.layers):
       
-      if self.version in [18,19,20]:
-        inputs = layer(inputs, domain, mask=mask, training=training)
-        inputs = tf.math.multiply(inputs, domain_mask)
-      elif self.version ==21:
-        inputs = layer(inputs, domain, mask=mask, training=training)        
+      inputs = layer(inputs, domain, mask=mask, training=training)
+      inputs = tf.math.multiply(inputs, domain_mask)
+           
       
     outputs = self.layer_norm(inputs, domain)
     return outputs, None, sequence_length

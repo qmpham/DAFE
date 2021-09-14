@@ -6671,9 +6671,7 @@ class Multi_domain_SelfAttentionDecoder_sparse(Decoder):
     
     for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
       
-      if self.version in [18,19,20]:
-        
-        inputs, layer_cache, attention = layer(
+      inputs, layer_cache, attention = layer(
           inputs,
           domain,
           mask=mask,
@@ -6681,21 +6679,12 @@ class Multi_domain_SelfAttentionDecoder_sparse(Decoder):
           memory_mask=memory_mask,
           cache=cache[i] if cache is not None else None,
           training=training)
-        new_cache.append(layer_cache)
+      new_cache.append(layer_cache)
         
-        inputs = tf.math.multiply(inputs, domain_mask)
-      elif self.version == 21:
-        inputs, layer_cache, attention = layer(
-          inputs,
-          domain,
-          mask=mask,
-          memory=memory,
-          memory_mask=memory_mask,
-          cache=cache[i] if cache is not None else None,
-          training=training)
-        new_cache.append(layer_cache)
+      inputs = tf.math.multiply(inputs, domain_mask)
+    
               
-      outputs = self.layer_norm(inputs, domain)
+    outputs = self.layer_norm(inputs, domain)
 
     return outputs, new_cache, attention
   
