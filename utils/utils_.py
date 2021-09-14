@@ -187,6 +187,7 @@ def average_checkpoints(model_dir,
       for path in six.iterkeys(reader.get_variable_to_shape_map()):
         if not path.startswith(model_key) or ".OPTIMIZER_SLOT" in path:
           continue
+        print(path)
         variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
         variable = variable_which(trackables, variable_path)
         value = reader.get_tensor(path)
@@ -211,10 +212,7 @@ def variable_which(structure, path):
       structure = structure.get(key)
     else:
       structure = getattr(structure, key, None)
-    """
-    if structure==None:
-      raise ValueError("Invalid path in structure: %s" % path)
-    """
+    
   if structure:
     name = path.split("/")[-1]  
     if sum([name in v.name for v in structure.trainable_variables]):
