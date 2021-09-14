@@ -17224,7 +17224,7 @@ def train_elbo_sparse_layer(config,
         _number_examples = []
         start = time.time()
       if step % gumbel_temperature_decay==0:
-        gumbel_temperature.assign(gumbel_temperature*0.85)
+        gumbel_temperature.assign(gumbel_temperature*0.9)
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
