@@ -17292,7 +17292,7 @@ def translate_sparse_layer(source_file,
   
   unit_selection_logits = tf.reshape(tf.concat([tf.expand_dims(domain_one_logits,1),tf.expand_dims(domain_zero_logits,-1)],0),[-1,2])
 
-  domain_dropout_mask = tf.cast(tf.reshape(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),1),[model.unit_group_size,1]),[-1]),tf.float32)
+  domain_dropout_mask = tf.cast(tf.reshape(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[model.unit_group_size,1]),[-1]),tf.float32)
   tf.print("dropout_mask:",domain_dropout_mask,summarize=-1)
   tf.print("dropout_logits",unit_selection_logits,summarize=-1)
   tf.print(tf.math.argmax(unit_selection_logits,1),summarize=-1)
