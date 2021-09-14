@@ -17096,6 +17096,7 @@ def train_elbo_sparse_layer(config,
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator() 
   gumbel_temperature = tf.constant(1.0)
+  
   def _accumulate_gradients(source, target):
     outputs, _, kl_term = model(
         source,

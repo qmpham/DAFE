@@ -2108,7 +2108,7 @@ class Multi_domain_SelfAttentionEncoder_sparse(Encoder):
                stop_gradient_version=1,
                **kwargs):
     
-    super(Multi_domain_SelfAttentionEncoder_v15, self).__init__(**kwargs)
+    super(Multi_domain_SelfAttentionEncoder_sparse, self).__init__(**kwargs)
     self.num_units = num_units
     self.dropout = dropout
     self.position_encoder = None

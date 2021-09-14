@@ -3574,7 +3574,6 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
         updated_variables.extend(variables)
       return vars_b
 
-
 def _shift_target_sequence(labels, prefix=""):
   labels_ids = labels["%sids" % prefix]
   bos = tf.constant([constants.START_OF_SENTENCE_ID], dtype=labels_ids.dtype)
