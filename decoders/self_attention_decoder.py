@@ -6628,9 +6628,10 @@ class Multi_domain_SelfAttentionDecoder_sparse(Decoder):
            internal_node_printing=True):
     # Process inputs.
     domain = inputs[1]
-    domain = domain[0]
-    inputs = inputs[0]
     domain_mask = inputs[2]
+    inputs = inputs[0]
+    domain = domain[0]
+    
     inputs *= self.num_units**0.5
     if self.position_encoder is not None:
       inputs = self.position_encoder(inputs, position=step + 1 if step is not None else None)

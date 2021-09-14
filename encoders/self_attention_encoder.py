@@ -2133,10 +2133,10 @@ class Multi_domain_SelfAttentionEncoder_sparse(Encoder):
         for i in range(num_layers)]     
     
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False, adapter_activate=True):
-    domain = inputs[1]
-    domain = domain[0]
-    inputs = inputs[0]
+    domain = inputs[1]    
     domain_mask = inputs[2]
+    inputs = inputs[0]
+    domain = domain[0]
 
     inputs *= self.num_units**0.5
     
