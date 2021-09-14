@@ -6661,7 +6661,7 @@ class Multi_domain_SelfAttentionDecoder_sparse(Decoder):
     # Run each layer.
     new_cache = []
         
-    for i, (layer, multi_domain_layer) in enumerate(zip(self.layers,self.multi_domain_layers)):
+    for i, layer in enumerate(self.layers):
       
       inputs, layer_cache, attention = layer(
           inputs,
