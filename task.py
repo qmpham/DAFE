@@ -17097,7 +17097,7 @@ def train_elbo_sparse_layer(config,
     gradient_accumulator = optimizer_util.GradientAccumulator() 
   gumbel_temperature = tf.Variable(1.0,trainable=False)
   
-  kl_term_coeff = config.get("kl_coeff",3.0)
+  kl_term_coeff = config.get("kl_coeff",1.0)
 
   def _accumulate_gradients(source, target):
     outputs, _, kl_term = model(
@@ -17121,7 +17121,7 @@ def train_elbo_sparse_layer(config,
     variables = model.trainable_variables
     print("var numb: ", len(variables))
     
-    gradients = optimizer.get_gradients(training_loss + kl_term, variables)
+    gradients = optimizer.get_gradients(training_loss + kl_term_coeff * kl_term, variables)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
