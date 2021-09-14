@@ -3378,7 +3378,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     #domain_dropout_mask = 
     import tensorflow_probability as tfp
     tfd = tfp.distributions
-    gumbel_dist = tfd.gumbel(loc=0.,scale=1.)
+    gumbel_dist = tfd.Gumbel(loc=0.,scale=1.)
     gumbel_one = gumbel_dist.sample([self.num_domain_unit_group])
     gumbel_zero = gumbel_dist.sample([self.num_domain_unit_group])
 
