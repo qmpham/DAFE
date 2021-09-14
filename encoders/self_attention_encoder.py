@@ -2079,7 +2079,92 @@ class Multi_domain_SelfAttentionEncoder_v18(Encoder):
       m += layer.map_v1_weights(weights["layer_%d" % i])
     return m
 
+class Multi_domain_SelfAttentionEncoder_sparse(Encoder):
+  
+  def __init__(self,
+               num_layers,
+               num_domains=6,
+               num_domain_units=128,
+               domain_region_sizes=None,
+               ADAP_layer_stopping_gradient=False,
+               ADAP_gate_stopping_gradient=False,
+               num_units=512,
+               num_heads=8,
+               ffn_inner_dim=2048,
+               dropout=0.1,
+               training_res_using_rate=0.0,
+               testing_res_using_rate=0.0,
+               attention_dropout=0.1,
+               ffn_dropout=0.1,
+               ffn_activation=tf.nn.relu,
+               position_encoder_class=SinusoidalPositionEncoder,
+               multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+               multi_domain_adapter_gate_class=Multi_domain_classification_gate,
+               ADAP_contribution=None,
+               fake_domain_prob=0.1,
+               noisy_prob=None,
+               version=1,
+               inner_layer_norm=None,
+               stop_gradient_version=1,
+               **kwargs):
+    
+    super(Multi_domain_SelfAttentionEncoder_v15, self).__init__(**kwargs)
+    self.num_units = num_units
+    self.dropout = dropout
+    self.position_encoder = None
+    self.num_layers = num_layers
+    self.num_domains = num_domains
 
+    if position_encoder_class is not None:
+      self.position_encoder = position_encoder_class()
+        
+    self.layer_norm = Multi_LayerNorm(num_domains)
+
+    self.layers = [
+        transformer.SelfAttentionEncoderLayer_v1(
+            num_units,
+            num_heads,
+            ffn_inner_dim,
+            domain_numb = num_domains,
+            dropout=dropout,
+            attention_dropout=attention_dropout,
+            ffn_dropout=ffn_dropout,
+            ffn_activation=ffn_activation)
+        for i in range(num_layers)]     
+    
+  def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False, adapter_activate=True):
+    domain = inputs[1]
+    domain = domain[0]
+    inputs = inputs[0]
+    domain_mask = inputs[2]
+
+    inputs *= self.num_units**0.5
+    
+    if self.position_encoder is not None:
+      inputs = self.position_encoder(inputs)
+    inputs = common.dropout(inputs, self.dropout, training=training)
+    mask = self.build_mask(inputs, sequence_length=sequence_length)
+    
+    inputs = tf.math.multiply(inputs, domain_mask)
+        
+    for i, layer in enumerate(self.layers):
+      
+      if self.version in [18,19,20]:
+        inputs = layer(inputs, domain, mask=mask, training=training)
+        inputs = tf.math.multiply(inputs, domain_mask)
+      elif self.version ==21:
+        inputs = layer(inputs, domain, mask=mask, training=training)        
+      
+    outputs = self.layer_norm(inputs, domain)
+    return outputs, None, sequence_length
+
+  
+  def map_v1_weights(self, weights):
+    m = []
+    m += self.layer_norm.map_v1_weights(weights["LayerNorm"])
+    for i, layer in enumerate(self.layers):
+      m += layer.map_v1_weights(weights["layer_%d" % i])
+    return m
 
 
 

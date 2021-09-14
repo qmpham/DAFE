@@ -3966,6 +3966,7 @@ def model_inspect(config,
     score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
     tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
   """
+
 def src_wemb_pretrain(config,
           optimizer,          
           learning_rate,

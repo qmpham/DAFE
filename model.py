@@ -3320,6 +3320,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     self.share_embeddings = share_embeddings
     self.num_domains = num_domains
     self.num_domain_unit_group=num_domain_unit_group
+    self.unit_group_size = int(num_units / num_domain_unit_group)
 
   def auto_config(self, num_replicas=1):
     config = super(Multi_domain_SequenceToSequence_sparse, self).auto_config(num_replicas=num_replicas)
@@ -3362,7 +3363,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     self.domain_zero_logits = self.add_weight("domain_zero_logits", shape=[self.num_domains, self.num_domain_unit_group])
 
 
-  def call(self, features, labels=None, training=None, step=None, internal_node_printing=False, return_domain_classification_logits=False, return_embedding=False, adapter_activate=True, inference=True):
+  def call(self, features, gumbel_temperature=1.0, labels=None, training=None, step=None, internal_node_printing=False, return_domain_classification_logits=False, return_embedding=False, adapter_activate=True, inference=True):
     # Encode the source.
     assert isinstance(self.features_inputter, My_inputter)
     assert isinstance(self.labels_inputter, My_inputter)    
@@ -3372,10 +3373,36 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     domain = features["domain"][0]
     domain_one_logits = tf.nn.embedding_lookup(self.domain_one_logits,domain)
     domain_zero_logits = tf.nn.embedding_lookup(self.domain_zero_logits,domain)
+    
+    unit_selection_logits = tf.reshape(tf.concat([tf.expand_dims(domain_one_logits,1),tf.expand_dims(domain_zero_logits,-1)],0),[2,-1])
 
     #domain_dropout_mask = 
+    import tensorflow_probability as tfp
+    tfd = tfp.distributions
+    gumbel_dist = tfd.gumbel(loc=0.,scale=1.)
+    gumbel_one = gumbel_dist.sample([self.num_domain_unit_group])
+    gumbel_zero = gumbel_dist.sample([self.num_domain_unit_group])
+
+    domain_one_logits += gumbel_one
+    domain_zero_logits += gumbel_zero
+
+    prob_one = tf.math.exp(domain_one_logits/gumbel_temperature)
+    prob_zero = tf.math.exp(domain_zero_logits/gumbel_temperature)
+    
+    total_prob = prob_one + prob_zero
+
+    prob_one = prob_one/total_prob
+    prob_zero = prob_zero/total_prob
+
+    KL_term = None
+    if training:
+      KL_term = tf.reduce_sum(0.8 * prob_one + 0.2 * prob_zero)
+    
+    if training:
+      domain_dropout_mask = tf.reshape(tf.tile(tf.expand_dims(prob_one,1),[self.unit_group_size,1]),[-1])
+
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
-        [source_inputs, domain_dropout_mask], sequence_length=source_length, training=training)
+        [source_inputs, features["domain"], domain_dropout_mask], sequence_length=source_length, training=training)
 
     
     outputs = None
@@ -3389,24 +3416,27 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
           encoder_outputs,
           encoder_state,
           encoder_sequence_length,
+          domain_dropout_mask,
           step=step,
           training=training)
 
     # When not in training, also compute the model predictions.
-    if not training and inference:
+    if not training:
       predictions = self._dynamic_decode(
           features,
           encoder_outputs,
           encoder_state,
-          encoder_sequence_length)
+          encoder_sequence_length,
+          domain_dropout_mask)
     
-    return outputs, predictions
+    return outputs, predictions, KL_term
   
   def _decode_target(self,
                      labels,
                      encoder_outputs,
                      encoder_state,
                      encoder_sequence_length,
+                     domain_dropout_mask,
                      step=None,
                      training=None,
                      internal_node_printing=False):
@@ -3427,7 +3457,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
         memory_sequence_length=encoder_sequence_length,
         initial_state=encoder_state)
     logits, _, attention = self.decoder(
-        [target_inputs, labels["domain"]],
+        [target_inputs, labels["domain"], domain_dropout_mask],
         self.labels_inputter.get_length(labels),
         state=initial_state,
         input_fn=input_fn,
@@ -3437,7 +3467,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
 
     return outputs
   
-  def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length):
+  def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length, domain_dropout_mask):
     params = self.params
     batch_size = tf.shape(tf.nest.flatten(encoder_outputs)[0])[0]
     start_ids = tf.fill([batch_size], constants.START_OF_SENTENCE_ID)
@@ -3456,7 +3486,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
         memory_sequence_length=encoder_sequence_length,
         initial_state=encoder_state)
     sampled_ids, sampled_length, log_probs, alignment, _ = self.decoder.dynamic_decode(
-        lambda ids: [self.labels_inputter({"ids": ids}), features["domain"]],
+        lambda ids: [self.labels_inputter({"ids": ids}), features["domain"], domain_dropout_mask],
         start_ids,
         initial_state=initial_state,
         decoding_strategy=decoding.DecodingStrategy.from_params(params),
