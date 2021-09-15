@@ -187,6 +187,7 @@ def average_checkpoints(model_dir,
       for path in six.iterkeys(reader.get_variable_to_shape_map()):
         if not path.startswith(model_key) or ".OPTIMIZER_SLOT" in path:
           continue
+        print("checking....",path)
         if "features_inputter/multi_domain__sequence_to_sequence_sparse.Smy_inputter.S_embedding" in path:
           print("correcting path...")
           path.replace("features_inputter/multi_domain__sequence_to_sequence_sparse.Smy_inputter.S_embedding","features_inputter/multi_domain__sequence_to_sequence_sparse/my_inputter/_embedding")
