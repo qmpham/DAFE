@@ -1146,6 +1146,8 @@ def main():
     num_units=config.get("num_units",512),
     dropout_rate=config.get("dropout_rate",0.5),
     num_domain_unit_group=config.get("num_domain_unit_group",16),
+    unit_group_size=config.get("unit_group_size",12),
+    num_shared_units=config.get("num_shared_units",480),
     encoder=Multi_domain_SelfAttentionEncoder_sparse(
         num_layers=6,
         num_domains=num_domains,

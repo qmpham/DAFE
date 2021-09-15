@@ -3295,7 +3295,9 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
                decoder,
                num_domains=6,
                dropout_rate=0.2,
-               num_domain_unit_group=16,
+               num_domain_unit_group=12,
+               unit_group_size=16,
+               num_shared_units=480,
                num_units=512,
                share_embeddings=EmbeddingsSharingLevel.NONE):
 
@@ -3321,8 +3323,9 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     self.share_embeddings = share_embeddings
     self.num_domains = num_domains
     self.num_domain_unit_group=num_domain_unit_group
-    self.unit_group_size = int(num_units / num_domain_unit_group)
+    self.unit_group_size = unit_group_size
     self.dropout_rate = dropout_rate
+    self.num_units = num_units
   def auto_config(self, num_replicas=1):
     config = super(Multi_domain_SequenceToSequence_sparse, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
@@ -3408,11 +3411,11 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
       KL_term = tf.reduce_sum((1-dropout_rate) * tf.math.log(prob_one) + dropout_rate * tf.math.log(prob_zero))
     
     if training:
-      domain_dropout_mask = tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(prob_one,0),[self.unit_group_size,1])),[-1]),tf.float32)
+      domain_dropout_mask = tf.concat([tf.ones(self.num_units - self.num_domain_unit_group * self.unit_group_size),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(prob_one,0),[self.unit_group_size,1])),[-1]),tf.float32)],-1)
       #tf.print("domain_dropout_mask",domain_dropout_mask,summarize=-1)
       #tf.print("gumbel_temperature",gumbel_temperature,summarize=-1)
     else:
-      domain_dropout_mask = tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[self.unit_group_size,1])),[-1]),tf.float32)
+      domain_dropout_mask = tf.concat([tf.ones(self.num_units - self.num_domain_unit_group * self.unit_group_size),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[self.unit_group_size,1])),[-1]),tf.float32)],-1)
 
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         [source_inputs, features["domain"], domain_dropout_mask], sequence_length=source_length, training=training)
