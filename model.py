@@ -3322,7 +3322,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     self.num_domains = num_domains
     self.num_domain_unit_group=num_domain_unit_group
     self.unit_group_size = int(num_units / num_domain_unit_group)
-
+    self.dropout_rate = dropout_rate
   def auto_config(self, num_replicas=1):
     config = super(Multi_domain_SequenceToSequence_sparse, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
@@ -3397,6 +3397,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     prob_zero = prob_zero/total_prob
 
     KL_term = None
+    dropout_rate = self.dropout_rate
     if training:
       KL_term = tf.reduce_sum((1-dropout_rate) * prob_one + dropout_rate * prob_zero)
     
