@@ -3390,17 +3390,17 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
 
     prob_one = tf.math.exp(domain_one_logits/gumbel_temperature)
     prob_zero = tf.math.exp(domain_zero_logits/gumbel_temperature)
-    tf.print("prob_one",prob_one)
-    tf.print("prob_zero",prob_zero)
+    tf.print("prob_one",prob_one,summarize=-1)
+    tf.print("prob_zero",prob_zero,summarize=-1)
     total_prob = prob_one + prob_zero
     
-    tf.print("total_prob",total_prob)
+    tf.print("total_prob",total_prob,summarize=-1)
 
     prob_one = prob_one/total_prob
     prob_zero = prob_zero/total_prob
 
-    tf.print("prob_one_f",prob_one)
-    tf.print("prob_zero_f",prob_zero)
+    tf.print("prob_one_f",prob_one,summarize=-1)
+    tf.print("prob_zero_f",prob_zero,summarize=-1)
 
     KL_term = None
     dropout_rate = self.dropout_rate
