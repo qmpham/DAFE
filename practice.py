@@ -15,7 +15,7 @@ from opennmt import END_OF_SENTENCE_ID
 from opennmt.utils.misc import print_bytes
 from opennmt.data import dataset as dataset_util
 from opennmt.optimizers import utils as optimizer_util
-from utils.utils_ import average_checkpoints
+from utils.utils_ import average_checkpoints, average_checkpoints_tf2_3
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter, ProbInputter, ProbInputter_v1
 from opennmt.models.sequence_to_sequence import SequenceToSequence
