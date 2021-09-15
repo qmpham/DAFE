@@ -3379,7 +3379,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     domain_one_logits = tf.nn.embedding_lookup(self.domain_one_logits,domain)
     domain_zero_logits = tf.nn.embedding_lookup(self.domain_zero_logits,domain)
     
-    unit_selection_logits = tf.transpose(tf.concat([tf.expand_dims(domain_one_logits,0),tf.expand_dims(domain_zero_logits,0)],0))
+    unit_selection_logits = tf.transpose(tf.concat([tf.expand_dims(domain_zero_logits,0),tf.expand_dims(domain_one_logits,0)],0))
     #tf.print("domain_one_logits",domain_one_logits,summarize=-1)
     #tf.print("domain_zero_logits",domain_zero_logits,summarize=-1)
     #tf.print("unit_selection_logits",unit_selection_logits,summarize=-1)
