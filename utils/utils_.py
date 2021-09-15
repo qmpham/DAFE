@@ -221,7 +221,7 @@ def variable_which(structure, path):
       structure = structure.get(key)
     else:
       structure = getattr(structure, key, None)
-    
+  print(structure)
   if structure:
     name = path.split("/")[-1]  
     if sum([name in v.name for v in structure.trainable_variables]):
