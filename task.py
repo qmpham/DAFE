@@ -17212,6 +17212,9 @@ def train_elbo_sparse_layer(config,
   print("min_temperature",min_temperature)
   print("gumbel_temperature_decay",gumbel_temperature_decay)
   print("r_coeff",r)
+  step = optimizer.iterations.numpy()
+  gumbel_temperature.assign(tf.cast(tf.math.maximum(min_temperature, tf.math.exp(-r*step)),tf.float32))
+  print("gumbel_temperature: ",gumbel_temperature)
   with _summary_writer.as_default():
     while True:
       #####Training batch
@@ -17231,6 +17234,7 @@ def train_elbo_sparse_layer(config,
         start = time.time()
       if step % gumbel_temperature_decay==0:
         gumbel_temperature.assign(tf.cast(tf.math.maximum(min_temperature, tf.math.exp(-r*step)),tf.float32))
+        print("gumbel_temperature: ",gumbel_temperature)
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
@@ -17296,7 +17300,7 @@ def translate_sparse_layer(source_file,
   
   unit_selection_logits = tf.reshape(tf.concat([tf.expand_dims(domain_one_logits,1),tf.expand_dims(domain_zero_logits,-1)],0),[-1,2])
 
-  domain_dropout_mask = tf.concat([tf.ones(self.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[model.unit_group_size,1])),[-1]),tf.float32)],-1)
+  domain_dropout_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[model.unit_group_size,1])),[-1]),tf.float32)],-1)
   tf.print("dropout_mask:",domain_dropout_mask,summarize=-1)
   tf.print("dropout_logits",unit_selection_logits,summarize=-1)
   tf.print(tf.math.argmax(unit_selection_logits,1),summarize=-1)
