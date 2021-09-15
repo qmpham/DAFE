@@ -190,14 +190,14 @@ def average_checkpoints(model_dir,
 
         value = reader.get_tensor(path)
         print("variable:___", path, value)
-        """ print(path)
+        
         if "features_inputter" in path:
           print("correcting path...",path)
           variable_path = "model/examples_inputter/features_inputter/multi_domain__sequence_to_sequence_sparse/my_inputter/_embedding"
         else:
-          variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "") """
+          variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "") 
         
-        variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
+        #variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
         variable = variable_which(trackables, variable_path)
         
         #tf.print("variable:___", variable.name, tf.shape(value), variable_path, sep="|")
