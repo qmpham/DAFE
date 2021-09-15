@@ -220,10 +220,10 @@ def variable_which(structure, path):
         raise ValueError("Expected a list index, got %s instead" % key)
     elif isinstance(structure, dict):
       print(structure)
+      print(key)
       structure = structure.get(key)
     else:
       structure = getattr(structure, key, None)
-  print(structure)
   if structure:
     name = path.split("/")[-1]  
     if sum([name in v.name for v in structure.trainable_variables]):
