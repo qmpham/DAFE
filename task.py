@@ -17298,7 +17298,7 @@ def translate_sparse_layer(source_file,
   domain_one_logits = tf.nn.embedding_lookup(model.domain_one_logits,domain)
   domain_zero_logits = tf.nn.embedding_lookup(model.domain_zero_logits,domain)
   
-  unit_selection_logits = tf.reshape(tf.concat([tf.expand_dims(domain_one_logits,1),tf.expand_dims(domain_zero_logits,-1)],0),[-1,2])
+  unit_selection_logits = tf.reshape(tf.concat([tf.expand_dims(domain_zero_logits,1),tf.expand_dims(domain_one_logits,-1)],0),[-1,2])
 
   domain_dropout_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[model.unit_group_size,1])),[-1]),tf.float32)],-1)
   tf.print("dropout_mask:",domain_dropout_mask,summarize=-1)
