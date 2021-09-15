@@ -200,8 +200,6 @@ def average_checkpoints(model_dir,
 
 def variable_which(structure, path):
   """Follows :obj:`path` in a nested structure of objects, lists, and dicts."""
-  #print(path)
-  
   for key in path.split("/")[:-1]:
     if isinstance(structure, list):
       try:
@@ -210,8 +208,6 @@ def variable_which(structure, path):
       except ValueError:
         raise ValueError("Expected a list index, got %s instead" % key)
     elif isinstance(structure, dict):
-      #print(structure)
-      #print(key)
       structure = structure.get(key)
     else:
       structure = getattr(structure, key, None)
