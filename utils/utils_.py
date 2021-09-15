@@ -187,15 +187,11 @@ def average_checkpoints(model_dir,
       for path in six.iterkeys(reader.get_variable_to_shape_map()):
         if not path.startswith(model_key) or ".OPTIMIZER_SLOT" in path:
           continue
-        """ print(path)
-        if "features_inputter" in path:
-          print("correcting path...",path)
-          variable_path = "model/examples_inputter/features_inputter/multi_domain__sequence_to_sequence_sparse/my_inputter/_embedding"
-        else:
-          variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "") """
+        
+        value = reader.get_tensor(path)
         variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
         variable = variable_which(trackables, variable_path)
-        value = reader.get_tensor(path)
+        
         #tf.print("variable:___", variable.name, tf.shape(value), variable_path, sep="|")
         variable.assign_add(value / num_checkpoints)
 
