@@ -1588,7 +1588,7 @@ def main():
     translate_config_file = args.src
     with open(translate_config_file, "r") as stream:
       translate_config = yaml.load(stream)
-    new_checkpoint_manager = average_checkpoints(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+    new_checkpoint_manager = average_checkpoints_tf2_3(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
                         max_count=translate_config.get("max_count",3),
                         model_key="model")
     for src_file, domain in zip(translate_config["src"], translate_config["domain"]):      

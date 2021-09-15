@@ -189,17 +189,8 @@ def average_checkpoints(model_dir,
           continue
 
         value = reader.get_tensor(path)
-        print("variable:___", path, value)
-        
-        if "features_inputter" in path:
-          print("correcting path...",path)
-          variable_path = "model/examples_inputter/features_inputter/multi_domain__sequence_to_sequence_sparse/my_inputter/_embedding"
-        else:
-          variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "") 
-        
-        #variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
+        variable_path = path.replace("/.ATTRIBUTES/VARIABLE_VALUE", "")
         variable = variable_which(trackables, variable_path)
-        
         #tf.print("variable:___", variable.name, tf.shape(value), variable_path, sep="|")
         variable.assign_add(value / num_checkpoints)
 
@@ -209,7 +200,7 @@ def average_checkpoints(model_dir,
 
 def variable_which(structure, path):
   """Follows :obj:`path` in a nested structure of objects, lists, and dicts."""
-  print(path)
+  #print(path)
   
   for key in path.split("/")[:-1]:
     if isinstance(structure, list):
@@ -219,8 +210,8 @@ def variable_which(structure, path):
       except ValueError:
         raise ValueError("Expected a list index, got %s instead" % key)
     elif isinstance(structure, dict):
-      print(structure)
-      print(key)
+      #print(structure)
+      #print(key)
       structure = structure.get(key)
     else:
       structure = getattr(structure, key, None)
