@@ -189,7 +189,7 @@ def average_checkpoints(model_dir,
           continue
 
         value = reader.get_tensor(path)
-        print("variable:___", variable.name, value.numpy(), tf.shape(value), sep="|")
+        print("variable:___", variable.name, value, tf.shape(value), sep="|")
         """ print(path)
         if "features_inputter" in path:
           print("correcting path...",path)
