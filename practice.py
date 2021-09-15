@@ -1144,6 +1144,7 @@ def main():
     target_inputter=My_inputter(embedding_size=config.get("num_units",512)),
     num_domains=num_domains,
     num_units=config.get("num_units",512),
+    dropout_rate=config.get("dropout_rate",0.5),
     num_domain_unit_group=config.get("num_domain_unit_group",16),
     encoder=Multi_domain_SelfAttentionEncoder_sparse(
         num_layers=6,

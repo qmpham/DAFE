@@ -3294,6 +3294,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
                encoder,
                decoder,
                num_domains=6,
+               dropout_rate=0.2,
                num_domain_unit_group=16,
                num_units=512,
                share_embeddings=EmbeddingsSharingLevel.NONE):
@@ -3397,7 +3398,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
 
     KL_term = None
     if training:
-      KL_term = tf.reduce_sum(0.5 * prob_one + 0.5 * prob_zero)
+      KL_term = tf.reduce_sum((1-dropout_rate) * prob_one + dropout_rate * prob_zero)
     
     if training:
       domain_dropout_mask = tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(prob_one,0),[self.unit_group_size,1])),[-1]),tf.float32)
