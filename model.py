@@ -3405,7 +3405,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     KL_term = None
     dropout_rate = self.dropout_rate
     if training:
-      KL_term = tf.reduce_sum((1-dropout_rate) * prob_one + dropout_rate * prob_zero)
+      KL_term = tf.reduce_sum((1-dropout_rate) * tf.math.log(prob_one) + dropout_rate * tf.math.log(prob_zero))
     
     if training:
       domain_dropout_mask = tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(prob_one,0),[self.unit_group_size,1])),[-1]),tf.float32)
