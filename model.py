@@ -3374,7 +3374,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     domain_zero_logits = tf.nn.embedding_lookup(self.domain_zero_logits,domain)
     
     unit_selection_logits = tf.reshape(tf.concat([tf.expand_dims(domain_one_logits,1),tf.expand_dims(domain_zero_logits,-1)],0),[-1,2])
-
+    tf.print("unit_selection_logits",unit_selection_logits)
     #domain_dropout_mask = 
     import tensorflow_probability as tfp
     tfd = tfp.distributions
