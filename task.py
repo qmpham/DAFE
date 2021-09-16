@@ -17312,11 +17312,9 @@ def translate_sparse_layer(source_file,
   gumbel_one = gumbel_dist.sample([model.num_domain_unit_group])
   gumbel_zero = gumbel_dist.sample([model.num_domain_unit_group])
 
-  domain_one_logits += gumbel_one
-  domain_zero_logits += gumbel_zero
   print("gumbel_temperature",gumbel_temperature)
-  prob_one = tf.math.exp(domain_one_logits/gumbel_temperature)
-  prob_zero = tf.math.exp(domain_zero_logits/gumbel_temperature)
+  prob_one = tf.math.exp((domain_one_logits + gumbel_one)/gumbel_temperature)
+  prob_zero = tf.math.exp((domain_zero_logits + gumbel_zero)/gumbel_temperature)
   #tf.print("prob_one",prob_one,summarize=-1)
   #tf.print("prob_zero",prob_zero,summarize=-1)
   total_prob = prob_one + prob_zero
@@ -17327,7 +17325,8 @@ def translate_sparse_layer(source_file,
   prob_zero = prob_zero/total_prob
 
   domain_dropout_mask_ = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(prob_one,0),[model.unit_group_size,1])),[-1]),tf.float32)],-1)
-  tf.print("domain_one_logits",domain_one_logits)
+  tf.print("domain_one_logits",domain_one_logits,domain_one_logits + gumbel_one,summarize=-1)
+  tf.print("domain_zero_logits",domain_zero_logits,domain_zero_logits + gumbel_zero,summarize=-1)
   tf.print("domain_dropout_mask_",domain_dropout_mask_,summarize=-1)
   domain_dropout_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[model.unit_group_size,1])),[-1]),tf.float32)],-1)
   tf.print("dropout_mask:",domain_dropout_mask,summarize=-1)
