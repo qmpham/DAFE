@@ -16483,7 +16483,7 @@ def priming_train(config,
         break
       tf.summary.flush()
       if step > train_steps:
-        brea
+        break
 
 def priming_train_chasing(config,
           optimizer,          
