@@ -17125,7 +17125,7 @@ def train_elbo_sparse_layer(config,
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, num_examples, _domain
+    return reported_loss, kl_term, num_examples, _domain
      
   def _apply_gradients():
     variables = model.trainable_variables
@@ -17149,13 +17149,14 @@ def train_elbo_sparse_layer(config,
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_num_examples, per_replica_domain = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_kl_loss, per_replica_num_examples, per_replica_domain = strategy.experimental_run_v2(
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+      kl_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_kl_loss, None)
       _domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)      
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, _domain, num_examples
+    return loss, kl_loss, _domain, num_examples
   
   @tf.function
   def _step():
@@ -17175,11 +17176,12 @@ def train_elbo_sparse_layer(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  _, _, _ = next(train_data_flow)
+  _, _, _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
   _loss = []  
+  _kl_loss = []
   _number_examples = []
   step = optimizer.iterations.numpy()
   if config.get("reset_step",None):
@@ -17218,8 +17220,9 @@ def train_elbo_sparse_layer(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss, _domain, num_examples = next(train_data_flow)    
+      loss, kl_loss, _domain, num_examples = next(train_data_flow)    
       _loss.append(loss.numpy())
+      _kl_loss.append(kl_loss.numpy())
       _number_examples.append(num_examples.numpy())
       _step()  
       step = optimizer.iterations.numpy()
@@ -17227,9 +17230,10 @@ def train_elbo_sparse_layer(config,
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; number_examples = %d, after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.sum(_number_examples), elapsed)
+            "Step = %d ; Learning rate = %f ; Loss = %f; KL_loss = %f, number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.mean(_kl_loss), np.sum(_number_examples), elapsed)
         _loss = []
+        _kl_loss = []
         _number_examples = []
         start = time.time()
       if step % gumbel_temperature_decay==0:
@@ -17275,6 +17279,7 @@ def translate_sparse_layer(source_file,
               output_file,
               length_penalty,
               is_noisy=1,
+              gumbel_temperature = 0.2,
               checkpoint_path=None,
               probs_file=None,
               experiment="ldr",
@@ -17300,6 +17305,29 @@ def translate_sparse_layer(source_file,
   
   unit_selection_logits = tf.reshape(tf.concat([tf.expand_dims(domain_zero_logits,1),tf.expand_dims(domain_one_logits,-1)],0),[-1,2])
 
+
+  import tensorflow_probability as tfp
+  tfd = tfp.distributions
+  gumbel_dist = tfd.Gumbel(loc=0.,scale=1.)
+  gumbel_one = gumbel_dist.sample([model.num_domain_unit_group])
+  gumbel_zero = gumbel_dist.sample([model.num_domain_unit_group])
+
+  domain_one_logits += gumbel_one
+  domain_zero_logits += gumbel_zero
+  print("gumbel_temperature",gumbel_temperature)
+  prob_one = tf.math.exp(domain_one_logits/gumbel_temperature)
+  prob_zero = tf.math.exp(domain_zero_logits/gumbel_temperature)
+  #tf.print("prob_one",prob_one,summarize=-1)
+  #tf.print("prob_zero",prob_zero,summarize=-1)
+  total_prob = prob_one + prob_zero
+  
+  #tf.print("total_prob",total_prob,summarize=-1)
+
+  prob_one = prob_one/total_prob
+  prob_zero = prob_zero/total_prob
+
+  domain_dropout_mask_ = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(prob_one,0),[model.unit_group_size,1])),[-1]),tf.float32)],-1)
+  tf.print("domain_dropout_mask_",domain_dropout_mask_)
   domain_dropout_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[model.unit_group_size,1])),[-1]),tf.float32)],-1)
   tf.print("dropout_mask:",domain_dropout_mask,summarize=-1)
   tf.print("dropout_logits",unit_selection_logits,summarize=-1)
