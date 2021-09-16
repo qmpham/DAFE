@@ -16483,7 +16483,7 @@ def priming_train(config,
         break
       tf.summary.flush()
       if step > train_steps:
-        break
+        brea
 
 def priming_train_chasing(config,
           optimizer,          
@@ -17230,15 +17230,15 @@ def train_elbo_sparse_layer(config,
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; KL_loss = %f, number_examples = %d, after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.mean(_kl_loss), np.sum(_number_examples), elapsed)
+            "Step = %d ; Learning rate = %f ; Loss = %f; KL_loss = %f, gumbel_temperature = %f, number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.mean(_kl_loss), gumbel_temperature, np.sum(_number_examples), elapsed)
         _loss = []
         _kl_loss = []
         _number_examples = []
         start = time.time()
       if step % gumbel_temperature_decay==0:
         gumbel_temperature.assign(tf.cast(tf.math.maximum(min_temperature, tf.math.exp(-r*step)),tf.float32))
-        print("gumbel_temperature: ",gumbel_temperature)
+        #print("gumbel_temperature: ",gumbel_temperature)
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
