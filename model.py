@@ -3390,6 +3390,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     tfd = tfp.distributions
     gumbel_dist = tfd.Gumbel(loc=0.,scale=1.)
     if self.version == 1:
+      print("version: ",self.version)
       gumbel_one = gumbel_dist.sample([self.num_domain_unit_group])
       gumbel_zero = gumbel_dist.sample([self.num_domain_unit_group])
 
@@ -3424,6 +3425,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
         domain_dropout_mask = tf.concat([tf.ones(self.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[self.unit_group_size,1])),[-1]),tf.float32)],-1)
 
     elif self.version == 2:
+      print("version: ",self.version)
       gumbel_one = gumbel_dist.sample([tf.shape(source_inputs)[0],1,self.num_domain_unit_group])
       gumbel_zero = gumbel_dist.sample([tf.shape(source_inputs)[0],1,self.num_domain_unit_group])
 
