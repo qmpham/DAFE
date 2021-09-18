@@ -3293,6 +3293,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
                target_inputter,
                encoder,
                decoder,
+               version=1,
                num_domains=6,
                dropout_rate=0.2,
                num_domain_unit_group=12,
@@ -3328,6 +3329,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     self.num_units = num_units
     self.num_shared_units = num_shared_units
     assert num_shared_units + unit_group_size * num_domain_unit_group == num_units
+    self.version = version
   def auto_config(self, num_replicas=1):
     config = super(Multi_domain_SequenceToSequence_sparse, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
@@ -3387,38 +3389,68 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
     import tensorflow_probability as tfp
     tfd = tfp.distributions
     gumbel_dist = tfd.Gumbel(loc=0.,scale=1.)
-    gumbel_one = gumbel_dist.sample([self.num_domain_unit_group])
-    gumbel_zero = gumbel_dist.sample([self.num_domain_unit_group])
+    if self.version == 1:
+      gumbel_one = gumbel_dist.sample([self.num_domain_unit_group])
+      gumbel_zero = gumbel_dist.sample([self.num_domain_unit_group])
 
-    domain_one_logits += gumbel_one
-    domain_zero_logits += gumbel_zero
+      domain_one_logits += gumbel_one
+      domain_zero_logits += gumbel_zero
 
-    prob_one = tf.math.exp(domain_one_logits/gumbel_temperature)
-    prob_zero = tf.math.exp(domain_zero_logits/gumbel_temperature)
-    #tf.print("prob_one",prob_one,summarize=-1)
-    #tf.print("prob_zero",prob_zero,summarize=-1)
-    total_prob = prob_one + prob_zero
-    
-    #tf.print("total_prob",total_prob,summarize=-1)
+      prob_one = tf.math.exp(domain_one_logits/gumbel_temperature)
+      prob_zero = tf.math.exp(domain_zero_logits/gumbel_temperature)
+      #tf.print("prob_one",prob_one,summarize=-1)
+      #tf.print("prob_zero",prob_zero,summarize=-1)
+      total_prob = prob_one + prob_zero
+      
+      #tf.print("total_prob",total_prob,summarize=-1)
 
-    prob_one = prob_one/total_prob
-    prob_zero = prob_zero/total_prob
+      prob_one = prob_one/total_prob
+      prob_zero = prob_zero/total_prob
 
-    #tf.print("prob_one_f",prob_one,summarize=-1)
-    #tf.print("prob_zero_f",prob_zero,summarize=-1)
+      #tf.print("prob_one_f",prob_one,summarize=-1)
+      #tf.print("prob_zero_f",prob_zero,summarize=-1)
 
-    KL_term = None
-    dropout_rate = self.dropout_rate
-    print("dropout_rate",dropout_rate)
-    if training:
-      KL_term = - tf.reduce_sum((1-dropout_rate) * tf.math.log(prob_one) + dropout_rate * tf.math.log(prob_zero))
-    
-    if training:
-      domain_dropout_mask = tf.concat([tf.ones(self.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(prob_one,0),[self.unit_group_size,1])),[-1]),tf.float32)],-1)
-      #tf.print("domain_dropout_mask",domain_dropout_mask,summarize=-1)
-      #tf.print("gumbel_temperature",gumbel_temperature,summarize=-1)
-    else:
-      domain_dropout_mask = tf.concat([tf.ones(self.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[self.unit_group_size,1])),[-1]),tf.float32)],-1)
+      KL_term = None
+      dropout_rate = self.dropout_rate
+      print("dropout_rate",dropout_rate)
+      if training:
+        KL_term = - tf.reduce_sum((1-dropout_rate) * tf.math.log(prob_one) + dropout_rate * tf.math.log(prob_zero))
+      
+      if training:
+        domain_dropout_mask = tf.concat([tf.ones(self.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(prob_one,0),[self.unit_group_size,1])),[-1]),tf.float32)],-1)
+        #tf.print("domain_dropout_mask",domain_dropout_mask,summarize=-1)
+        #tf.print("gumbel_temperature",gumbel_temperature,summarize=-1)
+      else:
+        domain_dropout_mask = tf.concat([tf.ones(self.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[self.unit_group_size,1])),[-1]),tf.float32)],-1)
+
+    elif self.version == 2:
+      gumbel_one = gumbel_dist.sample([tf.shape(source_inputs)[0],1,self.num_domain_unit_group])
+      gumbel_zero = gumbel_dist.sample([tf.shape(source_inputs)[0],1,self.num_domain_unit_group])
+
+      domain_one_logits = tf.tile(tf.expand_dims(domain_one_logits,0,1),[tf.shape(source_inputs)[0],1,1])
+      tf.print(domain_one_logits,summarize=-1)
+      domain_zero_logits = tf.tile(tf.expand_dims(domain_zero_logits,0,1),[tf.shape(source_inputs)[0],1,1])
+      tf.print(domain_one_logits,summarize=-1)
+
+      prob_one = tf.math.exp(domain_one_logits/gumbel_temperature)
+      prob_zero = tf.math.exp(domain_zero_logits/gumbel_temperature)
+
+      total_prob = prob_one + prob_zero
+      
+      prob_one = prob_one/total_prob
+      prob_zero = prob_zero/total_prob
+
+      KL_term = None
+      dropout_rate = self.dropout_rate
+      print("dropout_rate",dropout_rate)
+      if training:
+        KL_term = - tf.reduce_sum(tf.reduce_mean((1-dropout_rate) * tf.math.log(prob_one) + dropout_rate * tf.math.log(prob_zero),0))
+      
+      if training:
+        domain_dropout_mask = tf.concat([tf.ones([tf.shape(source_inputs)[0],1,self.num_shared_units]), tf.repeat(prob_one,self.unit_group_size,-1)],-1)
+      else:
+        domain_dropout_mask = tf.concat([tf.ones(self.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[self.unit_group_size,1])),[-1]),tf.float32)],-1)
+
 
     encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
         [source_inputs, features["domain"], domain_dropout_mask], sequence_length=source_length, training=training)
