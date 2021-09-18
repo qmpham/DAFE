@@ -3394,11 +3394,8 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
       gumbel_one = gumbel_dist.sample([self.num_domain_unit_group])
       gumbel_zero = gumbel_dist.sample([self.num_domain_unit_group])
 
-      domain_one_logits += gumbel_one
-      domain_zero_logits += gumbel_zero
-
-      prob_one = tf.math.exp(domain_one_logits/gumbel_temperature)
-      prob_zero = tf.math.exp(domain_zero_logits/gumbel_temperature)
+      prob_one = tf.math.exp((domain_one_logits+gumbel_one)/gumbel_temperature)
+      prob_zero = tf.math.exp((domain_zero_logits+gumbel_zero)/gumbel_temperature)
       #tf.print("prob_one",prob_one,summarize=-1)
       #tf.print("prob_zero",prob_zero,summarize=-1)
       total_prob = prob_one + prob_zero
@@ -3434,8 +3431,8 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
       domain_zero_logits = tf.tile(tf.expand_dims(tf.expand_dims(domain_zero_logits,0),0),[tf.shape(source_inputs)[0],1,1])
       #tf.print(domain_one_logits,summarize=-1)
 
-      prob_one = tf.math.exp(domain_one_logits/gumbel_temperature)
-      prob_zero = tf.math.exp(domain_zero_logits/gumbel_temperature)
+      prob_one = tf.math.exp((domain_one_logits+gumbel_one)/gumbel_temperature)
+      prob_zero = tf.math.exp((domain_zero_logits+gumbel_zero)/gumbel_temperature)
 
       total_prob = prob_one + prob_zero
       
