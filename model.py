@@ -3448,6 +3448,8 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
       
       if training:
         domain_dropout_mask = tf.concat([tf.ones([tf.shape(source_inputs)[0],1,self.num_shared_units]), tf.repeat(prob_one,self.unit_group_size,-1)],-1)
+        tf.print("domain_dropout_mask",domain_dropout_mask,summarize=-1)
+        tf.print("gumbel_temperature",gumbel_temperature,summarize=-1)
       else:
         domain_dropout_mask = tf.concat([tf.ones(self.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(tf.math.argmax(unit_selection_logits,1),0),[self.unit_group_size,1])),[-1]),tf.float32)],-1)
 
