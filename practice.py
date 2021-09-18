@@ -1148,7 +1148,7 @@ def main():
     num_domain_unit_group=config.get("num_domain_unit_group",16),
     unit_group_size=config.get("unit_group_size",12),
     num_shared_units=config.get("num_shared_units",480),
-    version = config.get("version",1)
+    version = config.get("version",1),
     encoder=Multi_domain_SelfAttentionEncoder_sparse(
         num_layers=6,
         num_domains=num_domains,
