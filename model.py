@@ -3427,7 +3427,7 @@ class Multi_domain_SequenceToSequence_sparse(model.SequenceGenerator):
       gumbel_one = gumbel_dist.sample([tf.shape(source_inputs)[0],1,self.num_domain_unit_group])
       gumbel_zero = gumbel_dist.sample([tf.shape(source_inputs)[0],1,self.num_domain_unit_group])
 
-      domain_one_logits = tf.tile(tf.expand_dims(domain_one_logits,0,1),[tf.shape(source_inputs)[0],1,1])
+      domain_one_logits = tf.tile(tf.expand_dims(tf.expand_dims(domain_one_logits,0),0),[tf.shape(source_inputs)[0],1,1])
       tf.print(domain_one_logits,summarize=-1)
       domain_zero_logits = tf.tile(tf.expand_dims(domain_zero_logits,0,1),[tf.shape(source_inputs)[0],1,1])
       tf.print(domain_one_logits,summarize=-1)
