@@ -6547,7 +6547,6 @@ class Multi_domain_SelfAttentionDecoder_sparse(Decoder):
             num_units,
             num_heads,
             ffn_inner_dim,
-            domain_numb = num_domains,
             dropout=dropout,
             attention_dropout=attention_dropout,
             ffn_dropout=ffn_dropout,
