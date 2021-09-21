@@ -1528,7 +1528,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
               ffn_activation=ffn_activation)
           for i in range(num_layers)] 
     else:
-      self.layer_norm = LayerNorm(num_domains)
+      self.layer_norm = LayerNorm()
       self.layers = [
           transformer.SelfAttentionEncoderLayer(
               num_units,
@@ -2114,13 +2114,13 @@ class Multi_domain_SelfAttentionEncoder_sparse(Encoder):
     self.position_encoder = None
     self.num_layers = num_layers
     self.num_domains = num_domains
-
+    self.version = version
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
-        
-    self.layer_norm = Multi_LayerNorm(num_domains)
 
-    self.layers = [
+    if version ==1:
+      self.layer_norm = Multi_LayerNorm(num_domains)
+      self.layers = [
         transformer.SelfAttentionEncoderLayer_v1(
             num_units,
             num_heads,
@@ -2131,6 +2131,19 @@ class Multi_domain_SelfAttentionEncoder_sparse(Encoder):
             ffn_dropout=ffn_dropout,
             ffn_activation=ffn_activation)
         for i in range(num_layers)]     
+    else:
+      self.layer_norm = LayerNorm()
+      self.layers = [
+        transformer.SelfAttentionEncoderLayer(
+            num_units,
+            num_heads,
+            ffn_inner_dim,
+            domain_numb = num_domains,
+            dropout=dropout,
+            attention_dropout=attention_dropout,
+            ffn_dropout=ffn_dropout,
+            ffn_activation=ffn_activation)
+        for i in range(num_layers)]  
     
   def call(self, inputs, sequence_length=None, training=None, internal_node_printing=False, adapter_activate=True):
     domain = inputs[1]    
@@ -2148,12 +2161,16 @@ class Multi_domain_SelfAttentionEncoder_sparse(Encoder):
     inputs = tf.math.multiply(inputs, domain_mask)
         
     for i, layer in enumerate(self.layers):
-      
-      inputs = layer(inputs, domain, mask=mask, training=training)
+      if self.version ==1:
+        inputs = layer(inputs, domain, mask=mask, training=training)
+      else:
+        inputs = layer(inputs, mask=mask, training=training)
       inputs = tf.math.multiply(inputs, domain_mask)
            
-      
-    outputs = self.layer_norm(inputs, domain)
+    if self.version==1:
+      outputs = self.layer_norm(inputs, domain)
+    else:
+      outputs = self.layer_norm(inputs)
     return outputs, None, sequence_length
 
   

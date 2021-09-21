@@ -6525,10 +6525,24 @@ class Multi_domain_SelfAttentionDecoder_sparse(Decoder):
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
 
-    
-    self.layer_norm = common.Multi_LayerNorm(num_domains)
-    self.layers = [
+    self.version = version
+    if version==1:
+      self.layer_norm = common.Multi_LayerNorm(num_domains)
+      self.layers = [
         transformer.SelfAttentionDecoderLayer_v1(
+            num_units,
+            num_heads,
+            ffn_inner_dim,
+            domain_numb = num_domains,
+            dropout=dropout,
+            attention_dropout=attention_dropout,
+            ffn_dropout=ffn_dropout,
+            ffn_activation=ffn_activation)
+        for i in range(num_layers)] 
+    else:
+      self.layer_norm = common.LayerNorm()
+      self.layers = [
+        transformer.SelfAttentionDecoderLayer(
             num_units,
             num_heads,
             ffn_inner_dim,
@@ -6661,8 +6675,8 @@ class Multi_domain_SelfAttentionDecoder_sparse(Decoder):
     new_cache = []
         
     for i, layer in enumerate(self.layers):
-      
-      inputs, layer_cache, attention = layer(
+      if self.version==1:
+        inputs, layer_cache, attention = layer(
           inputs,
           domain,
           mask=mask,
@@ -6670,12 +6684,23 @@ class Multi_domain_SelfAttentionDecoder_sparse(Decoder):
           memory_mask=memory_mask,
           cache=cache[i] if cache is not None else None,
           training=training)
+      else:
+        inputs, layer_cache, attention = layer(
+          inputs,
+          mask=mask,
+          memory=memory,
+          memory_mask=memory_mask,
+          cache=cache[i] if cache is not None else None,
+          training=training)
+
       new_cache.append(layer_cache)
         
       inputs = tf.math.multiply(inputs, domain_mask)
     
-              
-    outputs = self.layer_norm(inputs, domain)
+    if self.version==1:
+      outputs = self.layer_norm(inputs, domain)
+    else:
+      outputs = self.layer_norm(inputs)
 
     return outputs, new_cache, attention
   
