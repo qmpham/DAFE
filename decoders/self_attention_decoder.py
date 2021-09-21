@@ -6526,6 +6526,7 @@ class Multi_domain_SelfAttentionDecoder_sparse(Decoder):
       self.position_encoder = position_encoder_class()
 
     self.version = version
+    print("decoder_version",version)
     if version==1:
       self.layer_norm = common.Multi_LayerNorm(num_domains)
       self.layers = [

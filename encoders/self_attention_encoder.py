@@ -2117,7 +2117,7 @@ class Multi_domain_SelfAttentionEncoder_sparse(Encoder):
     self.version = version
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
-
+    print("encoder_version",version)
     if version ==1:
       self.layer_norm = Multi_LayerNorm(num_domains)
       self.layers = [
