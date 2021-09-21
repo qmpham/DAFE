@@ -1165,7 +1165,7 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
-        version=config.get("encoder_version"),
+        version=config.get("encoder_version",1),
         inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
         stop_gradient_version=config.get("stop_gradient_version",1)),
     decoder=Multi_domain_SelfAttentionDecoder_sparse(
@@ -1185,7 +1185,7 @@ def main():
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
-        version=config.get("decoder_version"),
+        version=config.get("decoder_version",1),
         stop_gradient_version=config.get("stop_gradient_version",1)))
   
   elif experiment=="residualv28":
