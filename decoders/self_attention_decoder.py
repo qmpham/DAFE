@@ -5234,13 +5234,12 @@ class Multi_domain_SelfAttentionDecoder_v17(Decoder):
           for i in range(num_layers)] 
 
     elif version==21:
-      self.layer_norm = common.Multi_LayerNorm(num_domains)
+      self.layer_norm = common.LayerNorm()
       self.layers = [
-          transformer.SelfAttentionDecoderLayer_v1(
+          transformer.SelfAttentionDecoderLayer(
               num_units,
               num_heads,
               ffn_inner_dim,
-              domain_numb = num_domains,
               dropout=dropout,
               attention_dropout=attention_dropout,
               ffn_dropout=ffn_dropout,

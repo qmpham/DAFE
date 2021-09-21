@@ -1486,14 +1486,12 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
               ffn_activation=ffn_activation)
           for i in range(num_layers)] 
     elif version==21:
-      self.layer_norm = Multi_LayerNorm(num_domains)
-
+      self.layer_norm = LayerNorm()
       self.layers = [
-          transformer.SelfAttentionEncoderLayer_v1(
+          transformer.SelfAttentionEncoderLayer(
               num_units,
               num_heads,
               ffn_inner_dim,
-              domain_numb = num_domains,
               dropout=dropout,
               attention_dropout=attention_dropout,
               ffn_dropout=ffn_dropout,
@@ -1631,7 +1629,9 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
         domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
         inputs = tf.math.multiply(inputs, domain_mask)
       elif self.version ==21:
-        inputs = layer(inputs, domain, mask=mask, training=training)        
+        inputs = layer(inputs, mask=mask, training=training)
+        domain_mask = tf.nn.embedding_lookup(self.domain_mask, domain)
+        inputs = tf.math.multiply(inputs, domain_mask)     
       else:
         inputs = layer(inputs, mask=mask, training=training)
 
@@ -1718,7 +1718,7 @@ class Multi_domain_SelfAttentionEncoder_v15(Encoder):
     elif self.version ==20:
       outputs = self.layer_norm(inputs, domain)
     elif self.version ==21:
-      outputs = self.layer_norm(inputs, domain)
+      outputs = self.layer_norm(inputs)
     return outputs, None, sequence_length
 
   def adv_call(self, inputs, sequence_length=None, training=None):
