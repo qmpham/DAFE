@@ -5517,7 +5517,7 @@ def train_ldr(config,
 
   train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=True,picking_prob=config.get("picking_prob",None))
+                                            multi_domain=True,picking_prob=None)
   generic_dataset = create_trainining_dataset(strategy, model, config["generic_domain"], config["generic_source_file"], config["generic_target_file"], batch_train_size, batch_type, shuffle_buffer_size, 
                                             maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
                                             multi_domain=True,picking_prob=config.get("picking_prob",None))
