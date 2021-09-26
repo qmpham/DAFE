@@ -17500,6 +17500,8 @@ def train_elbo_topK_sparse_layer(config,
     tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group])
     tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) 
     tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1
+    tf.hessians(soft_mask,temp_x)
+    tf.hessians(soft_mask,latent_group_allocation_logit)
     tf.tile(tf.expand_dims(tf.hessians(soft_mask,latent_group_allocation_logit) / tf.hessians(soft_mask,temp_x),0),[model.num_domain_unit_group,1])
     tf.linalg.diag(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs)/temperature+temp_x)))
     gradient_softmask_domain_allocation_logits = 1/temperature * tf.linalg.matmul( tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) * tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1) - tf.tile(tf.expand_dims(tf.hessians(soft_mask,latent_group_allocation_logit) / tf.hessians(soft_mask,temp_x),0),[model.num_domain_unit_group,1]) , tf.linalg.diag(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs)/temperature+temp_x))), transpose_a=True, transpose_b=True)
