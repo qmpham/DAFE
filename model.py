@@ -3780,7 +3780,9 @@ class Multi_domain_SequenceToSequence_TopK_sparse(model.SequenceGenerator):
     # Encode the source.
     assert isinstance(self.features_inputter, My_inputter)
     assert isinstance(self.labels_inputter, My_inputter)    
-    assert domain_dropout_mask != None
+    #assert domain_dropout_mask != None
+    if not domain_dropout_mask:
+      domain_dropout_mask = tf.ones(self.num_units)
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
 
