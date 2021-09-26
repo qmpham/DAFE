@@ -3724,7 +3724,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse(model.SequenceGenerator):
         source_inputter,
         target_inputter,
         share_parameters=EmbeddingsSharingLevel.share_input_embeddings(share_embeddings))
-    super(Multi_domain_SequenceToSequence_sparse, self).__init__(examples_inputter)
+    super(Multi_domain_SequenceToSequence_TopK_sparse, self).__init__(examples_inputter)
     self.encoder = encoder
     self.decoder = decoder
     self.share_embeddings = share_embeddings
@@ -3738,7 +3738,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse(model.SequenceGenerator):
     self.version = version
   
   def auto_config(self, num_replicas=1):
-    config = super(Multi_domain_SequenceToSequence_sparse, self).auto_config(num_replicas=num_replicas)
+    config = super(Multi_domain_SequenceToSequence_TopK_sparse, self).auto_config(num_replicas=num_replicas)
     return merge_dict(config, {
         "params": {
             "beam_width": 5
@@ -3754,7 +3754,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse(model.SequenceGenerator):
     })
 
   def initialize(self, data_config, params=None):
-    super(Multi_domain_SequenceToSequence_sparse, self).initialize(data_config, params=params)
+    super(Multi_domain_SequenceToSequence_TopK_sparse, self).initialize(data_config, params=params)
     if self.params.get("contrastive_learning"):
       noiser = noise.WordNoiser(
           noises=[noise.WordOmission(1)],
@@ -3763,7 +3763,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse(model.SequenceGenerator):
       self.labels_inputter.set_noise(noiser, in_place=False)
 
   def build(self, input_shape):
-    super(Multi_domain_SequenceToSequence_sparse, self).build(input_shape)
+    super(Multi_domain_SequenceToSequence_TopK_sparse, self).build(input_shape)
     output_layer = None
     if EmbeddingsSharingLevel.share_target_embeddings(self.share_embeddings):
       output_layer = layers.Dense(
