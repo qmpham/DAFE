@@ -17463,7 +17463,7 @@ def train_elbo_topK_sparse_layer(config,
     
     temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=50, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
     #soft_mask = model.soft_mask
-    soft_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(temp_x,0),[model.unit_group_size,1])),[-1]),tf.float32)],-1))
+    soft_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(temp_x,0),[model.unit_group_size,1])),[-1]),tf.float32)],-1)
     
     kl_term = - tf.reduce_sum(tf.math.log(domain_allocation_logits))
 
