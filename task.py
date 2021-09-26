@@ -17449,18 +17449,19 @@ def train_elbo_topK_sparse_layer(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator() 
-  gumbel_temperature = tf.Variable(1.0,trainable=False)
+  temperature = tf.Variable(1.0,trainable=False)
   
   kl_term_coeff = config.get("kl_coeff",1.0)
   delta = 7
   K = config.get("domain_group_allocation_num",int(0.3 * config.get("num_domain_unit_group")))
+
   def _accumulate_gradients(source, target):
     domain = source["domain"][0]
     gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
     domain_allocation_probs = tf.math.softmax(tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain))
-    f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_probs)/gumbel_temperature+x)) - K
+    f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+x)/temperature)) - K
     temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=50, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
-    soft_mask = tf.math.sigmoid((gumbel_sample+domain_allocation_probs)/gumbel_temperature+temp_x)
+    soft_mask = tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature)
     #soft_mask = model.soft_mask
     tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs)
     soft_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask,model.unit_group_size,-1),tf.float32)],-1)
@@ -17496,7 +17497,7 @@ def train_elbo_topK_sparse_layer(config,
     
     gradients = optimizer.get_gradients(training_loss, model_variables)
     gradient_soft_mask = optimizer.get_gradients(training_loss,[soft_mask])
-    #gradient_tempx_domain_allocation_logits = 
+    gradient_softmask_domain_allocation_logits = 1/temperature * tf.linalg.matmul( tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) * tf.linalg(-tf.ones(model.num_domain_unit_group)) + 1) - tf.tile(tf.expand_dims(tf.hessians(soft_mask,latent_group_allocation_logit) / tf.hessians(soft_mask,temp_x),0),[model.num_domain_unit_group,1]) , tf.linalg.diag(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs)/temperature+temp_x))), transpose_a=True, transpose_b=True)
     tf.print("gradient_soft_mask",gradient_soft_mask[0])
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
@@ -17581,16 +17582,16 @@ def train_elbo_topK_sparse_layer(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-  gumbel_temperature_decay = config.get("gumbel_temperature_decay",1000)
+  temperature_decay = config.get("temperature_decay",1000)
   r = config.get("r_coeff",1e-4)
   min_temperature = config.get("min_temperature",0.5)
   print("dropout_rate",config.get("dropout_rate"))
   print("min_temperature",min_temperature)
-  print("gumbel_temperature_decay",gumbel_temperature_decay)
+  print("temperature_decay",temperature_decay)
   print("r_coeff",r)
   step = optimizer.iterations.numpy()
-  gumbel_temperature.assign(tf.cast(tf.math.maximum(min_temperature, tf.math.exp(-r*step)),tf.float32))
-  print("gumbel_temperature: ",gumbel_temperature)
+  temperature.assign(tf.cast(tf.math.maximum(min_temperature, tf.math.exp(-r*step)),tf.float32))
+  print("temperature: ",temperature)
   with _summary_writer.as_default():
     while True:
       #####Training batch
@@ -17604,14 +17605,14 @@ def train_elbo_topK_sparse_layer(config,
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; KL_loss = %f, gumbel_temperature = %f, number_examples = %d, after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.mean(_kl_loss), gumbel_temperature, np.sum(_number_examples), elapsed)
+            "Step = %d ; Learning rate = %f ; Loss = %f; KL_loss = %f, temperature = %f, number_examples = %d, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.mean(_kl_loss), temperature, np.sum(_number_examples), elapsed)
         _loss = []
         _kl_loss = []
         _number_examples = []
         start = time.time()
-      if step % gumbel_temperature_decay==0:
-        gumbel_temperature.assign(tf.cast(tf.math.maximum(min_temperature, tf.math.exp(-r*step)),tf.float32))
+      if step % temperature_decay==0:
+        temperature.assign(tf.cast(tf.math.maximum(min_temperature, tf.math.exp(-r*step)),tf.float32))
         #print("gumbel_temperature: ",gumbel_temperature)
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
