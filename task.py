@@ -17495,7 +17495,7 @@ def train_elbo_topK_sparse_layer(config,
         model_variables.append(v)
     print("var numb: ", len(variables))
     
-    gradients = optimizer.get_gradients(training_loss, model_variables)
+    gradients = optimizer.get_gradients(training_loss, variables)
     gradient_soft_mask = optimizer.get_gradients(training_loss,[soft_mask])
     tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group])
     tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) 
