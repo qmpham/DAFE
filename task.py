@@ -17469,7 +17469,7 @@ def train_elbo_topK_sparse_layer(config,
 
     outputs, _ = model(
         source,
-        soft_mask=soft_mask,
+        domain_dropout_mask=soft_mask,
         labels=target,
         training=True,
         step=optimizer.iterations)
