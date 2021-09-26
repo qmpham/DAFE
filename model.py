@@ -3762,6 +3762,34 @@ class Multi_domain_SequenceToSequence_TopK_sparse(model.SequenceGenerator):
           is_spacer=self.params.get("decoding_subword_token_is_spacer"))
       self.labels_inputter.set_noise(noiser, in_place=False)
 
+  def create_variables(self, optimizer=None):
+    """Creates the model variables by running it once.
+
+    Args:
+      optimizer: If set, also create the optimizer variables.
+    """
+    if self.built:
+      return
+
+    # Create input features from the input signatures. We remove the leading
+    # batch dimension as sometimes assumed by make_features methods and set
+    # unspecified dimensions to 1.
+    features = tf.nest.map_structure(
+        lambda spec: tf.fill(
+            [dim or 1 for dim in spec.shape.as_list()[1:]],
+            tf.constant("" if spec.dtype is tf.string else 1, dtype=spec.dtype)),
+        self.examples_inputter.input_signature())
+    features = self.examples_inputter.make_features(features=features)
+
+    # Add the batch dimension back before calling the model.
+    features, labels = tf.nest.map_structure(lambda x: tf.expand_dims(x, 0), features)
+    _ = self(features, domain_dropout_mask=tf.ones(self.num_units), labels=labels, training=True, step=0)
+
+    if optimizer is not None:
+      _ = optimizer.iterations
+      optimizer._create_hypers()  # pylint: disable=protected-access
+      optimizer._create_slots(self.trainable_variables)  # pylint: disable=protected-access
+
   def build(self, input_shape):
     super(Multi_domain_SequenceToSequence_TopK_sparse, self).build(input_shape)
     output_layer = None
@@ -3781,9 +3809,8 @@ class Multi_domain_SequenceToSequence_TopK_sparse(model.SequenceGenerator):
     # Encode the source.
     assert isinstance(self.features_inputter, My_inputter)
     assert isinstance(self.labels_inputter, My_inputter)    
-    #assert domain_dropout_mask != None
-    if not domain_dropout_mask:
-      domain_dropout_mask = tf.ones(self.num_units)
+    assert domain_dropout_mask != None
+    
     source_length = self.features_inputter.get_length(features)
     source_inputs = self.features_inputter(features, training=training)
 
