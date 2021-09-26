@@ -17460,10 +17460,10 @@ def train_elbo_topK_sparse_layer(config,
     domain_allocation_logits = tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain)
     f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_logits)/gumbel_temperature+x)) - K
     #temp_x = scipy.optimize.bisect(f,-max(abs(gumbel_sample.eval()+domain_allocation_logits.eval()))/gumbel_temperature,max(abs(gumbel_sample.eval()+domain_allocation_logits.eval()))/gumbel_temperature.eval())
-    
     temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=50, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
+    soft_mask = tf.math.sigmoid((gumbel_sample+domain_allocation_logits)/gumbel_temperature+temp_x)
     #soft_mask = model.soft_mask
-    soft_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(temp_x,0),[model.unit_group_size,1])),[-1]),tf.float32)],-1)
+    soft_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask,model.unit_group_size,-1),tf.float32)],-1)
     
     kl_term = - tf.reduce_sum(tf.math.log(domain_allocation_logits))
 
