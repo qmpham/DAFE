@@ -17458,7 +17458,7 @@ def train_elbo_topK_sparse_layer(config,
     domain = source["domain"][0]
     gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
     domain_allocation_logits = tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain)
-    f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample.eval()+domain_allocation_logits.eval())/gumbel_temperature.eval()+x)) - K
+    f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_logits)/gumbel_temperature+x)) - K
     #temp_x = scipy.optimize.bisect(f,-max(abs(gumbel_sample.eval()+domain_allocation_logits.eval()))/gumbel_temperature,max(abs(gumbel_sample.eval()+domain_allocation_logits.eval()))/gumbel_temperature.eval())
     
     temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=50, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
