@@ -17502,7 +17502,7 @@ def train_elbo_topK_sparse_layer(config,
     tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1
     tf.hessians(soft_mask,temp_x)
     optimizer.get_gradients(training_loss,[model.latent_group_allocation_logit])
-    optimizer.get_gradients(domain_allocation_probs,[model.latent_group_allocation_logit])
+    tf.print("probs/latent",optimizer.get_gradients(domain_allocation_probs,[model.latent_group_allocation_logit]),summarize=-1)
     tf.print("softmask/latent", optimizer.get_gradients(soft_mask_,[model.latent_group_allocation_logit]),summarize=-1)
     #tf.tile(tf.expand_dims(tf.hessians(soft_mask,latent_group_allocation_logit) / tf.hessians(soft_mask,temp_x),0),[model.num_domain_unit_group,1])
     #tf.linalg.diag(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs)/temperature+temp_x)))
