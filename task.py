@@ -15,7 +15,7 @@ from opennmt import END_OF_SENTENCE_ID
 from opennmt.utils.misc import print_bytes
 from opennmt.data import dataset as dataset_util
 from utils import dataprocess
-if tf.__version__ in ['2.3.0','2.6.0']:
+if tf.__version__ in ['2.3.0','2.6.0','2.5.0']:
   from optimizer import utils_23 as optimizer_util
 else:
   from optimizer import utils as optimizer_util
