@@ -3775,6 +3775,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse(model.SequenceGenerator):
         output_layer=output_layer)
 
     self.latent_group_allocation_logit = self.add_weight("latent_group_allocation_logit", shape=[self.num_domains, self.num_domain_unit_group])
+    self.soft_mask = tf.ones(self.num_units)
 
   def call(self, features, domain_dropout_mask=None, labels=None, training=None, step=None, internal_node_printing=False, return_domain_classification_logits=False, return_embedding=False, adapter_activate=True, inference=True):
     # Encode the source.
