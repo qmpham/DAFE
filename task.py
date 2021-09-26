@@ -17489,7 +17489,7 @@ def train_elbo_topK_sparse_layer(config,
     print("var numb: ", len(variables))
     
     gradients = optimizer.get_gradients(training_loss, variables)
-    gradient_soft_mask = optimizer.get_gradients(training_loss(,[soft_mask])
+    gradient_soft_mask = optimizer.get_gradients(training_loss,[soft_mask])
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
