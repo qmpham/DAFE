@@ -17485,13 +17485,18 @@ def train_elbo_topK_sparse_layer(config,
       _domain = 0
 
     variables = model.trainable_variables
+    model_variables = []
+    latent_group_allocation_logit = None
     for v in variables:
       if "latent_group_allocation_logit" in v.name:
-        print(v.name)
+        latent_group_allocation_logit = v
+      else:
+        model_variables.append(v)
     print("var numb: ", len(variables))
     
-    gradients = optimizer.get_gradients(training_loss, variables)
+    gradients = optimizer.get_gradients(training_loss, model_variables)
     gradient_soft_mask = optimizer.get_gradients(training_loss,[soft_mask])
+    tf.printg("gradient_soft_mask",gradient_soft_mask)
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
@@ -17499,16 +17504,14 @@ def train_elbo_topK_sparse_layer(config,
      
   def _apply_gradients():
     variables = model.trainable_variables
-    model_vars = []
-    classifier_vars = []
-    for var in variables:
-      if "ADAP_gate/dense" in var.name:
-        classifier_vars.append(var)
+    model_variables = []
+    for v in variables:
+      if "latent_group_allocation_logit" in v.name:
+        continue
       else:
-        model_vars.append(var)
-    variables = model_vars + classifier_vars
+        model_variables.append(v)
     grads_and_vars = []
-    for gradient, variable in zip(gradient_accumulator.gradients, variables):
+    for gradient, variable in zip(gradient_accumulator.gradients, model_variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
