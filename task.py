@@ -17161,7 +17161,7 @@ def train_elbo_sparse_layer(config,
   @tf.function
   def _step():
     with strategy.scope():
-      strategy.experimental_run_v2(_apply_gradients)
+      strategy.run(_apply_gradients)
 
   def _set_weight(v, w):
     v.assign(tf.cast(w,v.dtype))
