@@ -17485,6 +17485,9 @@ def train_elbo_topK_sparse_layer(config,
       _domain = 0
 
     variables = model.trainable_variables
+    for v in variables:
+      if "latent_group_allocation_logit" in v.name:
+        print(v.name)
     print("var numb: ", len(variables))
     
     gradients = optimizer.get_gradients(training_loss, variables)
