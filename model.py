@@ -3811,7 +3811,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse(model.SequenceGenerator):
           encoder_sequence_length,
           domain_dropout_mask)
     
-    return outputs, predictions, KL_term
+    return outputs, predictions
   
   def _decode_target(self,
                      labels,

@@ -17411,6 +17411,8 @@ def train_elbo_topK_sparse_layer(config,
           report_every=100): 
 
   import tensorflow_probability as tfp
+  import scipy
+  from scipy import optimize
   tfd = tfp.distributions
   gumbel_dist = tfd.Gumbel(loc=0.,scale=1.)
   if config.get("train_steps",None)!=None:
@@ -17451,13 +17453,18 @@ def train_elbo_topK_sparse_layer(config,
   
   kl_term_coeff = config.get("kl_coeff",1.0)
   delta = 7
+  K = config.get("domain_group_allocation_num",int(0.3 * config.get("num_domain_unit_group")))
   def _accumulate_gradients(source, target):
     domain = source["domain"][0]
     gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
     domain_allocation_logits = tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain)
-    f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_logits+x)/gumbel_temperature))
+    f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_logits)/gumbel_temperature+x)) - K
+    temp_x = scipy.optimize.bisect(f,-max(abs(gumbel_sample+domain_allocation_logits))/gumbel_temperature,max(abs(gumbel_sample+domain_allocation_logits))/gumbel_temperature)
+    soft_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(temp_x,0),[model.unit_group_size,1])),[-1]),tf.float32)],-1)
     
-    outputs, _, kl_term = model(
+    kl_term = - tf.reduce_sum(tf.math.log(domain_allocation_logits))
+
+    outputs, _ = model(
         source,
         soft_mask=soft_mask,
         labels=target,
