@@ -17458,8 +17458,8 @@ def train_elbo_topK_sparse_layer(config,
     domain = source["domain"][0]
     gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
     domain_allocation_logits = tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain)
-    f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample.numpy()+domain_allocation_logits.numpy())/gumbel_temperature.numpy()+x)) - K
-    temp_x = scipy.optimize.bisect(f,-max(abs(gumbel_sample.numpy()+domain_allocation_logits.numpy()))/gumbel_temperature,max(abs(gumbel_sample.numpy()+domain_allocation_logits.numpy()))/gumbel_temperature.numpy())
+    f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample.eval()+domain_allocation_logits.eval())/gumbel_temperature.eval()+x)) - K
+    temp_x = scipy.optimize.bisect(f,-max(abs(gumbel_sample.eval()+domain_allocation_logits.eval()))/gumbel_temperature,max(abs(gumbel_sample.eval()+domain_allocation_logits.eval()))/gumbel_temperature.eval())
     soft_mask = model.soft_mask
     soft_mask.assign(tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reshape(tf.transpose(tf.tile(tf.expand_dims(temp_x,0),[model.unit_group_size,1])),[-1]),tf.float32)],-1))
     
