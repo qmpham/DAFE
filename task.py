@@ -17462,8 +17462,8 @@ def train_elbo_topK_sparse_layer(config,
     temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=50, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
     soft_mask = tf.math.sigmoid((gumbel_sample+domain_allocation_probs)/gumbel_temperature+temp_x)
     #soft_mask = model.soft_mask
-    soft_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask,model.unit_group_size,-1),tf.float32)],-1)
     tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs)
+    soft_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask,model.unit_group_size,-1),tf.float32)],-1)
     kl_term = - tf.reduce_sum(tf.math.log(domain_allocation_probs))
 
     outputs, _ = model(
@@ -17496,6 +17496,7 @@ def train_elbo_topK_sparse_layer(config,
     
     gradients = optimizer.get_gradients(training_loss, model_variables)
     gradient_soft_mask = optimizer.get_gradients(training_loss,[soft_mask])
+    #gradient_tempx_domain_allocation_logits = 
     tf.print("gradient_soft_mask",gradient_soft_mask[0])
     gradient_accumulator(gradients)
     num_examples = tf.reduce_sum(target["length"])
