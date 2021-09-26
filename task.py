@@ -17513,7 +17513,7 @@ def train_elbo_topK_sparse_layer(config,
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_kl_loss, per_replica_num_examples, per_replica_domain = strategy.experimental_run_v2(
+      per_replica_loss, per_replica_kl_loss, per_replica_num_examples, per_replica_domain = strategy.run(
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
@@ -17525,7 +17525,7 @@ def train_elbo_topK_sparse_layer(config,
   @tf.function
   def _step():
     with strategy.scope():
-      strategy.experimental_run_v2(_apply_gradients)
+      strategy.run(_apply_gradients)
 
   def _set_weight(v, w):
     v.assign(tf.cast(w,v.dtype))
