@@ -17658,7 +17658,7 @@ def train_elbo_topK_sparse_layer(config,
         new_bleu = 0.0
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
             output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-            score = translate_sparse_layer(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+            score = translate_topK_sparse_layer(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
             tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
             output_files.append(output_file)
         ##### BLEU on concat dev set.
