@@ -17520,7 +17520,7 @@ def train_elbo_topK_sparse_layer(config,
     deltaL_deltaLogit = tf.linalg.matmul(tf.expand_dims(deltaL_deltaM,0),deltaM_deltaLogit)
     group_allocation_gradient = optimizer.get_gradients(kl_term, latent_group_allocation_logit)
     group_allocation_gradient[0] = tf.tensor_scatter_nd_add(group_allocation_gradient[0],tf.expand_dims(group_allocation_gradient[0].indices,1),deltaL_deltaLogit)
-    tf.print("group_allocation_gradient",group_allocation_gradient)
+    tf.print("group_allocation_gradient",group_allocation_gradient,summarize=-1)
     #tf.print("deltaL_deltaLogit",deltaL_deltaLogit,summarize=-1)
     #M3 = tf.linalg.matmul( tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) * tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1)
     #M4 = 
