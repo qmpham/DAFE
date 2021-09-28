@@ -17449,7 +17449,7 @@ def train_elbo_topK_sparse_layer(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator() 
-  temperature = tf.Variable(1.0,trainable=False)
+  temperature = tf.Variable(0.2,trainable=False)
   
   kl_term_coeff = config.get("kl_coeff",1.0)
   delta = 7
