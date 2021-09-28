@@ -17708,9 +17708,14 @@ def translate_topK_sparse_layer(source_file,
   # Create the mapping for target ids to tokens.
   ids_to_tokens = model.labels_inputter.ids_to_tokens
 
+  topK = tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain)).indices.numpy()
+  group_allocation = np.zeros(model.num_domain_unit_group)
+  for i in topK:
+    group_allocation[i] = 1
 
+  group_allocation = tf.repeat(tf.Variable(group_allocation,dtype=tf.float32),model.unit_group_size)
 
-  domain_dropout_mask = tf.concat([tf.ones(model.num_shared_units),tf.cast(,tf.float32)],-1)
+  domain_dropout_mask = tf.concat([tf.ones(model.num_shared_units),group_allocation],-1)
   tf.print("dropout_mask:",domain_dropout_mask,summarize=-1)
 
   @tf.function
