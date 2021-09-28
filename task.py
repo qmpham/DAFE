@@ -17519,7 +17519,7 @@ def train_elbo_topK_sparse_layer(config,
     #deltaresidue_deltatempx = tf.gradients(residue,temp_x)[0] / temperature
     deltaresidue_deltatempx1 = tf.reduce_sum(M1)
     #tf.print("deltaresidue_deltatempx1",deltaresidue_deltatempx1)
-    deltaresidue_deltalogit1 = tf.linalg.matmul(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature))/tf.math.exp((gumbel_sample+domain_allocation_probs+temp_x)/temperature),deltaSoftMax_deltaLogit_1)/temperature
+    deltaresidue_deltalogit1 = tf.linalg.matmul(tf.expand_dims(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature))/tf.math.exp((gumbel_sample+domain_allocation_probs+temp_x)/temperature),0),deltaSoftMax_deltaLogit_1)/temperature
     deltaTempx_deltaLogit = deltaresidue_deltalogit1 / deltaresidue_deltatempx1
     tf.print("deltaresidue_deltalogit", deltaresidue_deltalogit1, "deltaresidue_deltatempx", deltaresidue_deltatempx1, "deltaTempx_deltaLogit", deltaTempx_deltaLogit, summarize=-1)
     
