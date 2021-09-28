@@ -17624,7 +17624,7 @@ def train_elbo_topK_sparse_layer(config,
   print("temperature_decay",temperature_decay)
   print("r_coeff",r)
   step = optimizer.iterations.numpy()
-  temperature.assign(tf.cast(tf.math.maximum(min_temperature, 0.2 * tf.math.exp(-r*step)),tf.float32))
+  temperature.assign(tf.cast(tf.math.maximum(min_temperature, 0.5 * tf.math.exp(-r*step)),tf.float32))
   print("temperature: ",temperature)
   with _summary_writer.as_default():
     while True:
@@ -17646,7 +17646,7 @@ def train_elbo_topK_sparse_layer(config,
         _number_examples = []
         start = time.time()
       if step % temperature_decay==0:
-        temperature.assign(tf.cast(tf.math.maximum(min_temperature, tf.math.exp(-r*step)),tf.float32))
+        temperature.assign(tf.cast(tf.math.maximum(min_temperature, 0.5 * tf.math.exp(-r*step)),tf.float32))
         #print("gumbel_temperature: ",gumbel_temperature)
       if step % save_every == 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
