@@ -17515,12 +17515,14 @@ def train_elbo_topK_sparse_layer(config,
     
     deltaSoftMax_deltaLogit_1 = tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.linalg.diag(tf.ones(model.num_domain_unit_group))-tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]))
     #tf.print("deltaSoftMax_deltaLogit_1",deltaSoftMax_deltaLogit_1,summarize=-1)
-    deltaresidue_deltalogit = g.gradient(residue,latent_group_allocation_logit)
-    deltaresidue_deltatempx = tf.gradients(residue,temp_x)[0] / temperature
-    deltaTempx_deltaLogit = deltaresidue_deltalogit / deltaresidue_deltatempx
-    tf.print("deltaresidue_deltalogit", deltaresidue_deltalogit, "deltaresidue_deltatempx", deltaresidue_deltatempx, "deltaTempx_deltaLogit", deltaTempx_deltaLogit, summarize=-1)
+    #deltaresidue_deltalogit = g.gradient(residue,latent_group_allocation_logit)
+    #deltaresidue_deltatempx = tf.gradients(residue,temp_x)[0] / temperature
     deltaresidue_deltatempx1 = tf.reduce_sum(M1)
-    tf.print("deltaresidue_deltatempx1",deltaresidue_deltatempx1)
+    #tf.print("deltaresidue_deltatempx1",deltaresidue_deltatempx1)
+    deltaresidue_deltalogit1 = tf.linalg.matmul(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature))/tf.math.exp((gumbel_sample+domain_allocation_probs+temp_x)/temperature),deltaSoftMax_deltaLogit_1)/temperature
+    deltaTempx_deltaLogit = deltaresidue_deltalogit1 / deltaresidue_deltatempx1
+    tf.print("deltaresidue_deltalogit", deltaresidue_deltalogit1, "deltaresidue_deltatempx", deltaresidue_deltatempx1, "deltaTempx_deltaLogit", deltaTempx_deltaLogit, summarize=-1)
+    
     #M3 = tf.linalg.matmul( tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) * tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1)
     #M4 = 
     #M2 = 1/temperature*(M3 + M4) 
