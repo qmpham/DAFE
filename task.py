@@ -17453,21 +17453,20 @@ def train_elbo_topK_sparse_layer(config,
   temperature = tf.Variable(0.2,trainable=False)
   
   kl_term_coeff = config.get("kl_coeff",1.0)
-  delta = 7
-  K = config.get("domain_group_allocation_num",int(0.5 * config.get("num_domain_unit_group")))
+  K = config.get("domain_group_allocation_num",int(0.3 * config.get("num_domain_unit_group")))
 
   def _accumulate_gradients(source, target):
     domain = source["domain"][0]
     gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
-    with tf.GradientTape(persistent=True) as g:
-      domain_allocation_probs = tf.math.softmax(tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain))
-      f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+x)/temperature)) - K
-      temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=50, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
-      residue = tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature))
+    #with tf.GradientTape(persistent=True) as g:
+    domain_allocation_probs = tf.math.softmax(tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain))
+    f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+x)/temperature)) - K
+    temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=50, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
+    #residue = tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature))
     soft_mask_logits = (gumbel_sample+domain_allocation_probs+temp_x)/temperature
     
     soft_mask = tf.math.sigmoid(soft_mask_logits)
-    tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
+    #tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
     soft_mask_total = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask,model.unit_group_size,-1),tf.float32)],-1)
     kl_term = - tf.reduce_sum(tf.math.log(domain_allocation_probs))
 
