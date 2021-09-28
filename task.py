@@ -17449,6 +17449,7 @@ def train_elbo_topK_sparse_layer(config,
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator() 
+    gradient_group_allocation_accumulator = optimizer_util.GradientAccumulator()
   temperature = tf.Variable(0.2,trainable=False)
   
   kl_term_coeff = config.get("kl_coeff",1.0)
@@ -17502,7 +17503,7 @@ def train_elbo_topK_sparse_layer(config,
     gradient_soft_mask = optimizer.get_gradients(training_loss,[soft_mask])
     deltaL_deltaM = gradient_soft_mask[0] # in R^n_g
 
-    tf.print("gradient_soft_mask",gradient_soft_mask[0],summarize=-1)
+    #tf.print("gradient_soft_mask",gradient_soft_mask[0],summarize=-1)
     M1 = tf.linalg.diag(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature))/tf.math.exp((gumbel_sample+domain_allocation_probs+temp_x)/temperature))
     #deltaSoftMax_deltaLogit = g.jacobian(domain_allocation_probs,latent_group_allocation_logit)
     #tf.print("deltaSoftMax_deltaLogit",deltaSoftMax_deltaLogit,summarize=-1)
@@ -17515,19 +17516,22 @@ def train_elbo_topK_sparse_layer(config,
     #tf.print("deltaresidue_deltatempx1",deltaresidue_deltatempx1)
     deltaresidue_deltalogit1 = tf.linalg.matmul(tf.expand_dims(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature))/tf.math.exp((gumbel_sample+domain_allocation_probs+temp_x)/temperature),0),deltaSoftMax_deltaLogit_1)/temperature
     deltaTempx_deltaLogit = - tf.tile(deltaresidue_deltalogit1 / deltaresidue_deltatempx1,[model.num_domain_unit_group,1])
-    tf.print("deltaresidue_deltalogit", deltaresidue_deltalogit1, "deltaresidue_deltatempx", deltaresidue_deltatempx1, "deltaTempx_deltaLogit", deltaTempx_deltaLogit, summarize=-1)
+    #tf.print("deltaresidue_deltalogit", deltaresidue_deltalogit1, "deltaresidue_deltatempx", deltaresidue_deltatempx1, "deltaTempx_deltaLogit", deltaTempx_deltaLogit, summarize=-1)
     deltaM_deltaLogit = tf.linalg.matmul(M1,deltaSoftMax_deltaLogit_1+deltaTempx_deltaLogit,transpose_a=True, transpose_b=True)
     deltaL_deltaLogit = tf.linalg.matmul(tf.expand_dims(deltaL_deltaM,0),deltaM_deltaLogit)
-    tf.print("deltaL_deltaLogit",deltaL_deltaLogit,summarize=-1)
+    group_allocation_gradient = optimizer.get_gradients(kl_term, latent_group_allocation_logit)
+    group_allocation_gradient[0] = tf.tensor_scatter_nd_add(deltaL_deltaLogit,tf.expand_dims(group_allocation_gradient[0].indices,1),group_allocation_gradient[0].values)
+    #tf.print("deltaL_deltaLogit",deltaL_deltaLogit,summarize=-1)
     #M3 = tf.linalg.matmul( tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) * tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1)
     #M4 = 
     #M2 = 1/temperature*(M3 + M4) 
     #tf.tile(tf.expand_dims(tf.hessians(soft_mask,latent_group_allocation_logit) / tf.hessians(soft_mask,temp_x),0),[model.num_domain_unit_group,1])
     #tf.linalg.diag(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs)/temperature+temp_x)))
     #gradient_softmask_domain_allocation_logits = 1/temperature * tf.linalg.matmul( tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) * tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1) - tf.tile(tf.expand_dims(tf.hessians(soft_mask,latent_group_allocation_logit) / tf.hessians(soft_mask,temp_x),0),[model.num_domain_unit_group,1]) , left_matrix, transpose_a=True, transpose_b=True)
-    tf.print("gradient_soft_mask",gradient_soft_mask[0],summarize=-1)
+    #tf.print("gradient_soft_mask",gradient_soft_mask[0],summarize=-1)
     #gradients_domain_allocation_logits = tf.linalg.matmul(gradient_soft_mask[] )
     gradient_accumulator(gradients)
+    gradient_group_allocation_accumulator(group_allocation_gradient)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, kl_term, num_examples, _domain
@@ -17535,9 +17539,10 @@ def train_elbo_topK_sparse_layer(config,
   def _apply_gradients():
     variables = model.trainable_variables
     model_variables = []
+    latent_group_allocation_logit = None
     for v in variables:
       if "latent_group_allocation_logit" in v.name:
-        continue
+        latent_group_allocation_logit = v
       else:
         model_variables.append(v)
     grads_and_vars = []
@@ -17545,6 +17550,7 @@ def train_elbo_topK_sparse_layer(config,
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
+    grads_and_vars.append((gradient_group_allocation_accumulator[0],latent_group_allocation_logit))
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
 
