@@ -17513,8 +17513,8 @@ def train_elbo_topK_sparse_layer(config,
     #tf.print("deltaSoftMax_deltaLogit",deltaSoftMax_deltaLogit,summarize=-1)
     deltaSoftMax_deltaLogit_1 = tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.linalg.diag(tf.ones(model.num_domain_unit_group))-tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]))
     tf.print("deltaSoftMax_deltaLogit_1",deltaSoftMax_deltaLogit_1,summarize=-1)
-    deltaresidue_deltalogit = tf.gradients(residue,latent_group_allocation_logit)
-    deltaresidue_deltatempx = tf.gradients(residue,temp_x)
+    deltaresidue_deltalogit = tf.gradients(residue,latent_group_allocation_logit)[0]
+    deltaresidue_deltatempx = tf.gradients(residue,temp_x)[0]
     deltaTempx_deltaLogit = deltaresidue_deltalogit / deltaresidue_deltatempx
     tf.print("deltaresidue_deltalogit", deltaresidue_deltalogit, "deltaresidue_deltatempx", deltaresidue_deltatempx, "deltaTempx_deltaLogit", deltaTempx_deltaLogit, summarize=-1)
     #M3 = tf.linalg.matmul( tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) * tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1)
