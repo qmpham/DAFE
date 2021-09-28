@@ -17453,7 +17453,7 @@ def train_elbo_topK_sparse_layer(config,
   temperature = tf.Variable(0.2,trainable=False)
   
   kl_term_coeff = config.get("kl_coeff",1.0)
-  K = config.get("domain_group_allocation_num",int(0.3 * config.get("num_domain_unit_group")))
+  K = config.get("domain_group_allocation_num",int(config.get("dropout_rate") * config.get("num_domain_unit_group")))
 
   def _accumulate_gradients(source, target):
     domain = source["domain"][0]
@@ -17511,7 +17511,7 @@ def train_elbo_topK_sparse_layer(config,
     #tf.print("deltaSoftMax_deltaLogit_1",deltaSoftMax_deltaLogit_1,summarize=-1)
     #deltaresidue_deltalogit = g.gradient(residue,latent_group_allocation_logit)
     #deltaresidue_deltatempx = tf.gradients(residue,temp_x)[0] / temperature
-    deltaresidue_deltatempx1 = tf.reduce_sum(M1)
+    deltaresidue_deltatempx1 = tf.reduce_sum(M1)/temperature
     #tf.print("deltaresidue_deltatempx1",deltaresidue_deltatempx1)
     deltaresidue_deltalogit1 = tf.linalg.matmul(tf.expand_dims(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature))/tf.math.exp((gumbel_sample+domain_allocation_probs+temp_x)/temperature),0),deltaSoftMax_deltaLogit_1)/temperature
     deltaTempx_deltaLogit = - tf.tile(deltaresidue_deltalogit1 / deltaresidue_deltatempx1,[model.num_domain_unit_group,1])
