@@ -17510,7 +17510,7 @@ def train_elbo_topK_sparse_layer(config,
     M1 = tf.linalg.diag(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature)/tf.math.exp((gumbel_sample+domain_allocation_probs+temp_x)/temperature)))
     deltaSoftMax_deltaLogit = g.jacobian(domain_allocation_probs,latent_group_allocation_logit)
     tf.print("deltaSoftMax_deltaLogit",deltaSoftMax_deltaLogit,summarize=-1)
-    deltaSoftMax_deltaLogit_1 = tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) * tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1)
+    deltaSoftMax_deltaLogit_1 = tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.linalg.diag(tf.ones(model.num_domain_unit_group))-tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]))
     tf.print("deltaSoftMax_deltaLogit_1",deltaSoftMax_deltaLogit_1,summarize=-1)
     #M3 = tf.linalg.matmul( tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) * tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1)
     #M4 = 
