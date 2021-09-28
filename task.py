@@ -17460,9 +17460,9 @@ def train_elbo_topK_sparse_layer(config,
     gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
     with tf.GradientTape(persistent=True) as g:
       domain_allocation_probs = tf.math.softmax(tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain))
+      f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+x)/temperature)) - K
+      temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=50, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
       residue = tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature)) - K
-    f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+x)/temperature)) - K
-    temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=50, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
     soft_mask_logits = (gumbel_sample+domain_allocation_probs+temp_x)/temperature
     
     soft_mask = tf.math.sigmoid(soft_mask_logits)
