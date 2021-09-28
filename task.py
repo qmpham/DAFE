@@ -17659,7 +17659,7 @@ def train_elbo_topK_sparse_layer(config,
         new_bleu = 0.0
         for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
             output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-            score = translate_topK_sparse_layer(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+            score = translate_topK_sparse_layer(src, ref, model, checkpoint_manager, checkpoint, i, output_file, topK=K, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
             tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
             output_files.append(output_file)
         ##### BLEU on concat dev set.
@@ -17688,6 +17688,7 @@ def translate_topK_sparse_layer(source_file,
               domain,
               output_file,
               length_penalty,
+              topK=1,
               is_noisy=1,
               gumbel_temperature = 0.2,
               checkpoint_path=None,
@@ -17710,9 +17711,7 @@ def translate_topK_sparse_layer(source_file,
   # Create the mapping for target ids to tokens.
   ids_to_tokens = model.labels_inputter.ids_to_tokens
 
-  K = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate")) * config.get("num_domain_unit_group")))
-
-  topK = tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain),k=K).indices.numpy()
+  topK = tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain),k=topK).indices.numpy()
   group_allocation = np.zeros(model.num_domain_unit_group)
   for i in topK:
     group_allocation[i] = 1
