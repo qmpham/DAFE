@@ -3937,8 +3937,8 @@ def model_inspect(config,
           _build_model, args=(per_replica_source, per_replica_target))
   
   # Runs the training loop.
-  train_data_flow = iter(_train_forward())
-  next(train_data_flow)
+  #train_data_flow = iter(_train_forward())
+  #next(train_data_flow)
   load_and_update_if_needed_from_ckpt(config["model_dir"],   
                         checkpoint_path,                        
                         trackables={"model":model},
