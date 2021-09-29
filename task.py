@@ -17475,7 +17475,7 @@ def train_elbo_topK_sparse_layer(config,
     soft_mask_logits = (gumbel_sample+domain_allocation_probs+temp_x)/temperature
     #tf.print("soft_mask_logits",soft_mask_logits,summarize=-1)
     soft_mask = tf.math.sigmoid(soft_mask_logits)
-    tf.print("soft_mask",soft_mask,summarize=-1)
+    #tf.print("soft_mask",soft_mask,summarize=-1)
     #tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
     soft_mask_total = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask,model.unit_group_size),tf.float32)],-1)
     kl_term = - tf.reduce_sum(tf.math.log(domain_allocation_probs))
