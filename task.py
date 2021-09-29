@@ -3945,6 +3945,7 @@ def model_inspect(config,
                         vocab_update=False,
                         model_key="model")
   #checkpoint_manager.save(checkpoint_number=0)
+  """
   with np.printoptions(threshold=np.inf):
     for v in model.trainable_variables:
       if "layer_norm" in v.name:
@@ -3957,6 +3958,13 @@ def model_inspect(config,
           for j in range(m):
             dist[i,j] = np.sum((matrix[i,:] - matrix[j,:]) * (matrix[i,:] - matrix[j,:]))
         print(dist)
+  """
+
+  with np.printoptions(threshold=np.inf):
+    for v in model.trainable_variables:
+      if "latent_group_allocation_logit" in v.name:
+        print(v.name)
+        print(v.numpy())
 
   """
   checkpoint_path = checkpoint_manager.latest_checkpoint
