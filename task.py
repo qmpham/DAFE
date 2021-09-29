@@ -3893,7 +3893,7 @@ def model_inspect(config,
           report_every=100): 
   
   #####
-  """
+  
   if checkpoint_path is not None:
     checkpoint.restore(checkpoint_path).expect_partial()
     tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
@@ -3902,7 +3902,7 @@ def model_inspect(config,
     checkpoint.restore(checkpoint_manager.latest_checkpoint)
   else:
     exit()
-  """
+  
   #####
   _summary_writer = tf.summary.create_file_writer(config["model_dir"])
   #####
@@ -3939,11 +3939,13 @@ def model_inspect(config,
   # Runs the training loop.
   #train_data_flow = iter(_train_forward())
   #next(train_data_flow)
+  """
   load_and_update_if_needed_from_ckpt(config["model_dir"],   
                         checkpoint_path,                        
                         trackables={"model":model},
                         vocab_update=False,
                         model_key="model")
+  """
   #checkpoint_manager.save(checkpoint_number=0)
   """
   with np.printoptions(threshold=np.inf):
