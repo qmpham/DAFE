@@ -3948,7 +3948,7 @@ def model_inspect(config,
   """
   #checkpoint_manager.save(checkpoint_number=0)
   
-  with np.printoptions(threshold=np.inf):
+  """ with np.printoptions(threshold=np.inf):
     for v in model.trainable_variables:
       if "layer_norm" in v.name:
         print(v.name)
@@ -3959,7 +3959,7 @@ def model_inspect(config,
         for i in range(m):
           for j in range(m):
             dist[i,j] = np.sum((matrix[i,:] - matrix[j,:]) * (matrix[i,:] - matrix[j,:]))
-        print(dist)
+        print(dist) """
 
   with np.printoptions(threshold=np.inf):
     for v in model.trainable_variables:
