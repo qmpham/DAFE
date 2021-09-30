@@ -17465,7 +17465,8 @@ def train_elbo_topK_sparse_layer(config,
   
   kl_term_coeff = config.get("kl_coeff",1.0)
   K = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate")) * config.get("num_domain_unit_group")))
-
+  print("kl_term_coeff",kl_term_coeff)
+  print("topK: ", K)
   def _accumulate_gradients(source, target):
     domain = source["domain"][0]
     gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
@@ -17495,6 +17496,7 @@ def train_elbo_topK_sparse_layer(config,
       reported_loss = loss[0] / loss[2]
     else:
       training_loss, reported_loss = loss, loss
+
     if config.get("multi_domain", True):
       _domain = source["domain"][0]
     else:
