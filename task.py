@@ -17568,7 +17568,6 @@ def train_elbo_topK_sparse_layer(config,
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
     gradient_group_allocation_accumulator.reset()
-    optimizer.iterations.assign_sub(1)
 
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
