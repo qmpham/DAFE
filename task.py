@@ -17470,7 +17470,7 @@ def train_elbo_topK_sparse_layer(config,
 
   def print_tensor(soft_mask):
     def print():
-      tf.print("soft_mask",soft_mask,summarize=-1)
+      tf.print("residue",soft_mask,summarize=-1)
       return tf.constant(1)
     return print
   
@@ -17485,12 +17485,12 @@ def train_elbo_topK_sparse_layer(config,
     domain_allocation_probs = tf.math.softmax(latent_group_allocation_logit_)
     f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+x)/temperature)) - K
     temp_x = tfp.math.find_root_chandrupatla(f, low=-1000, high=1000, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=50, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
-    #residue = tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature))
+    residue = tf.reduce_sum(tf.math.sigmoid((gumbel_sample+domain_allocation_probs+temp_x)/temperature)) - K
     soft_mask_logits = (gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature
     #tf.print("soft_mask_logits",soft_mask_logits,summarize=-1)
     soft_mask = tf.math.sigmoid(soft_mask_logits)
     
-    #tf.cond( tf.math.equal(tf.math.floormod(optimizer.iterations,100),0), true_fn = print_tensor(soft_mask), false_fn = do_nothing)
+    #tf.cond( tf.math.equal(tf.math.floormod(optimizer.iterations,100),0), true_fn = print_tensor(residue), false_fn = do_nothing)
     #tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
     soft_mask_total = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask,model.unit_group_size),tf.float32)],-1)
     kl_term = - tf.reduce_sum(tf.math.log(domain_allocation_probs))
@@ -17561,7 +17561,7 @@ def train_elbo_topK_sparse_layer(config,
     gradient_group_allocation_accumulator(group_allocation_gradient)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
-    return reported_loss, kl_term, num_examples, _domain
+    return reported_loss, kl_term, num_examples, _domain, residue
      
   def _apply_gradients():
     variables = model.trainable_variables
@@ -17588,14 +17588,16 @@ def train_elbo_topK_sparse_layer(config,
   def _train_forward(next_fn):    
     with strategy.scope():
       per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_kl_loss, per_replica_num_examples, per_replica_domain = strategy.run(
+      per_replica_loss, per_replica_kl_loss, per_replica_num_examples, per_replica_domain, per_replica_residue = strategy.run(
           _accumulate_gradients, args=(per_replica_source, per_replica_target))
       # TODO: these reductions could be delayed until _step is called.
       loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
       kl_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_kl_loss, None)
       _domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)      
       num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-    return loss, kl_loss, _domain, num_examples
+      residue = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_residue, None)
+
+    return loss, kl_loss, _domain, num_examples, residue
   
   @tf.function
   def _step():
@@ -17615,13 +17617,14 @@ def train_elbo_topK_sparse_layer(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  _, _, _, _ = next(train_data_flow)
+  _, _, _, _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
   _loss = []  
   _kl_loss = []
   _number_examples = []
+  _residue = []
   step = optimizer.iterations.numpy()
   if config.get("reset_step",None):
     print("start from %d-th step"%config.get("reset_step",150000))
@@ -17660,21 +17663,23 @@ def train_elbo_topK_sparse_layer(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss, kl_loss, _domain, num_examples = next(train_data_flow)    
+      loss, kl_loss, _domain, num_examples, residue = next(train_data_flow)    
       _loss.append(loss.numpy())
       _kl_loss.append(kl_loss.numpy())
       _number_examples.append(num_examples.numpy())
+      _residue.append(residue.numpy())
       _step()  
       step = optimizer.iterations.numpy()
       
       if step % report_every == 0:
         elapsed = time.time() - start
         tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; KL_loss = %f, temperature = %f, number_examples = %d, after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.mean(_kl_loss), temperature, np.sum(_number_examples), elapsed)
+            "Step = %d ; Learning rate = %f ; Loss = %f; KL_loss = %f, temperature = %f, number_examples = %d, residue = %f, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.mean(_kl_loss), temperature, np.sum(_number_examples), np.sum(_residue), elapsed)
         _loss = []
         _kl_loss = []
         _number_examples = []
+        _residue = []
         start = time.time()
       if step % temperature_decay==0:
         temperature.assign(tf.cast(tf.math.maximum(min_temperature, start_temperature * tf.math.exp(-r*step)),tf.float32))
