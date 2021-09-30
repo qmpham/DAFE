@@ -17469,7 +17469,7 @@ def train_elbo_topK_sparse_layer(config,
   print("topK: ", K)
 
   def print_tensor(soft_mask):
-    def print()
+    def print():
       tf.print("soft_mask",soft_mask,summarize=-1)
       return tf.constant(1)
     return print
