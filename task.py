@@ -17664,10 +17664,10 @@ def train_elbo_topK_sparse_layer(config,
       if step % temperature_decay==0:
         temperature.assign(tf.cast(tf.math.maximum(min_temperature, start_temperature * tf.math.exp(-r*step)),tf.float32))
         #print("gumbel_temperature: ",gumbel_temperature)
-      if step % save_every == 0:
+      if step % save_every == 0 and step > 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
-      if step % eval_every == 0:
+      if step % eval_every == 0 and step > 0:
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
         output_files = []
