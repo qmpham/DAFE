@@ -17459,6 +17459,8 @@ def train_elbo_topK_sparse_layer(config,
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator() 
     gradient_group_allocation_accumulator = optimizer_util.GradientAccumulator()
+    latent_logit_optimizer = tfa.optimizers.LazyAdam(config.get("latent_logit_lr",0.01))
+
   temperature = tf.Variable(0.2,trainable=False)
   
   kl_term_coeff = config.get("kl_coeff",1.0)
@@ -17528,7 +17530,7 @@ def train_elbo_topK_sparse_layer(config,
     #tf.print("deltaresidue_deltalogit", deltaresidue_deltalogit1, "deltaresidue_deltatempx", deltaresidue_deltatempx1, "deltaTempx_deltaLogit", deltaTempx_deltaLogit, summarize=-1)
     deltaM_deltaLogit = tf.linalg.matmul(M1,deltaSoftMax_deltaLogit_1+deltaTempx_deltaLogit,transpose_a=True, transpose_b=True)
     deltaL_deltaLogit = tf.linalg.matmul(tf.expand_dims(deltaL_deltaM,0),deltaM_deltaLogit)
-    group_allocation_gradient = optimizer.get_gradients(kl_term, latent_group_allocation_logit)
+    group_allocation_gradient = optimizer.get_gradients(kl_term * kl_term_coeff, latent_group_allocation_logit)
     group_allocation_gradient[0] = tf.tensor_scatter_nd_add(group_allocation_gradient[0],tf.expand_dims(group_allocation_gradient[0].indices,1),deltaL_deltaLogit)
     #tf.print("group_allocation_gradient",group_allocation_gradient,summarize=-1)
     #tf.print("deltaL_deltaLogit",deltaL_deltaLogit,summarize=-1)
@@ -17556,13 +17558,17 @@ def train_elbo_topK_sparse_layer(config,
       else:
         model_variables.append(v)
     grads_and_vars = []
+
     for gradient, variable in zip(gradient_accumulator.gradients, model_variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
-      grads_and_vars.append((scaled_gradient, variable))
-    grads_and_vars.append((gradient_group_allocation_accumulator.gradients[0],latent_group_allocation_logit))
+      #grads_and_vars.append((scaled_gradient, variable))
+    #grads_and_vars.append((gradient_group_allocation_accumulator.gradients[0],latent_group_allocation_logit))
+    latent_logit_optimizer.apply_gradients([(gradient_group_allocation_accumulator.gradients[0],latent_group_allocation_logit)])
     optimizer.apply_gradients(grads_and_vars)
     gradient_accumulator.reset()
+    gradient_group_allocation_accumulator.reset()
+    optimizer.iterations.assign_sub(1)
 
   @dataset_util.function_on_next(train_dataset)
   def _train_forward(next_fn):    
