@@ -17467,6 +17467,14 @@ def train_elbo_topK_sparse_layer(config,
   K = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate")) * config.get("num_domain_unit_group")))
   print("kl_term_coeff",kl_term_coeff)
   print("topK: ", K)
+
+  def print_tensor():
+    tf.print("soft_mask",soft_mask,summarize=-1)
+    return tf.constant(1)
+  
+  def do_nothing():
+    return tf.constant(1)
+
   def _accumulate_gradients(source, target):
     domain = source["domain"][0]
     gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
@@ -17479,7 +17487,8 @@ def train_elbo_topK_sparse_layer(config,
     soft_mask_logits = (gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature
     #tf.print("soft_mask_logits",soft_mask_logits,summarize=-1)
     soft_mask = tf.math.sigmoid(soft_mask_logits)
-    tf.cond( tf.math.equal(tf.math.floormod(optimizer.iterations,100),0), true_fn = lambda : tf.print("soft_mask",soft_mask,summarize=-1), false_fn = lambda : tf.constant(1))
+    
+    tf.cond( tf.math.equal(tf.math.floormod(optimizer.iterations,100),0), true_fn = print_tensor, false_fn = do_nothing)
     #tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
     soft_mask_total = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask,model.unit_group_size),tf.float32)],-1)
     kl_term = - tf.reduce_sum(tf.math.log(domain_allocation_probs))
