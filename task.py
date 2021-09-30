@@ -17468,9 +17468,11 @@ def train_elbo_topK_sparse_layer(config,
   print("kl_term_coeff",kl_term_coeff)
   print("topK: ", K)
 
-  def print_tensor():
-    tf.print("soft_mask",soft_mask,summarize=-1)
-    return tf.constant(1)
+  def print_tensor(soft_mask):
+    def print()
+      tf.print("soft_mask",soft_mask,summarize=-1)
+      return tf.constant(1)
+    return print
   
   def do_nothing():
     return tf.constant(1)
@@ -17488,7 +17490,7 @@ def train_elbo_topK_sparse_layer(config,
     #tf.print("soft_mask_logits",soft_mask_logits,summarize=-1)
     soft_mask = tf.math.sigmoid(soft_mask_logits)
     
-    tf.cond( tf.math.equal(tf.math.floormod(optimizer.iterations,100),0), true_fn = print_tensor, false_fn = do_nothing)
+    tf.cond( tf.math.equal(tf.math.floormod(optimizer.iterations,100),0), true_fn = print_tensor(soft_mask), false_fn = do_nothing)
     #tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
     soft_mask_total = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask,model.unit_group_size),tf.float32)],-1)
     kl_term = - tf.reduce_sum(tf.math.log(domain_allocation_probs))
