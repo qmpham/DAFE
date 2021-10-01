@@ -17493,7 +17493,7 @@ def train_elbo_topK_sparse_layer(config,
     #tf.cond( tf.math.equal(tf.math.floormod(optimizer.iterations,100),0), true_fn = print_tensor(residue), false_fn = do_nothing)
     #tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
     soft_mask_total = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask,model.unit_group_size),tf.float32)],-1)
-    kl_term = - tf.reduce_sum(tf.math.log(domain_allocation_probs))
+    kl_term = - tf.reduce_mean(tf.math.log(domain_allocation_probs))
 
     outputs, _ = model(
         source,
@@ -17556,7 +17556,7 @@ def train_elbo_topK_sparse_layer(config,
     #tf.linalg.diag(tf.math.square(tf.math.sigmoid((gumbel_sample+domain_allocation_probs)/temperature+temp_x)))
     #gradient_softmask_domain_allocation_logits = 1/temperature * tf.linalg.matmul( tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) * tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1) - tf.tile(tf.expand_dims(tf.hessians(soft_mask,latent_group_allocation_logit) / tf.hessians(soft_mask,temp_x),0),[model.num_domain_unit_group,1]) , left_matrix, transpose_a=True, transpose_b=True)
     #tf.print("gradient_soft_mask",gradient_soft_mask[0],summarize=-1)
-    #gradients_domain_allocation_logits = tf.linalg.matmul(gradient_soft_mask[] )
+    #gradients_domain_allocation_logits = tf.linalg.matmul(gradient_soft_mask[])
     gradient_accumulator(gradients)
     gradient_group_allocation_accumulator(group_allocation_gradient)
     num_examples = tf.reduce_sum(target["length"])
