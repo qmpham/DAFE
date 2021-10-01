@@ -17687,7 +17687,7 @@ def train_elbo_topK_sparse_layer(config,
       if step % save_every == 0 and step > 0:
         tf.get_logger().info("Saving checkpoint for step %d", step)
         checkpoint_manager.save(checkpoint_number=step)
-        tf.print("latent_group_allocation_logit",model.latent_group_allocation_logit)
+        tf.print("latent_group_allocation_logit",model.latent_group_allocation_logit,summarize=-1)
       if step % eval_every == 0 and step > 0:
         checkpoint_path = checkpoint_manager.latest_checkpoint
         tf.summary.experimental.set_step(step)
