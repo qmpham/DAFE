@@ -60,14 +60,6 @@ def main():
   config_file = args.config
   with open(config_file, "r") as stream:
       config = yaml.load(stream)
-  
-  if args.stdout:
-    stdout_fileno = sys.stdout
-    sys.stdout = open(args.stdout,"w")
-  
-  if args.stderr:
-    stderr_fileno = sys.stderr
-    sys.stderr = open(args.stderr,"w")
 
   data_config = {
       "source_vocabulary": config["src_vocab"],
@@ -1756,14 +1748,6 @@ def main():
     reference = args.translation_file
     checkpoint_path = args.ckpt
     task.EWC_res_stat(source_file, reference, model, config, strategy, meta_test_optimizer, checkpoint_manager, checkpoint, checkpoint_path=checkpoint_path)
-
-  if args.stdout:
-    sys.stdout.close()
-    sys.stdout = stdout_fileno
-  
-  if args.stderr:
-    sys.stderr.close()
-    sys.stderr = stderr_fileno
 
 if __name__ == "__main__":
   main()
