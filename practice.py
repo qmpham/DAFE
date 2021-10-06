@@ -53,12 +53,22 @@ def main():
   parser.add_argument("--maxcount",default=3)
   parser.add_argument("--translation_file",default=None)
   parser.add_argument("--gpu_id",default=0)
+  parser.add_argument("--stderr",default=None)
+  parser.add_argument("--stdout",default=None)
   args = parser.parse_args()
   print("Running mode: ", args.run)
   config_file = args.config
   with open(config_file, "r") as stream:
       config = yaml.load(stream)
   
+  if args.stdout:
+    stdout_fileno = sys.stdout
+    sys.stdout = open(args.stdout)
+  
+  if args.stderr:
+    stderr_fileno = sys.stderr
+    sys.stderr = open(args.stderr)
+
   data_config = {
       "source_vocabulary": config["src_vocab"],
       "source_1_vocabulary": config["src_vocab"],
@@ -1747,5 +1757,13 @@ def main():
     checkpoint_path = args.ckpt
     task.EWC_res_stat(source_file, reference, model, config, strategy, meta_test_optimizer, checkpoint_manager, checkpoint, checkpoint_path=checkpoint_path)
 
+  if args.stdout:
+    sys.stdout.close()
+    sys.stdout = stdout_fileno
+  
+  if args.stderr:
+    sys.stderr.close()
+    sys.stderr = stderr_fileno
+    
 if __name__ == "__main__":
   main()
