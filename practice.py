@@ -63,11 +63,11 @@ def main():
   
   if args.stdout:
     stdout_fileno = sys.stdout
-    sys.stdout = open(args.stdout)
+    sys.stdout = open(args.stdout,"w")
   
   if args.stderr:
     stderr_fileno = sys.stderr
-    sys.stderr = open(args.stderr)
+    sys.stderr = open(args.stderr,"w")
 
   data_config = {
       "source_vocabulary": config["src_vocab"],
@@ -1764,6 +1764,6 @@ def main():
   if args.stderr:
     sys.stderr.close()
     sys.stderr = stderr_fileno
-    
+
 if __name__ == "__main__":
   main()
