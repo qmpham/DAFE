@@ -17664,11 +17664,12 @@ def train_elbo_topK_sparse_layer(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss, kl_loss, _domain, num_examples, residue = next(train_data_flow)    
-      _loss.append(loss.numpy())
-      _kl_loss.append(kl_loss.numpy())
-      _number_examples.append(num_examples.numpy())
-      _residue.append(residue.numpy())
+      for _ in range(int(config.get("accumulation_step",1))):
+        loss, kl_loss, _domain, num_examples, residue = next(train_data_flow)    
+        _loss.append(loss.numpy())
+        _kl_loss.append(kl_loss.numpy())
+        _number_examples.append(num_examples.numpy())
+        _residue.append(residue.numpy())
       _step()  
       step = optimizer.iterations.numpy()
       
