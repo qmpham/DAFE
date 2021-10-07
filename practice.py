@@ -1676,6 +1676,7 @@ def main():
       src_file = "%s.cluster.%d"%(root,i)
       output_file = os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(os.path.basename(root),i))
       domain = i
+      print("translating %s"%src_file)
       task.translate_topK_sparse_layer(src_file, None, model, new_checkpoint_manager, checkpoint, int(domain), output_file, topK=topK, length_penalty=0.6, experiment=experiment)
       
   elif args.run == "priming_translate":
