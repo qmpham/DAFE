@@ -1674,7 +1674,7 @@ def main():
     root = args.src
     for i in range(int(args.n_clusters)):
       src_file = "%s.cluster.%d.tagged"%(root,i)
-      output_file = os.path.join(config["model_dir"],"eval","%s.cluster.%d.tagged.trans"%(os.path.basename(root),i))
+      output_file = os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(os.path.basename(root),i))
       domain = i
       task.translate_topK_sparse_layer(src_file, None, model, new_checkpoint_manager, checkpoint, int(domain), output_file, topK=topK, length_penalty=0.6, experiment=experiment)
       
