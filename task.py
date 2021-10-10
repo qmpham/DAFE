@@ -17464,7 +17464,7 @@ def train_elbo_topK_sparse_layer(config,
   temperature = tf.Variable(0.2,trainable=False)
   
   kl_term_coeff = config.get("kl_coeff",1.0)
-  K = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate")) * config.get("num_domain_unit_group")))
+  K = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate",0.5)) * config.get("num_domain_unit_group",32)))
   print("kl_term_coeff",kl_term_coeff)
   print("topK: ", K)
 
