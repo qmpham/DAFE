@@ -17558,7 +17558,7 @@ def train_elbo_topK_sparse_layer(config,
     #tf.print("gradient_soft_mask",gradient_soft_mask[0],summarize=-1)
     #gradients_domain_allocation_logits = tf.linalg.matmul(gradient_soft_mask[])
     gradient_accumulator(gradients)
-    gradient_group_allocation_accumulator(group_allocation_gradient)
+    gradient_group_allocation_accumulator(tf.clip_by_norm(group_allocation_gradient, 1.0))
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, kl_term, num_examples, _domain, residue
