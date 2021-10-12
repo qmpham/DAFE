@@ -17650,7 +17650,7 @@ def train_elbo_topK_sparse_layer(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-  gumbel_temperature_decay = config.get("temperature_decay",1000)
+  gumbel_temperature_decay = config.get("gumbel_temperature_decay",1000)
   r = config.get("r_coeff",1e-4)
   min_temperature = config.get("min_temperature",0.5)
   start_temperature = config.get("start_temperature",0.5)
