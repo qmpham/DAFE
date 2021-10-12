@@ -17650,13 +17650,13 @@ def train_elbo_topK_sparse_layer(config,
     print("using MultiBLEU")
     scorer = MultiBLEUScorer()
   ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-  temperature_decay = config.get("temperature_decay",1000)
+  gumbel_temperature_decay = config.get("temperature_decay",1000)
   r = config.get("r_coeff",1e-4)
   min_temperature = config.get("min_temperature",0.5)
   start_temperature = config.get("start_temperature",0.5)
   print("dropout_rate",config.get("dropout_rate"))
   print("min_temperature",min_temperature)
-  print("temperature_decay",temperature_decay)
+  print("gumbel_temperature_decay",gumbel_temperature_decay)
   print("r_coeff",r)
   step = optimizer.iterations.numpy()
   temperature.assign(tf.cast(tf.math.maximum(min_temperature, start_temperature * tf.math.exp(-r*step)),tf.float32))
@@ -17683,7 +17683,7 @@ def train_elbo_topK_sparse_layer(config,
         _number_examples = []
         _residue = []
         start = time.time()
-      if step % temperature_decay==0:
+      if step % gumbel_temperature_decay==0:
         temperature.assign(tf.cast(tf.math.maximum(min_temperature, start_temperature * tf.math.exp(-r*step)),tf.float32))
         #print("gumbel_temperature: ",gumbel_temperature)
       if step % save_every == 0 and step > 0:
