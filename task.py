@@ -17546,7 +17546,7 @@ def train_elbo_topK_sparse_layer(config,
     deltaM_deltaLogit = tf.linalg.matmul(tf.eye(model.num_domain_unit_group) + deltaTempx_deltaLogit, M1, transpose_a=True, transpose_b=True)
     deltaL_deltaLogit = tf.linalg.matmul(tf.expand_dims(deltaL_deltaM,0),deltaM_deltaLogit)
     group_allocation_gradient = optimizer.get_gradients(kl_term * kl_term_coeff, latent_group_allocation_logit)
-    group_allocation_gradient[0] = tf.tensor_scatter_nd_add(group_allocation_gradient[0],tf.expand_dims(group_allocation_gradient[0].indices,1),deltaL_deltaLogit)
+    group_allocation_gradient[0] = tf.clip_by_norm(tf.tensor_scatter_nd_add(group_allocation_gradient[0],tf.expand_dims(group_allocation_gradient[0].indices,1),deltaL_deltaLogit),1.0)
     #tf.print("group_allocation_gradient",group_allocation_gradient,"domain",_domain,summarize=-1)
     #tf.print("deltaL_deltaLogit",deltaL_deltaLogit,summarize=-1)
     #M3 = tf.linalg.matmul( tf.tile(tf.expand_dims(domain_allocation_probs,1),[1,model.num_domain_unit_group]) * (tf.tile(tf.expand_dims(domain_allocation_probs,0),[model.num_domain_unit_group,1]) * tf.linalg.diag(-tf.ones(model.num_domain_unit_group)) + 1)
@@ -17558,7 +17558,7 @@ def train_elbo_topK_sparse_layer(config,
     #tf.print("gradient_soft_mask",gradient_soft_mask[0],summarize=-1)
     #gradients_domain_allocation_logits = tf.linalg.matmul(gradient_soft_mask[])
     gradient_accumulator(gradients)
-    gradient_group_allocation_accumulator(tf.clip_by_norm(group_allocation_gradient, 1.0))
+    gradient_group_allocation_accumulator(group_allocation_gradient)
     num_examples = tf.reduce_sum(target["length"])
     #tf.summary.scalar("gradients/global_norm", tf.linalg.global_norm(gradients))    
     return reported_loss, kl_term, num_examples, _domain, residue
