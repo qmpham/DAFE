@@ -2677,7 +2677,7 @@ def train(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      #for _ in range(int(config.get("accumulation_step",1))):
+      
       if config.get("adv_step",None):          
         if step==config.get("adv_step",None):
           classification_loss_sign.assign(-1.0)
@@ -2690,9 +2690,10 @@ def train(config,
         _number_examples.append(num_examples)
         _model_step()
       else:
-        loss, _domain, num_examples = next(train_data_flow)    
-        _loss.append(loss.numpy())
-        _number_examples.append(num_examples.numpy())
+        for _ in range(int(config.get("accumulation_step",1))):
+          loss, _domain, num_examples = next(train_data_flow)    
+          _loss.append(loss.numpy())
+          _number_examples.append(num_examples.numpy())
         _step()  
       step = optimizer.iterations.numpy()
       """ for i in range(len(domain)):
