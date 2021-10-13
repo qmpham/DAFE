@@ -16924,6 +16924,7 @@ def multilingual_train(config,
                                             multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
 
   #####
+  optimizer = tfa.optimizers.LazyAdam(0.0015)
   with strategy.scope():
     model.create_variables(optimizer=optimizer)
     gradient_accumulator = optimizer_util.GradientAccumulator()  
