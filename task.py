@@ -18390,7 +18390,7 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
     domain = source["domain"][0]
     kl_loss_per_layer = []
     soft_mask_total_per_layer = []
-    soft_mask_logi_per_layer = []
+    soft_mask_logits_per_layer = []
     delta_sigmoid_per_layer = []
     for i in range(model.encoder.num_layers + model.decoder.num_layers+1):
       gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
