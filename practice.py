@@ -19,7 +19,7 @@ from utils.utils_ import average_checkpoints, average_checkpoints_tf2_3
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter, ProbInputter, ProbInputter_v1
 from opennmt.models.sequence_to_sequence import SequenceToSequence
-from model import Multi_domain_SequenceToSequence_TopK_sparse, Multi_domain_SequenceToSequence_sparse, Priming_SequenceToSequence, Priming_SequenceToSequence_v1, Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1, SequenceToSequence_with_dprob, Multi_domain_SequenceToSequence_DRO
+from model import Multi_domain_SequenceToSequence_TopK_sparse, Multi_domain_SequenceToSequence_TopK_sparse_multi_layer, Multi_domain_SequenceToSequence_sparse, Priming_SequenceToSequence, Priming_SequenceToSequence_v1, Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1, SequenceToSequence_with_dprob, Multi_domain_SequenceToSequence_DRO
 from encoders.self_attention_encoder import *
 from decoders.self_attention_decoder import *
 import numpy as np
@@ -1218,7 +1218,7 @@ def main():
         attention_dropout=0.1,
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
-        version=config.get("encoder_version",1),
+        version=config.get("encoder_version",2),
         inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
         stop_gradient_version=config.get("stop_gradient_version",1)),
     decoder=Multi_domain_SelfAttentionDecoder_sparse(
@@ -1238,7 +1238,57 @@ def main():
         ffn_dropout=0.1,
         multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
         inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
-        version=config.get("decoder_version",1),
+        version=config.get("decoder_version",2),
+        stop_gradient_version=config.get("stop_gradient_version",1)))
+  
+  elif experiment=="TopK_Sparse_Layers_multi_layer":
+    model = Multi_domain_SequenceToSequence_TopK_sparse_multi_layer(
+    source_inputter=My_inputter(embedding_size=config.get("num_units",512)),
+    target_inputter=My_inputter(embedding_size=config.get("num_units",512)),
+    num_domains=num_domains,
+    num_units=config.get("num_units",512),
+    dropout_rate=config.get("dropout_rate",0.5),
+    num_domain_unit_group=config.get("num_domain_unit_group",16),
+    unit_group_size=config.get("unit_group_size",12),
+    num_shared_units=config.get("num_shared_units",480),
+    version = config.get("version",1),
+    encoder=Multi_domain_SelfAttentionEncoder_sparse_multi_layer(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        domain_region_sizes = config.get("domain_region_sizes",None),
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=d_classification_gate_stopping_gradient_enc,
+        num_units=config.get("num_units",512),
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        training_res_using_rate=config.get("training_res_using_rate",1.0),
+        testing_res_using_rate=config.get("testing_res_using_rate",1.0),
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+        version=config.get("encoder_version",2),
+        inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
+        stop_gradient_version=config.get("stop_gradient_version",1)),
+    decoder=Multi_domain_SelfAttentionDecoder_sparse_multi_layer(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        domain_region_sizes = config.get("domain_region_sizes",None),
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=d_classification_gate_stopping_gradient_dec,
+        num_units=config.get("num_units",512),
+        num_heads=8,
+        ffn_inner_dim=2048,
+        dropout=0.1,
+        training_res_using_rate=config.get("training_res_using_rate",1.0),
+        testing_res_using_rate=config.get("testing_res_using_rate",1.0),
+        attention_dropout=0.1,
+        ffn_dropout=0.1,
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+        inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
+        version=config.get("decoder_version",2),
         stop_gradient_version=config.get("stop_gradient_version",1)))
   
   elif experiment=="residualv28":
