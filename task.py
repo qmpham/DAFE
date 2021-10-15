@@ -18437,7 +18437,8 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
     print("var numb: ", len(variables))
     
     gradients = optimizer.get_gradients(training_loss, model_variables)
-    deltaL_deltaM = optimizer.get_gradients(training_loss,soft_mask_logits_per_layer)
+    deltaL_deltaM = optimizer.get_gradients(training_loss,soft_mask_total_per_layer)
+    optimizer.get_gradients(training_loss,soft_mask_logits_per_layer)
     group_allocation_gradient_per_layer = []
     for i in range(model.encoder.num_layers + model.decoder.num_layers+1):
       delta_sigmoid = delta_sigmoid_per_layer[i]
