@@ -4122,7 +4122,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse_multi_layer(model.SequenceGene
           encoder_outputs,
           encoder_state,
           encoder_sequence_length,
-          domain_dropout_mask[self.encoder.num_layers:],
+          domain_dropout_mask[self.encoder.num_layers+1:],
           step=step,
           training=training)
 
