@@ -17527,7 +17527,8 @@ def train_elbo_topK_sparse_layer(config,
     print("var numb: ", len(variables))
     
     gradients = optimizer.get_gradients(training_loss, model_variables)
-    gradient_soft_mask = optimizer.get_gradients(training_loss,[soft_mask])
+    gradient_soft_mask = optimizer.get_gradients(training_loss,[soft_mask,soft_mask_logits])
+    
     deltaL_deltaM = gradient_soft_mask[0] # in R^n_g
     #tf.print("gradient_soft_mask",gradient_soft_mask[0],summarize=-1)
 
@@ -18389,7 +18390,7 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
     domain = source["domain"][0]
     kl_loss_per_layer = []
     soft_mask_total_per_layer = []
-    soft_mask_logits_per_layer = []
+    soft_mask_logi_per_layer = []
     delta_sigmoid_per_layer = []
     for i in range(model.encoder.num_layers + model.decoder.num_layers+1):
       gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
