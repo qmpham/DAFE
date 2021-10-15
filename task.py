@@ -17527,7 +17527,7 @@ def train_elbo_topK_sparse_layer(config,
     print("var numb: ", len(variables))
     
     gradients = optimizer.get_gradients(training_loss, model_variables)
-    gradient_soft_mask = optimizer.get_gradients(training_loss,[soft_mask,soft_mask_logits])
+    gradient_soft_mask = optimizer.get_gradients(training_loss,[soft_mask])
     
     deltaL_deltaM = gradient_soft_mask[0] # in R^n_g
     #tf.print("gradient_soft_mask",gradient_soft_mask[0],summarize=-1)
