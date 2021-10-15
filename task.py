@@ -17546,7 +17546,8 @@ def train_elbo_topK_sparse_layer(config,
     
     deltaTempx_deltaLogit = - tf.tile(tf.expand_dims(deltaresidue_deltalogit1 / deltaresidue_deltatempx1,0),[model.num_domain_unit_group,1])
     #tf.print("deltaresidue_deltalogit", deltaresidue_deltalogit1, "deltaresidue_deltatempx", deltaresidue_deltatempx1, "deltaTempx_deltaLogit", deltaTempx_deltaLogit, summarize=-1)
-    deltaM_deltaLogit = tf.linalg.matmul(M1, tf.eye(model.num_domain_unit_group) + deltaTempx_deltaLogit) #, M1, transpose_a=True, transpose_b=True)
+    #deltaM_deltaLogit = tf.linalg.matmul(M1, tf.eye(model.num_domain_unit_group) + deltaTempx_deltaLogit) #, M1, transpose_a=True, transpose_b=True)
+    deltaM_deltaLogit = tf.linalg.matmul(tf.eye(model.num_domain_unit_group) + deltaTempx_deltaLogit, M1, transpose_a=True, transpose_b=True)
     deltaL_deltaLogit = tf.linalg.matmul(tf.expand_dims(deltaL_deltaM,0),deltaM_deltaLogit)
     group_allocation_gradient = optimizer.get_gradients(kl_term * kl_term_coeff, latent_group_allocation_logit)
     group_allocation_gradient[0] = tf.clip_by_norm(tf.tensor_scatter_nd_add(group_allocation_gradient[0],tf.expand_dims(group_allocation_gradient[0].indices,1),deltaL_deltaLogit),1.0)
