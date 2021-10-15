@@ -4086,7 +4086,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse_multi_layer(model.SequenceGene
       optimizer._create_slots(self.trainable_variables)  # pylint: disable=protected-access
 
   def build(self, input_shape):
-    super(Multi_domain_SequenceToSequence_TopK_sparse, self).build(input_shape)
+    super(Multi_domain_SequenceToSequence_TopK_sparse_multi_layer, self).build(input_shape)
     output_layer = None
     if EmbeddingsSharingLevel.share_target_embeddings(self.share_embeddings):
       output_layer = layers.Dense(
