@@ -4078,7 +4078,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse_multi_layer(model.SequenceGene
 
     # Add the batch dimension back before calling the model.
     features, labels = tf.nest.map_structure(lambda x: tf.expand_dims(x, 0), features)
-    _ = self(features, domain_dropout_mask=[tf.ones(self.num_units)]*(self.encoder.num_layers+self.decoder.num_layers), labels=labels, training=True, step=0)
+    _ = self(features, domain_dropout_mask=[tf.ones(self.num_units)]*(self.encoder.num_layers+self.decoder.num_layers+1), labels=labels, training=True, step=0)
 
     if optimizer is not None:
       _ = optimizer.iterations
