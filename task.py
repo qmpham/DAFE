@@ -18317,7 +18317,7 @@ def train_tf_25(config,
       if step > train_steps:
         break
 
-def train_elbo_topK_sparse_layer(config,
+def train_elbo_topK_sparse_layer_multi_layer(config,
           optimizer,          
           learning_rate,
           model,  
