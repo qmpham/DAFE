@@ -1581,9 +1581,9 @@ def main():
   elif args.run == "train_elbo_topK_sparse_layer":
     task.train_elbo_topK_sparse_layer(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint,adapter_optimizer=adapter_optimizer, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "train_elbo_topK_sparse_layer_multi_layer":
-    print(config.get("num_units",512)),
-    print(config.get("num_heads",8)),
-    print(config.get("ffn_inner_dim",2048)),
+    print("num_units",config.get("num_units",512)),
+    print("num_heads",config.get("num_heads",8)),
+    print("ffn_inner_dim",config.get("ffn_inner_dim",2048)),
     print("dropout",config.get("dropout",0.1)),
     print("attention_dropout",config.get("attention_dropout",0.1)),
     print("ffn_dropout",config.get("ffn_dropout",0.1)),
