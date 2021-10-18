@@ -18469,18 +18469,20 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
         model_variables.append(v)
       else:
         continue
-    grads_and_vars = []
 
+    grads_and_vars = []
     for gradient, variable in zip(gradient_accumulator.gradients, model_variables):
       # optimizer.apply_gradients will sum the gradients accross replicas.
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
-    
+    optimizer.apply_gradients(grads_and_vars)
+
+    grads_and_vars = []
     for gradient, variable in zip(gradient_group_allocation_accumulator.gradients, model.latent_group_allocation_logit_per_layer):
       scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
       grads_and_vars.append((scaled_gradient, variable))
-    #latent_logit_optimizer.apply_gradients([(gradient_group_allocation_accumulator.gradients[0] / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32)), latent_group_allocation_logit)])
-    optimizer.apply_gradients(grads_and_vars)
+    latent_logit_optimizer.apply_gradients(grads_and_vars)
+
     gradient_accumulator.reset()
     gradient_group_allocation_accumulator.reset()
 
