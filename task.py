@@ -17754,9 +17754,9 @@ def translate_topK_sparse_layer(source_file,
   # Create the mapping for target ids to tokens.
   ids_to_tokens = model.labels_inputter.ids_to_tokens
 
-  topK = tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain),k=topK).indices.numpy()
+  topK_ = tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain),k=topK).indices.numpy()
   group_allocation = np.zeros(model.num_domain_unit_group)
-  for i in topK:
+  for i in topK_:
     group_allocation[i] = 1
 
   tf.print("group_allocation:",group_allocation,"domain:",domain,summarize=-1)
@@ -18653,9 +18653,9 @@ def translate_topK_sparse_layer_multi_layer(source_file,
   domain_dropout_mask = []
 
   for i in range(model.encoder.num_layers+model.decoder.num_layers+1):
-    topK = tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain),k=topK).indices.numpy()
+    topK_ = tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain),k=topK).indices.numpy()
     group_allocation = np.zeros(model.num_domain_unit_group)
-    for i in topK:
+    for i in topK_:
       group_allocation[i] = 1
 
     tf.print("group_allocation:",group_allocation,"domain:",domain,summarize=-1)
