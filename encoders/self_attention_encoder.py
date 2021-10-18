@@ -2179,8 +2179,6 @@ class Multi_domain_SelfAttentionEncoder_sparse(Encoder):
       m += layer.map_v1_weights(weights["layer_%d" % i])
     return m
 
-
-
 class Multi_domain_SelfAttentionEncoder_sparse_multi_layer(Encoder):
   
   def __init__(self,
