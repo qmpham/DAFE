@@ -18393,6 +18393,7 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
     soft_mask_total_per_layer = []
     soft_mask_logits_per_layer = []
     delta_sigmoid_per_layer = []
+    residue_per_layer = []
     for i in range(model.encoder.num_layers + model.decoder.num_layers+1):
       gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
       latent_group_allocation_logit_ = tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain)
@@ -18400,7 +18401,7 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
       kl_loss_per_layer.append(- tf.reduce_mean(tf.math.log(domain_allocation_probs)))
       f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+x)/temperature)) - K
       temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=100, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
-      residue = tf.reduce_sum(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature)) - K
+      residue_per_layer.append(tf.reduce_sum(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature)) - K)
       soft_mask_logits = (gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature
       soft_mask_logits_per_layer.append(soft_mask_logits)
       #tf.print("soft_mask_logits",soft_mask_logits,summarize=-1)
@@ -18458,7 +18459,7 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
     gradient_group_allocation_accumulator(group_allocation_gradient_per_layer)
     num_examples = tf.reduce_sum(target["length"])
        
-    return reported_loss, tf.math.add_n(kl_loss_per_layer)/len(kl_loss_per_layer), num_examples, _domain, residue
+    return reported_loss, tf.math.add_n(kl_loss_per_layer)/len(kl_loss_per_layer), num_examples, _domain, tf.math.add_n(residue_per_layer)/len(residue_per_layer)
      
   def _apply_gradients():
     variables = model.trainable_variables
