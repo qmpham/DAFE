@@ -1723,10 +1723,7 @@ def main():
     new_checkpoint_manager = average_checkpoints_tf2_3(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
                         max_count=translate_config.get("max_count",3),
                         model_key="model")
-    with np.printoptions(threshold=np.inf):
-      for i, logit in enumerate(model.latent_group_allocation_logit_per_layer):
-        print("unit_allocation_logit_layer_%d"%i)
-        print(logit.numpy())
+    
     for src_file, domain in zip(translate_config["src"], translate_config["domain"]):      
       output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src_file) + ".trans")
       print("translating %s in domain %d"%(src_file, domain))
@@ -1741,6 +1738,10 @@ def main():
     new_checkpoint_manager = average_checkpoints_tf2_3(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
                         max_count=translate_config.get("max_count",3),
                         model_key="model")
+    with np.printoptions(threshold=np.inf):
+      for i, logit in enumerate(model.latent_group_allocation_logit_per_layer):
+        print("unit_allocation_logit_layer_%d"%i)
+        print(logit.numpy())
     for src_file, domain in zip(translate_config["src"], translate_config["domain"]):      
       output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src_file) + ".trans")
       print("translating %s in domain %d"%(src_file, domain))
