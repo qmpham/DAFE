@@ -18660,7 +18660,7 @@ def translate_topK_sparse_layer_multi_layer(source_file,
     for i in topK_:
       group_allocation[i] = 1
 
-    tf.print("group_allocation:",group_allocation,"domain:",domain,summarize=-1)
+    tf.print("group_allocation:",group_allocation,"domain:",domain,"layer:",i,summarize=-1)
 
     group_allocation = tf.repeat(tf.Variable(group_allocation,dtype=tf.float32),model.unit_group_size)
 
