@@ -18675,7 +18675,7 @@ def translate_topK_sparse_layer_multi_layer(source_file,
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
-    encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"], domain_dropout_mask], source_length, training=False, internal_node_printing=True)
+    encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"], domain_dropout_mask[:model.encoder.num_layers+1]], source_length, training=False, internal_node_printing=True)
     
     # Prepare the decoding strategy.
     if beam_size > 1:
@@ -18689,7 +18689,7 @@ def translate_topK_sparse_layer_multi_layer(source_file,
     decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
         memory_sequence_length=source_length)
-    map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64), domain_dropout_mask]
+    map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64), domain_dropout_mask[model.encoder.num_layers+1:]]
     
     decoded = model.decoder.dynamic_decode(
         map_input_fn,
