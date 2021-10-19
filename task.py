@@ -18410,8 +18410,8 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
       soft_mask_total_per_layer.append(tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask, model.unit_group_size),tf.float32)],-1))
       delta_sigmoid_per_layer.append(tf.math.square(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature))/tf.math.exp((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature))
     
-    for i, mask_per_layer in enumerate(soft_mask_total_per_layer):
-      tf.print(mask_per_layer, "domain: ", domain, "layer: ", i, summarize=-1)
+    # for i, mask_per_layer in enumerate(soft_mask_total_per_layer):
+    #   tf.print(mask_per_layer, "domain: ", domain, "layer: ", i, summarize=-1)
 
     outputs, _ = model(
         source,
