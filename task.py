@@ -18394,7 +18394,7 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
     soft_mask_logits_per_layer = []
     delta_sigmoid_per_layer = []
     residue_per_layer = []
-    for i in range(model.encoder.num_layers + model.decoder.num_layers+1):
+    for i in range(model.encoder.num_layers + model.decoder.num_layers + 1):
       gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
       latent_group_allocation_logit_ = tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain)
       domain_allocation_probs = tf.math.softmax(latent_group_allocation_logit_)
@@ -18409,6 +18409,9 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
       #tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
       soft_mask_total_per_layer.append(tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask, model.unit_group_size),tf.float32)],-1))
       delta_sigmoid_per_layer.append(tf.math.square(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature))/tf.math.exp((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature))
+    
+    for i, mask_per_layer in enumerate(soft_mask_total_per_layer):
+      tf.print(mask_per_layer, "domain: ", domain, "layer: ", i, summarize=-1)
 
     outputs, _ = model(
         source,
@@ -18664,8 +18667,7 @@ def translate_topK_sparse_layer_multi_layer(source_file,
 
     group_allocation = tf.repeat(tf.Variable(group_allocation,dtype=tf.float32),model.unit_group_size)
 
-    domain_dropout_mask.append(tf.concat([tf.ones(model.num_shared_units),group_allocation],-1))
-  
+    domain_dropout_mask.append(tf.concat([tf.ones(model.num_shared_units),group_allocation],-1))  
 
   @tf.function
   def predict_next():    
