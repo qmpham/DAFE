@@ -3968,9 +3968,9 @@ def model_inspect(config,
   #       print(v.name)
   #       print(v.numpy())
 
-  size = 1
+  size = 0
   for v in model.trainable_variables:
-    size *= v.numpy().size
+    size += v.numpy().size
   print("total number of parameters: %d"%size)
   """
   checkpoint_path = checkpoint_manager.latest_checkpoint
