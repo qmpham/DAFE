@@ -3962,12 +3962,16 @@ def model_inspect(config,
             dist[i,j] = np.sum((matrix[i,:] - matrix[j,:]) * (matrix[i,:] - matrix[j,:]))
         print(dist) """
 
-  with np.printoptions(threshold=np.inf):
-    for v in model.trainable_variables:
-      if "latent_group_allocation_logit" in v.name:
-        print(v.name)
-        print(v.numpy())
+  # with np.printoptions(threshold=np.inf):
+  #   for v in model.trainable_variables:
+  #     if "latent_group_allocation_logit" in v.name:
+  #       print(v.name)
+  #       print(v.numpy())
 
+  size = 1
+  for v in model.trainable_variables:
+    size *= v.numpy().size
+  print("total number of parameters: %d"%size)
   """
   checkpoint_path = checkpoint_manager.latest_checkpoint
   for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
