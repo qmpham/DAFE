@@ -1531,6 +1531,7 @@ def main():
   meta_train_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr"))
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate, beta_1=config.get("adam_beta_1",0.9), beta_2=config.get("adam_beta_2",0.999),epsilon=config.get("adam_epsilon",1e-8))
   if experiment=="small_transformer":
+    print(meta_test_optimizer)
     meta_test_optimizer = tfa.optimizers.LazyAdam(0.0015)
   adapter_optimizer = tfa.optimizers.LazyAdam(learning_rate)
   model.initialize(data_config)
