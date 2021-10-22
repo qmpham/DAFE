@@ -6768,7 +6768,6 @@ class Multi_domain_SelfAttentionDecoder_sparse(Decoder):
       cache.append(dict(self_kv=self_kv, memory_kv=memory_kv))
     return cache
 
-
 class Multi_domain_SelfAttentionDecoder_sparse_multi_layer(Decoder):
   
   def __init__(self,
