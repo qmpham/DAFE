@@ -1731,7 +1731,7 @@ def main():
       print("output_file: ", output_file)
       task.translate_topK_sparse_layer(src_file, None, model, new_checkpoint_manager, checkpoint, int(domain), output_file, topK=topK, length_penalty=0.6, experiment=experiment)
   elif args.run == "translate_topK_sparse_layer_multi_layer":
-    topK = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate")) * config.get("num_domain_unit_group")))
+    topK = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate",0.3)) * config.get("num_domain_unit_group",12)))
     model.create_variables()
     translate_config_file = args.src
     with open(translate_config_file, "r") as stream:
