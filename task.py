@@ -1300,7 +1300,7 @@ def finetuning(config,
             layer_activity_regularization_losses.append(loss_)
 
         print("There are %d adaptation regularization loss on hidden layers____"%len(layer_activity_regularization_losses))
-        if (len(layer_activity_regularization_losses)>0) and config.get("layer_activity_regularization_loss_scale",0.001)>0:
+        if (len(layer_activity_regularization_losses)>0):
           training_loss += layer_activity_regularization_loss_scale * tf.add_n(layer_activity_regularization_losses)
 
     if config.get("ADAP_weight_decay",False):
