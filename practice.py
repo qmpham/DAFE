@@ -1747,6 +1747,7 @@ def main():
   elif args.run == "translate_topK_sparse_layer_multi_layer":
     topK = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate",0.3)) * config.get("num_domain_unit_group",12)))
     model.create_variables()
+    print("topK:",topK)
     translate_config_file = args.src
     with open(translate_config_file, "r") as stream:
       translate_config = yaml.load(stream)
