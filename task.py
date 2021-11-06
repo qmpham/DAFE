@@ -1391,9 +1391,10 @@ def finetuning(config,
   with _summary_writer.as_default():
     while True:
       #####Training batch
-      loss, _ = next(finetuning_data_flow)
-      _step()     
-      _loss.append(loss)
+      for _ in range(int(config.get("accumulation_step",1))):
+        loss, _ = next(finetuning_data_flow) 
+        _loss.append(loss)
+      _step()
       step = optimizer.iterations.numpy()
       if step % report_every == 0:
         elapsed = time.time() - start
