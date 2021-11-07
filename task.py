@@ -3988,7 +3988,8 @@ def model_inspect(config,
 
       group_allocation = tf.repeat(tf.Variable(group_allocation,dtype=tf.float32),model.unit_group_size)
 
-      domain_dropout_mask.append(tf.concat([tf.ones(model.num_shared_units),group_allocation],-1))
+      #domain_dropout_mask.append(tf.concat([tf.ones(model.num_shared_units),group_allocation],-1))
+      domain_dropout_mask.append(tf.Variable(group_allocation,dtype=tf.float32))
     domain_dropout_masks.append(domain_dropout_mask)
   
   for layer in range(model.encoder.num_layers+model.decoder.num_layers+1):
@@ -3997,6 +3998,7 @@ def model_inspect(config,
       for j in range(config.get("num_inspected_domains",8)):
         m_i = domain_dropout_masks[i][layer]
         m_j = domain_dropout_masks[j][layer]
+        print("(%d,%d)"%(i,j),m_i * m_j)
         similarity_matrix[i,j]= tf.reduce_sum(m_i * m_j,0) / config.get("num_domain_unit_group")
     print(similarity_matrix)
 
