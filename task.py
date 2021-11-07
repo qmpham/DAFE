@@ -3998,7 +3998,7 @@ def model_inspect(config,
       for j in range(config.get("num_inspected_domains",8)):
         m_i = domain_dropout_masks[i][layer]
         m_j = domain_dropout_masks[j][layer]
-        print("(%d,%d)"%(i,j),m_i * m_j)
+        #print("(%d,%d)"%(i,j),m_i * m_j)
         similarity_matrix[i,j]= tf.reduce_sum(m_i * m_j,0) / config.get("num_domain_unit_group")
     print(similarity_matrix)
 
