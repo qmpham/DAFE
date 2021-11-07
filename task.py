@@ -3976,7 +3976,7 @@ def model_inspect(config,
 
   topK = config.get("domain_group_allocation_num")
   domain_dropout_masks = []
-  for domain in range(config.get("num_domains",8)):
+  for domain in range(config.get("num_inspected_domains",8)):
     domain_dropout_mask = []
     for i in range(model.encoder.num_layers+model.decoder.num_layers+1):
       topK_ = tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain),k=topK).indices.numpy()
@@ -3992,9 +3992,9 @@ def model_inspect(config,
     domain_dropout_masks.append(domain_dropout_mask)
   
   for layer in range(model.encoder.num_layers+model.decoder.num_layers+1):
-    similarity_matrix = np.zeros((config.get("num_domains",8),config.get("num_domains",8)))
-    for i in range(config.get("num_domains",8)):
-      for j in range(config.get("num_domains",8)):
+    similarity_matrix = np.zeros((config.get("num_inspected_domains",8),config.get("num_inspected_domains",8)))
+    for i in range(config.get("num_inspected_domains",8)):
+      for j in range(config.get("num_inspected_domains",8)):
         m_i = domain_dropout_masks[i][layer]
         m_j = domain_dropout_masks[j][layer]
         similarity_matrix[i,j]= tf.reduce_sum(m_i * m_j,0) / config.get("num_domain_unit_group")
