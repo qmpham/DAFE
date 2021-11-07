@@ -3986,7 +3986,7 @@ def model_inspect(config,
 
       #tf.print("group_allocation:",group_allocation,"domain:",domain,"layer:",i,summarize=-1)
 
-      group_allocation = tf.repeat(tf.Variable(group_allocation,dtype=tf.float32),model.unit_group_size)
+      #group_allocation = tf.repeat(tf.Variable(group_allocation,dtype=tf.float32),model.unit_group_size)
 
       #domain_dropout_mask.append(tf.concat([tf.ones(model.num_shared_units),group_allocation],-1))
       domain_dropout_mask.append(tf.Variable(group_allocation,dtype=tf.float32))
