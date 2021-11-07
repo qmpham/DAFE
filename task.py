@@ -3984,7 +3984,7 @@ def model_inspect(config,
       for j in topK_:
         group_allocation[j] = 1
 
-      tf.print("group_allocation:",group_allocation,"domain:",domain,"layer:",i,summarize=-1)
+      #tf.print("group_allocation:",group_allocation,"domain:",domain,"layer:",i,summarize=-1)
 
       group_allocation = tf.repeat(tf.Variable(group_allocation,dtype=tf.float32),model.unit_group_size)
 
@@ -3992,7 +3992,7 @@ def model_inspect(config,
     domain_dropout_masks.append(domain_dropout_mask)
   
   for layer in range(model.encoder.num_layers+model.decoder.num_layers+1):
-    similarity_matrix = np.zeros(config.get("num_domains",8),config.get("num_domains",8))
+    similarity_matrix = np.zeros((config.get("num_domains",8),config.get("num_domains",8)))
     for i in range(config.get("num_domains",8)):
       for j in range(config.get("num_domains",8)):
         m_i = domain_dropout_masks[i][layer]
