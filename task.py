@@ -3973,6 +3973,35 @@ def model_inspect(config,
   for v in model.trainable_variables:
     size += v.numpy().size
   print("total number of parameters: %d"%size)
+
+  topK = config.get("domain_group_allocation_num")
+  domain_dropout_masks = []
+  for domain in range(config.get("num_domains",8)):
+    domain_dropout_mask = []
+    for i in range(model.encoder.num_layers+model.decoder.num_layers+1):
+      topK_ = tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain),k=topK).indices.numpy()
+      group_allocation = np.zeros(model.num_domain_unit_group)
+      for j in topK_:
+        group_allocation[j] = 1
+
+      tf.print("group_allocation:",group_allocation,"domain:",domain,"layer:",i,summarize=-1)
+
+      group_allocation = tf.repeat(tf.Variable(group_allocation,dtype=tf.float32),model.unit_group_size)
+
+      domain_dropout_mask.append(tf.concat([tf.ones(model.num_shared_units),group_allocation],-1))
+    domain_dropout_masks.append(domain_dropout_mask)
+  
+  for layer in range(model.encoder.num_layers+model.decoder.num_layers+1):
+    similarity_matrix = np.zeros(config.get("num_domains",8),config.get("num_domains",8))
+    for i in range(config.get("num_domains",8)):
+      for j in range(config.get("num_domains",8)):
+        m_i = domain_dropout_masks[i][layer]
+        m_j = domain_dropout_masks[j][layer]
+        similarity_matrix[i,j]= tf.reduce_sum(m_i * m_j,0) / config.get("num_domain_unit_group")
+    print(similarity_matrix)
+
+
+
   """
   checkpoint_path = checkpoint_manager.latest_checkpoint
   for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
