@@ -4756,7 +4756,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse_multi_layer_v1(model.SequenceG
         vocab_size=self.labels_inputter.vocabulary_size,
         output_layer=output_layer)
 
-    self.latent_group_allocation_logit_per_layer = [self.add_weight("latent_group_allocation_logit_per_layer_%d"%i, initializer=tf.keras.initializers.Zeros(), shape=[self.num_domains, self.num_domain_unit_group]) for i in range(self.encoder.num_layers+self.decoder.num_layers+1)]
+    self.latent_group_allocation_logit_per_layer = [self.add_weight("latent_group_allocation_logit_per_layer_%d"%i, initializer=tf.keras.initializers.Zeros(), shape=[self.num_domains, self.num_domain_unit_group]) for i in range(self.encoder.num_layers+self.decoder.num_layers+2)]
 
   def call(self, features, domain_dropout_mask=None, labels=None, training=None, step=None, internal_node_printing=False, return_domain_classification_logits=False, return_embedding=False, adapter_activate=True, inference=True):
     # Encode the source.
