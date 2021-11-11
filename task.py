@@ -3992,7 +3992,7 @@ def model_inspect(config,
       #domain_dropout_mask.append(tf.concat([tf.ones(model.num_shared_units),group_allocation],-1))
       domain_dropout_mask.append(tf.Variable(group_allocation,dtype=tf.float32))
     domain_dropout_masks.append(domain_dropout_mask)
-    vector_masks.append(tf.concat(domain_dropout_mask,0))
+    vector_masks.append(tf.concat(domain_dropout_mask,0).numpy())
   acc_similarity_matrix = np.zeros((config.get("num_inspected_domains",8),config.get("num_inspected_domains",8)))
 
   m = np.array(vector_masks)
