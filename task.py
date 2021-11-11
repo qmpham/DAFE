@@ -3996,9 +3996,9 @@ def model_inspect(config,
   acc_similarity_matrix = np.zeros((config.get("num_inspected_domains",8),config.get("num_inspected_domains",8)))
 
 
-  ckpt = tf.train.Checkpoint(tf.Variable(vector_masks))
+  ckpt = tf.train.Checkpoint(v=tf.Variable(vector_masks))
   path = ckpt.write(os.path.join(config["model_dir"],"my_mask.ckpt"))
-  checkpoint.read(path).assert_consumed()
+  
   for layer in range(model.encoder.num_layers+model.decoder.num_layers+1):
     similarity_matrix = np.zeros((config.get("num_inspected_domains",8),config.get("num_inspected_domains",8)))
     for i in range(config.get("num_inspected_domains",8)):
