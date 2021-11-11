@@ -3995,7 +3995,7 @@ def model_inspect(config,
     vector_masks.append(tf.concat(domain_dropout_mask,0))
   acc_similarity_matrix = np.zeros((config.get("num_inspected_domains",8),config.get("num_inspected_domains",8)))
 
-  m = np.array(domain_dropout_masks)
+  m = np.array(vector_masks)
   np.savetxt("mask.csv", m, delimiter="\t")
   
   for layer in range(model.encoder.num_layers+model.decoder.num_layers+1):
