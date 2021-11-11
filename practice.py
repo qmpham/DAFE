@@ -19,7 +19,7 @@ from utils.utils_ import average_checkpoints, average_checkpoints_tf2_3
 tf.get_logger().setLevel(logging.INFO)
 from utils.my_inputter import My_inputter, LDR_inputter, DC_inputter, ProbInputter, ProbInputter_v1
 from opennmt.models.sequence_to_sequence import SequenceToSequence
-from model import Multi_domain_SequenceToSequence_TopK_sparse, Multi_domain_SequenceToSequence_TopK_sparse_multi_layer, Multi_domain_SequenceToSequence_sparse, Priming_SequenceToSequence, Priming_SequenceToSequence_v1, Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1, SequenceToSequence_with_dprob, Multi_domain_SequenceToSequence_DRO
+from model import Multi_domain_SequenceToSequence_TopK_sparse, Multi_domain_SequenceToSequence_TopK_sparse_multi_layer_v1, Multi_domain_SequenceToSequence_TopK_sparse_multi_layer, Multi_domain_SequenceToSequence_sparse, Priming_SequenceToSequence, Priming_SequenceToSequence_v1, Multi_domain_SequenceToSequence, LDR_SequenceToSequence, SequenceToSequence_WDC, LDR_SequenceToSequence_v1, SequenceToSequence_with_dprob, Multi_domain_SequenceToSequence_DRO
 from encoders.self_attention_encoder import *
 from decoders.self_attention_decoder import *
 import numpy as np
@@ -1292,7 +1292,7 @@ def main():
         stop_gradient_version=config.get("stop_gradient_version",1)))
   
   elif experiment=="TopK_Sparse_Layers_multi_layer_v1":
-    model = Multi_domain_SequenceToSequence_TopK_sparse_multi_layer(
+    model = Multi_domain_SequenceToSequence_TopK_sparse_multi_layer_v1(
     source_inputter=My_inputter(embedding_size=config.get("num_units",512)),
     target_inputter=My_inputter(embedding_size=config.get("num_units",512)),
     num_domains=num_domains,
