@@ -4644,6 +4644,299 @@ class Priming_variational_SequenceToSequence(model.SequenceGenerator):
         optimizer=optimizer,
         ignore_weights=updated_variables)
 
+class Multi_domain_SequenceToSequence_TopK_sparse_multi_layer_v1(model.SequenceGenerator):
+
+  """A sequence to sequence model."""
+
+  def __init__(self,
+               source_inputter,
+               target_inputter,
+               encoder,
+               decoder,
+               version=1,
+               num_domains=6,
+               dropout_rate=0.2,
+               num_domain_unit_group=12,
+               unit_group_size=16,
+               num_shared_units=480,
+               num_units=512,
+               share_embeddings=EmbeddingsSharingLevel.NONE):
+
+    if not isinstance(target_inputter, inputters.WordEmbedder) and not isinstance(target_inputter, My_inputter):
+      raise TypeError("Target inputter must be a WordEmbedder or My_inputter")
+    if EmbeddingsSharingLevel.share_input_embeddings(share_embeddings):
+      if isinstance(source_inputter, inputters.ParallelInputter):
+        source_inputters = source_inputter.inputters
+      else:
+        source_inputters = [source_inputter]
+      for inputter in source_inputters:
+        if not isinstance(inputter, inputters.WordEmbedder):
+          raise TypeError("Sharing embeddings requires all inputters to be a "
+                          "WordEmbedder")
+
+    examples_inputter = Multi_domain_SequenceToSequenceInputter(
+        source_inputter,
+        target_inputter,
+        share_parameters=EmbeddingsSharingLevel.share_input_embeddings(share_embeddings))
+    super(Multi_domain_SequenceToSequence_TopK_sparse_multi_layer_v1, self).__init__(examples_inputter)
+    self.encoder = encoder
+    self.decoder = decoder
+    self.share_embeddings = share_embeddings
+    self.num_domains = num_domains
+    self.num_domain_unit_group=num_domain_unit_group
+    self.unit_group_size = unit_group_size
+    self.dropout_rate = dropout_rate
+    self.num_units = num_units
+    self.num_shared_units = num_shared_units
+    assert num_shared_units + unit_group_size * num_domain_unit_group == num_units
+    self.version = version
+  
+  def auto_config(self, num_replicas=1):
+    config = super(Multi_domain_SequenceToSequence_TopK_sparse_multi_layer_v1, self).auto_config(num_replicas=num_replicas)
+    return merge_dict(config, {
+        "params": {
+            "beam_width": 5
+        },
+        "train": {
+            "sample_buffer_size": -1,
+            "max_step": 200000
+        },
+        "infer": {
+            "batch_size": 32,
+            "length_bucket_width": 5
+        }
+    })
+
+  def initialize(self, data_config, params=None):
+    super(Multi_domain_SequenceToSequence_TopK_sparse_multi_layer_v1, self).initialize(data_config, params=params)
+    if self.params.get("contrastive_learning"):
+      noiser = noise.WordNoiser(
+          noises=[noise.WordOmission(1)],
+          subword_token=self.params.get("decoding_subword_token", "￭"),
+          is_spacer=self.params.get("decoding_subword_token_is_spacer"))
+      self.labels_inputter.set_noise(noiser, in_place=False)
+
+  def create_variables(self, optimizer=None):
+    """Creates the model variables by running it once.
+
+    Args:
+      optimizer: If set, also create the optimizer variables.
+    """
+    if self.built:
+      return
+
+    # Create input features from the input signatures. We remove the leading
+    # batch dimension as sometimes assumed by make_features methods and set
+    # unspecified dimensions to 1.
+    features = tf.nest.map_structure(
+        lambda spec: tf.fill(
+            [dim or 1 for dim in spec.shape.as_list()[1:]],
+            tf.constant("" if spec.dtype is tf.string else 1, dtype=spec.dtype)),
+        self.examples_inputter.input_signature())
+    features = self.examples_inputter.make_features(features=features)
+
+    # Add the batch dimension back before calling the model.
+    features, labels = tf.nest.map_structure(lambda x: tf.expand_dims(x, 0), features)
+    _ = self(features, domain_dropout_mask=[tf.ones(self.num_units)]*(self.encoder.num_layers+self.decoder.num_layers+2), labels=labels, training=True, step=0)
+
+    if optimizer is not None:
+      _ = optimizer.iterations
+      optimizer._create_hypers()  # pylint: disable=protected-access
+      optimizer._create_slots(self.trainable_variables)  # pylint: disable=protected-access
+
+  def build(self, input_shape):
+    super(Multi_domain_SequenceToSequence_TopK_sparse_multi_layer_v1, self).build(input_shape)
+    output_layer = None
+    if EmbeddingsSharingLevel.share_target_embeddings(self.share_embeddings):
+      output_layer = layers.Dense(
+          self.labels_inputter.vocabulary_size,
+          weight=self.labels_inputter.embedding,
+          transpose=True)
+    self.decoder.initialize(
+        vocab_size=self.labels_inputter.vocabulary_size,
+        output_layer=output_layer)
+
+    self.latent_group_allocation_logit_per_layer = [self.add_weight("latent_group_allocation_logit_per_layer_%d"%i, initializer=tf.keras.initializers.Zeros(), shape=[self.num_domains, self.num_domain_unit_group]) for i in range(self.encoder.num_layers+self.decoder.num_layers+1)]
+
+  def call(self, features, domain_dropout_mask=None, labels=None, training=None, step=None, internal_node_printing=False, return_domain_classification_logits=False, return_embedding=False, adapter_activate=True, inference=True):
+    # Encode the source.
+    assert isinstance(self.features_inputter, My_inputter)
+    assert isinstance(self.labels_inputter, My_inputter)    
+    assert domain_dropout_mask != None
+    
+    source_length = self.features_inputter.get_length(features)
+    source_inputs = self.features_inputter(features, training=training)
+
+    encoder_outputs, encoder_state, encoder_sequence_length = self.encoder(
+        [source_inputs, features["domain"], domain_dropout_mask[:self.encoder.num_layers+1]], sequence_length=source_length, training=training)
+    
+    outputs = None
+    predictions = None
+
+    # When a target is provided, compute the decoder outputs for it.
+    
+    if labels is not None:
+      outputs = self._decode_target(
+          labels,
+          encoder_outputs,
+          encoder_state,
+          encoder_sequence_length,
+          domain_dropout_mask[self.encoder.num_layers+1:],
+          step=step,
+          training=training)
+
+    # When not in training, also compute the model predictions.
+    if not training:
+      predictions = self._dynamic_decode(
+          features,
+          encoder_outputs,
+          encoder_state,
+          encoder_sequence_length,
+          domain_dropout_mask[self.encoder.num_layers+1:])
+    
+    return outputs, predictions
+  
+  def _decode_target(self,
+                     labels,
+                     encoder_outputs,
+                     encoder_state,
+                     encoder_sequence_length,
+                     domain_dropout_mask,
+                     step=None,
+                     training=None,
+                     internal_node_printing=False):
+    params = self.params
+    target_inputs = self.labels_inputter(labels, training=training)
+    input_fn = lambda ids: [self.labels_inputter({"ids": ids}, training=training), labels["domain"]]
+
+    sampling_probability = None
+    if training:
+      sampling_probability = decoder_util.get_sampling_probability(
+          step,
+          read_probability=params.get("scheduled_sampling_read_probability"),
+          schedule_type=params.get("scheduled_sampling_type"),
+          k=params.get("scheduled_sampling_k"))
+
+    initial_state = self.decoder.initial_state(
+        memory=encoder_outputs,
+        memory_sequence_length=encoder_sequence_length,
+        initial_state=encoder_state)
+    logits, _, attention = self.decoder(
+        [target_inputs, labels["domain"], domain_dropout_mask],
+        self.labels_inputter.get_length(labels),
+        state=initial_state,
+        input_fn=input_fn,
+        sampling_probability=sampling_probability,
+        training=training)
+    outputs = dict(logits=logits, attention=attention)
+
+    return outputs
+  
+  def _dynamic_decode(self, features, encoder_outputs, encoder_state, encoder_sequence_length, domain_dropout_mask):
+    params = self.params
+    batch_size = tf.shape(tf.nest.flatten(encoder_outputs)[0])[0]
+    start_ids = tf.fill([batch_size], constants.START_OF_SENTENCE_ID)
+    beam_size = params.get("beam_width", 1)
+
+    if beam_size > 1:
+      # Tile encoder outputs to prepare for beam search.
+      encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
+      encoder_sequence_length = tfa.seq2seq.tile_batch(encoder_sequence_length, beam_size)
+      if encoder_state is not None:
+        encoder_state = tfa.seq2seq.tile_batch(encoder_state, beam_size)
+
+    # Dynamically decodes from the encoder outputs.
+    initial_state = self.decoder.initial_state(
+        memory=encoder_outputs,
+        memory_sequence_length=encoder_sequence_length,
+        initial_state=encoder_state)
+    sampled_ids, sampled_length, log_probs, alignment, _ = self.decoder.dynamic_decode(
+        lambda ids: [self.labels_inputter({"ids": ids}), features["domain"], domain_dropout_mask],
+        start_ids,
+        initial_state=initial_state,
+        decoding_strategy=decoding.DecodingStrategy.from_params(params),
+        sampler=decoding.Sampler.from_params(params),
+        maximum_iterations=params.get("maximum_decoding_length", 250),
+        minimum_iterations=params.get("minimum_decoding_length", 0))
+    target_tokens = self.labels_inputter.ids_to_tokens.lookup(tf.cast(sampled_ids, tf.int64))
+
+    predictions = {
+        "tokens": target_tokens,
+        "length": sampled_length,
+        "log_probs": log_probs
+    }
+    
+    # Maybe restrict the number of returned hypotheses based on the user parameter.
+    num_hypotheses = params.get("num_hypotheses", 1)
+    if num_hypotheses > 0:
+      if num_hypotheses > beam_size:
+        raise ValueError("n_best cannot be greater than beam_width")
+      for key, value in six.iteritems(predictions):
+        predictions[key] = value[:, :num_hypotheses]
+    return predictions
+
+  def compute_loss(self, outputs, labels, training=True):
+    params = self.params
+    if not isinstance(outputs, dict):
+      outputs = dict(logits=outputs)
+    logits = outputs["logits"]
+    labels_lengths = self.labels_inputter.get_length(labels)
+
+    loss, loss_normalizer, loss_token_normalizer = losses.cross_entropy_sequence_loss(
+        logits,
+        labels["ids_out"],
+        labels_lengths,
+        label_smoothing=params.get("label_smoothing", 0.0),
+        average_in_time=params.get("average_loss_in_time", False),
+        training=training)
+    
+    return loss, loss_normalizer, loss_token_normalizer
+  
+  def print_prediction(self, prediction, params=None, stream=None):
+    if params is None:
+      params = {}
+    num_hypotheses = len(prediction["tokens"])
+    for i in range(num_hypotheses):
+      target_length = prediction["length"][i]
+      tokens = prediction["tokens"][i][:target_length]
+      sentence = self.labels_inputter.tokenizer.detokenize(tokens)
+      score = None
+      attention = None
+      alignment_type = None
+      if params.get("with_scores"):
+        score = prediction["log_probs"][i]
+      if params.get("with_alignments"):
+        attention = prediction["alignment"][i][:target_length]
+        alignment_type = params["with_alignments"]
+      sentence = format_translation_output(
+          sentence,
+          score=score,
+          attention=attention,
+          alignment_type=alignment_type)
+      print_bytes(tf.compat.as_bytes(sentence), stream=stream)
+
+  def transfer_weights(self, new_model, new_optimizer=None, optimizer=None, ignore_weights=None):
+    updated_variables = []
+
+    def _map_variables(inputter_fn, vars_fn):
+      mapping, _ = vocab.get_mapping(
+          inputter_fn(self).vocabulary_file,
+          inputter_fn(new_model).vocabulary_file)
+      vars_a, vocab_axes = vars_fn(self)
+      vars_b, _ = vars_fn(new_model)
+      for var_a, var_b, vocab_axis in zip(vars_a, vars_b, vocab_axes):
+        if new_optimizer is not None and optimizer is not None:
+          variables = vocab.update_variable_and_slots(
+              var_a,
+              var_b,
+              optimizer,
+              new_optimizer,
+              mapping,
+              vocab_axis=vocab_axis)
+        else:
+          variables = [vocab.update_variable(var_a, var_b, mapping, vocab_axis=vocab_axis)]
+        updated_variables.extend(variables)
+      return vars_b
 
 
 
