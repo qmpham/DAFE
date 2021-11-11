@@ -4010,6 +4010,7 @@ def model_inspect(config,
     for i in range(config.get("num_inspected_domains",8)):
       m_i = domain_dropout_masks[i][layer]
       m = m + m_i - m * m_i
+    print(m)
     p += tf.reduce_sum(m) / config.get("domain_group_allocation_num")
     acc_similarity_matrix += similarity_matrix
     print(similarity_matrix)
