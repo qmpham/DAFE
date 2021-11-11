@@ -3997,7 +3997,7 @@ def model_inspect(config,
 
   m = np.array(vector_masks)
   np.savetxt("mask.csv", m, delimiter="\t")
-  
+  p = 0
   for layer in range(model.encoder.num_layers+model.decoder.num_layers+1):
     similarity_matrix = np.zeros((config.get("num_inspected_domains",8),config.get("num_inspected_domains",8)))
     for i in range(config.get("num_inspected_domains",8)):
@@ -4006,9 +4006,15 @@ def model_inspect(config,
         m_j = domain_dropout_masks[j][layer]
         #print("(%d,%d)"%(i,j),m_i * m_j)
         similarity_matrix[i,j]= tf.reduce_sum(m_i * m_j,0) / config.get("domain_group_allocation_num")
+    m = tf.zeros_like(domain_dropout_masks[0][layer])
+    for i in range(config.get("num_inspected_domains",8)):
+      m_i = domain_dropout_masks[i][layer]
+      m = m + m_i - m * m_i
+    p += tf.reduce_sum(m) / config.get("domain_group_allocation_num")
     acc_similarity_matrix += similarity_matrix
     print(similarity_matrix)
   print(acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers+1))
+  print(p/(model.encoder.num_layers+model.decoder.num_layers+1))
 
   """
   checkpoint_path = checkpoint_manager.latest_checkpoint
