@@ -4033,6 +4033,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse_multi_layer(model.SequenceGene
     self.num_shared_units = num_shared_units
     assert num_shared_units + unit_group_size * num_domain_unit_group == num_units
     self.version = version
+    self.mask_num = encoder.num_layers + decoder.num_layers + 1
   
   def auto_config(self, num_replicas=1):
     config = super(Multi_domain_SequenceToSequence_TopK_sparse_multi_layer, self).auto_config(num_replicas=num_replicas)
@@ -4690,6 +4691,7 @@ class Multi_domain_SequenceToSequence_TopK_sparse_multi_layer_v1(model.SequenceG
     self.num_shared_units = num_shared_units
     assert num_shared_units + unit_group_size * num_domain_unit_group == num_units
     self.version = version
+    self.mask_num = encoder.num_layers + decoder.num_layers + 2
   
   def auto_config(self, num_replicas=1):
     config = super(Multi_domain_SequenceToSequence_TopK_sparse_multi_layer_v1, self).auto_config(num_replicas=num_replicas)

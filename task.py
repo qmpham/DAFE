@@ -18706,7 +18706,7 @@ def translate_topK_sparse_layer_multi_layer(source_file,
 
   domain_dropout_mask = []
 
-  for i in range(model.encoder.num_layers+model.decoder.num_layers+1):
+  for i in range(model.mask_num):
     topK_ = tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain),k=topK).indices.numpy()
     group_allocation = np.zeros(model.num_domain_unit_group)
     for j in topK_:
