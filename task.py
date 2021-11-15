@@ -4032,7 +4032,7 @@ def model_inspect(config,
   for i in range(1,8):
     number = i * 5000
     checkpoint.restore(os.path.join(config["model_dir"],"ckpt-%d"%number))
-    phi.append(model.latent_group_allocation_logit_per_layer[-1].numpy()[0,:])
+    phi.append(model.latent_group_allocation_logit_per_layer[4].numpy()[0,:])
   print(np.asarray(phi))
   np.savetxt("phi.csv",np.asarray(phi), delimiter="\t")
 
