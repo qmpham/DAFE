@@ -3969,6 +3969,8 @@ def model_inspect(config,
   #       print(v.name)
   #       print(v.numpy())
 
+
+  """
   size = 0
   for v in model.trainable_variables:
     size += v.numpy().size
@@ -4016,6 +4018,7 @@ def model_inspect(config,
     print(similarity_matrix)
   print(acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers+1))
   print(p/(model.encoder.num_layers+model.decoder.num_layers+1))
+  """
 
   """
   checkpoint_path = checkpoint_manager.latest_checkpoint
@@ -4025,6 +4028,12 @@ def model_inspect(config,
     score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
     tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
   """
+  phi = [np.zeros(16)]
+  for i in range(1,8):
+    number = i * 5000
+    checkpoint.restore(os.path.join(config["model_dir"],"ckpt-%d"%number))
+    phi.append(model.latent_group_allocation_logit_per_layer[-1].numpy()[0,:])
+  print(np.asarray(phi))
 
 def src_wemb_pretrain(config,
           optimizer,          
