@@ -4034,6 +4034,7 @@ def model_inspect(config,
     checkpoint.restore(os.path.join(config["model_dir"],"ckpt-%d"%number))
     phi.append(model.latent_group_allocation_logit_per_layer[-1].numpy()[0,:])
   print(np.asarray(phi))
+  np.savetxt("phi.csv",np.asarray(phi), delimiter="\t")
 
 def src_wemb_pretrain(config,
           optimizer,          
