@@ -3970,12 +3970,11 @@ def model_inspect(config,
   #       print(v.numpy())
 
 
-  """
   size = 0
   for v in model.trainable_variables:
     size += v.numpy().size
   print("total number of parameters: %d"%size)
-
+  """
   topK = config.get("domain_group_allocation_num")
   domain_dropout_masks = []
   vector_masks = []
@@ -4028,13 +4027,13 @@ def model_inspect(config,
     score = translate(src, ref, model, checkpoint_manager, checkpoint, i, output_file, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
     tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
   """
-  phi = [np.zeros(16)]
-  for i in range(1,8):
-    number = i * 5000
-    checkpoint.restore(os.path.join(config["model_dir"],"ckpt-%d"%number))
-    phi.append(model.latent_group_allocation_logit_per_layer[4].numpy()[0,:])
-  print(np.asarray(phi))
-  np.savetxt("phi.csv",np.asarray(phi), delimiter="\t")
+  # phi = [np.zeros(16)]
+  # for i in range(1,8):
+  #   number = i * 5000
+  #   checkpoint.restore(os.path.join(config["model_dir"],"ckpt-%d"%number))
+  #   phi.append(model.latent_group_allocation_logit_per_layer[4].numpy()[0,:])
+  # print(np.asarray(phi))
+  # np.savetxt("phi.csv",np.asarray(phi), delimiter="\t")
 
 def src_wemb_pretrain(config,
           optimizer,          
