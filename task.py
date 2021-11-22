@@ -3974,7 +3974,8 @@ def model_inspect(config,
   for v in model.trainable_variables:
     size += v.numpy().size
   print("total number of parameters: %d"%size)
-  """
+  
+  
   topK = config.get("domain_group_allocation_num")
   domain_dropout_masks = []
   vector_masks = []
@@ -4011,13 +4012,13 @@ def model_inspect(config,
     for i in range(config.get("num_inspected_domains",8)):
       m_i = domain_dropout_masks[i][layer]
       m = m + m_i - m * m_i
-    print(m)
+    #print(m)
     p += tf.reduce_sum(m) / config.get("domain_group_allocation_num")
     acc_similarity_matrix += similarity_matrix
     print(similarity_matrix)
   print(acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers+1))
   print(p/(model.encoder.num_layers+model.decoder.num_layers+1))
-  """
+  
 
   """
   checkpoint_path = checkpoint_manager.latest_checkpoint
@@ -18998,21 +18999,6 @@ def train_elbo_topK_sparse_layer_multi_layer_v1(config,
   _number_examples = []
   _residue = []
   step = optimizer.iterations.numpy()
-  if config.get("reset_step",None):
-    print("start from %d-th step"%config.get("reset_step",150000))
-    optimizer.iterations.assign(config.get("reset_step",150000))
-  
-  if step <= 1:
-    initializer = config.get("initializer","default")
-    if initializer == "default":
-      print("Initializing variables by tensorflow default")      
-    elif initializer == "variance_scaling":
-      print("Initializing variables by tf.variance_scaling")
-      initial_value = []
-      for v in model.trainable_variables:
-        shape = tf.shape(v).numpy()
-        initial_value.append(variance_scaling_initialier(shape, scale=1.0, mode="fan_avg", distribution="uniform"))
-      weight_reset(initial_value)       
   
   score_type = config.get("score_type","MultiBLEU")
   if score_type == "sacreBLEU":
