@@ -18642,6 +18642,9 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
         tf.get_logger().info(
             "Step = %d ; Learning rate = %f ; Loss = %f; KL_loss = %f, temperature = %f, number_examples = %d, residue = %f, after %f seconds",
             step, learning_rate(step), np.mean(_loss), np.mean(_kl_loss), temperature, np.sum(_number_examples), np.mean(_residue), elapsed)
+        tf.summary.experimental.set_step(step)
+        tf.summary.scalar("CE_loss", np.mean(_loss), description="training loss")
+        tf.summary.flush()
         _loss = []
         _kl_loss = []
         _number_examples = []
