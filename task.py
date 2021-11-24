@@ -17884,294 +17884,6 @@ def translate_topK_sparse_layer(source_file,
     else:
       return score
 
-def train_hierachical_elbo_topK_sparse_layer(config,
-          optimizer,          
-          learning_rate,
-          model,  
-          strategy,  
-          checkpoint_manager,
-          checkpoint,
-          adapter_optimizer=None,
-          checkpoint_path=None,
-          maximum_length=80,
-          batch_size = 2048,
-          batch_type = "tokens",
-          experiment="residual",
-          shuffle_buffer_size=-1,  # Uniform shuffle.
-          train_steps=200000,
-          save_every=5000,
-          eval_every=15000,
-          report_every=100): 
-
-  import tensorflow_probability as tfp
-  import scipy
-  from scipy import optimize
-  tfd = tfp.distributions
-  gumbel_dist = tfd.Gumbel(loc=0.,scale=1.)
-  if config.get("train_steps",None)!=None:
-    train_steps = config.get("train_steps")
-  if config.get("batch_type",None)!=None:
-    batch_type = config.get("batch_type")
-  #####
-  if checkpoint_manager.latest_checkpoint is not None:
-    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
-    checkpoint.restore(checkpoint_manager.latest_checkpoint)
-  else:
-    if checkpoint_path is not None:
-      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
-      checkpoint.restore(checkpoint_path)
-  #####
-  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
-  ###### early stopping criterion
-  current_max_eval_bleu = 0.0
-  descending_streak = 0
-  ######
-  batch_train_size = config["batch_train_size"]  
-  batch_type = batch_type
-  source_file = config["src"]
-  target_file = config["tgt"]
-  domain = config.get("domain",None)
-  
-  print("There are %d in-domain corpora"%len(source_file))
-  
-  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
-                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
-                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
-  
-  #####
-  with strategy.scope():
-    model.create_variables(optimizer=optimizer)
-    gradient_accumulator = optimizer_util.GradientAccumulator() 
-    gradient_group_allocation_accumulator = optimizer_util.GradientAccumulator()
-    latent_logit_optimizer = tfa.optimizers.LazyAdam(config.get("latent_logit_lr",0.01))
-
-  temperature = tf.Variable(0.2,trainable=False)
-  
-  kl_term_coeff = config.get("kl_coeff",1.0)
-  print("kl_term_coeff",kl_term_coeff)
-
-  def _accumulate_gradients(source, target):
-    domain = source["domain"][0]
-    gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
-    gumbel_K_group_sample = gumbel_dist.sample([model.num_domain_unit_group])
-    latent_K_group_logit_ = tf.nn.embedding_lookup(model.latent_K_group_logit,domain)
-
-    K = tf.reduce_sum(tf.math.softmax((latent_K_group_logit_ + gumbel_K_group_sample)/temperature) * tf.range(1, model.num_domain_unit_group+1, 1))
-
-    latent_group_allocation_logit_ = tf.nn.embedding_lookup(model.latent_group_allocation_logit,domain)
-    domain_allocation_probs = tf.math.softmax(latent_group_allocation_logit_)
-    f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+x)/temperature)) - K
-    temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=100, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
-    residue = tf.reduce_sum(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature)) - K
-    soft_mask_logits = (gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature
-    soft_mask = tf.math.sigmoid(soft_mask_logits)
-    
-    soft_mask_total = tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask,model.unit_group_size),tf.float32)],-1)
-    kl_term = - tf.reduce_mean(tf.math.log(domain_allocation_probs))
-
-    outputs, _ = model(
-        source,
-        domain_dropout_mask=soft_mask_total,
-        labels=target,
-        training=True,
-        step=optimizer.iterations)
-    loss = model.compute_loss(outputs, target, training=True)
-
-    if isinstance(loss, tuple):
-      training_loss = loss[0] / loss[1]
-      reported_loss = loss[0] / loss[2]
-    else:
-      training_loss, reported_loss = loss, loss
-
-    if config.get("multi_domain", True):
-      _domain = source["domain"][0]
-    else:
-      _domain = 0
-
-    variables = model.trainable_variables
-    model_variables = []
-    latent_group_allocation_logit = None
-    for v in variables:
-      if "latent_group_allocation_logit" in v.name:
-        latent_group_allocation_logit = v
-      else:
-        model_variables.append(v)
-    print("var numb: ", len(variables))
-    
-    gradients = optimizer.get_gradients(training_loss, model_variables)
-    gradient_soft_mask = optimizer.get_gradients(training_loss,[soft_mask])
-    deltaL_deltaM = gradient_soft_mask[0] 
-
-    delta_sigmoid = tf.math.square(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature))/tf.math.exp((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature)
-    deltaresidue_deltalogit1 = delta_sigmoid/temperature
-    M1 = tf.linalg.diag(delta_sigmoid)    
-    deltaresidue_deltatempx1 = tf.reduce_sum(delta_sigmoid)/temperature
-    
-    deltaTempx_deltaLogit = - tf.tile(tf.expand_dims(deltaresidue_deltalogit1 / deltaresidue_deltatempx1,0),[model.num_domain_unit_group,1])
-    deltaM_deltaLogit = tf.linalg.matmul(tf.eye(model.num_domain_unit_group) + deltaTempx_deltaLogit, M1, transpose_a=True, transpose_b=True)
-    deltaL_deltaLogit = tf.linalg.matmul(tf.expand_dims(deltaL_deltaM,0),deltaM_deltaLogit)
-    group_allocation_gradient = optimizer.get_gradients(kl_term * kl_term_coeff, latent_group_allocation_logit)
-    group_allocation_gradient[0] = tf.tensor_scatter_nd_add(group_allocation_gradient[0],tf.expand_dims(group_allocation_gradient[0].indices,1),deltaL_deltaLogit)
-    gradient_accumulator(gradients)
-    gradient_group_allocation_accumulator(group_allocation_gradient)
-    num_examples = tf.reduce_sum(target["length"])
-    return reported_loss, kl_term, num_examples, _domain, residue
-     
-  def _apply_gradients():
-    variables = model.trainable_variables
-    model_variables = []
-    latent_group_allocation_logit = None
-    for v in variables:
-      if "latent_group_allocation_logit" in v.name:
-        latent_group_allocation_logit = v
-      else:
-        model_variables.append(v)
-    grads_and_vars = []
-
-    for gradient, variable in zip(gradient_accumulator.gradients, model_variables):
-      # optimizer.apply_gradients will sum the gradients accross replicas.
-      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
-      grads_and_vars.append((scaled_gradient, variable))
-    grads_and_vars.append((gradient_group_allocation_accumulator.gradients[0],latent_group_allocation_logit))
-    #latent_logit_optimizer.apply_gradients([(gradient_group_allocation_accumulator.gradients[0] / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32)), latent_group_allocation_logit)])
-    optimizer.apply_gradients(grads_and_vars)
-    gradient_accumulator.reset()
-    gradient_group_allocation_accumulator.reset()
-
-  @dataset_util.function_on_next(train_dataset)
-  def _train_forward(next_fn):    
-    with strategy.scope():
-      per_replica_source, per_replica_target = next_fn()
-      per_replica_loss, per_replica_kl_loss, per_replica_num_examples, per_replica_domain, per_replica_residue = strategy.run(
-          _accumulate_gradients, args=(per_replica_source, per_replica_target))
-      # TODO: these reductions could be delayed until _step is called.
-      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
-      kl_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_kl_loss, None)
-      _domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)      
-      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
-      residue = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_residue, None)
-
-    return loss, kl_loss, _domain, num_examples, residue
-  
-  @tf.function
-  def _step():
-    with strategy.scope():
-      strategy.run(_apply_gradients)
-
-  def _set_weight(v, w):
-    v.assign(tf.cast(w,v.dtype))
-
-  @tf.function
-  def weight_reset(snapshots):
-    with strategy.scope():
-      for snap, var in zip(snapshots, model.trainable_variables):
-        strategy.extended.update(var, _set_weight, args=(snap, ))
-
-  # Runs the training loop.
-  import time
-  start = time.time()  
-  train_data_flow = iter(_train_forward())
-  _, _, _, _, _ = next(train_data_flow)
-
-  print("number of replicas: %d"%strategy.num_replicas_in_sync)
-  print("accumulation step", config.get("accumulation_step",1))
-  _loss = []  
-  _kl_loss = []
-  _number_examples = []
-  _residue = []
-  step = optimizer.iterations.numpy()
-  if config.get("reset_step",None):
-    print("start from %d-th step"%config.get("reset_step",150000))
-    optimizer.iterations.assign(config.get("reset_step",150000))
-  
-  if step <= 1:
-    initializer = config.get("initializer","default")
-    if initializer == "default":
-      print("Initializing variables by tensorflow default")      
-    elif initializer == "variance_scaling":
-      print("Initializing variables by tf.variance_scaling")
-      initial_value = []
-      for v in model.trainable_variables:
-        shape = tf.shape(v).numpy()
-        initial_value.append(variance_scaling_initialier(shape, scale=1.0, mode="fan_avg", distribution="uniform"))
-      weight_reset(initial_value)       
-  
-  score_type = config.get("score_type","MultiBLEU")
-  if score_type == "sacreBLEU":
-    print("using sacreBLEU")
-    scorer = BLEUScorer()
-  elif score_type == "MultiBLEU":
-    print("using MultiBLEU")
-    scorer = MultiBLEUScorer()
-  ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
-  temperature_decay = config.get("temperature_decay",1000)
-  r = config.get("r_coeff",1e-4)
-  min_temperature = config.get("min_temperature",0.5)
-  start_temperature = config.get("start_temperature",0.5)
-  print("dropout_rate",config.get("dropout_rate"))
-  print("min_temperature",min_temperature)
-  print("temperature_decay",temperature_decay)
-  print("r_coeff",r)
-  step = optimizer.iterations.numpy()
-  temperature.assign(tf.cast(tf.math.maximum(min_temperature, start_temperature * tf.math.exp(-r*step)),tf.float32))
-  print("temperature: ",temperature)
-  with _summary_writer.as_default():
-    while True:
-      #####Training batch
-      loss, kl_loss, _domain, num_examples, residue = next(train_data_flow)    
-      _loss.append(loss.numpy())
-      _kl_loss.append(kl_loss.numpy())
-      _number_examples.append(num_examples.numpy())
-      _residue.append(residue.numpy())
-      _step()  
-      step = optimizer.iterations.numpy()
-      
-      if step % report_every == 0:
-        elapsed = time.time() - start
-        tf.get_logger().info(
-            "Step = %d ; Learning rate = %f ; Loss = %f; KL_loss = %f, temperature = %f, number_examples = %d, residue = %f, after %f seconds",
-            step, learning_rate(step), np.mean(_loss), np.mean(_kl_loss), temperature, np.sum(_number_examples), np.mean(_residue), elapsed)
-        _loss = []
-        _kl_loss = []
-        _number_examples = []
-        _residue = []
-        start = time.time()
-      if step % temperature_decay==0:
-        temperature.assign(tf.cast(tf.math.maximum(min_temperature, start_temperature * tf.math.exp(-r*step)),tf.float32))
-        #print("gumbel_temperature: ",gumbel_temperature)
-      if step % save_every == 0 and step > 0:
-        tf.get_logger().info("Saving checkpoint for step %d", step)
-        checkpoint_manager.save(checkpoint_number=step)
-      if step % config.get("latent_logit_print_every",2000)==0:
-        tf.print("latent_group_allocation_logit",model.latent_group_allocation_logit,summarize=-1)
-      if step % eval_every == 0 and step > 0:
-        checkpoint_path = checkpoint_manager.latest_checkpoint
-        tf.summary.experimental.set_step(step)
-        output_files = []
-        new_bleu = 0.0
-        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
-            output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
-            score = translate_topK_sparse_layer(src, ref, model, checkpoint_manager, checkpoint, i, output_file, topK=K, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
-            tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
-            output_files.append(output_file)
-        ##### BLEU on concat dev set.
-        output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
-        score = scorer(ref_eval_concat, output_file_concat)
-        print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
-        new_bleu = score
-        tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
-        #############################
-        if new_bleu >= current_max_eval_bleu:
-          current_max_eval_bleu = new_bleu
-          descending_streak = 0
-        else:
-          descending_streak += 1
-      if descending_streak >= 5:
-        break
-      tf.summary.flush()
-      if step > train_steps:
-        break
-
 def train_tf_25(config,
           optimizer,          
           learning_rate,
@@ -19371,7 +19083,289 @@ def fewshot_elbo_topK_sparse_layer_multi_layer(config,
       if step > train_steps:
         break
 
+def train_elbo_hierarchical_topK_sparse_layer_multi_layer(config,
+          optimizer,          
+          learning_rate,
+          model,  
+          strategy,  
+          checkpoint_manager,
+          checkpoint,
+          adapter_optimizer=None,
+          checkpoint_path=None,
+          maximum_length=80,
+          batch_size = 2048,
+          batch_type = "tokens",
+          experiment="residual",
+          shuffle_buffer_size=-1,  # Uniform shuffle.
+          train_steps=200000,
+          save_every=5000,
+          eval_every=15000,
+          report_every=100): 
 
+  import tensorflow_probability as tfp
+  import scipy
+  from scipy import optimize
+  tfd = tfp.distributions
+  gumbel_dist = tfd.Gumbel(loc=0.,scale=1.)
+  if config.get("train_steps",None)!=None:
+    train_steps = config.get("train_steps")
+  if config.get("batch_type",None)!=None:
+    batch_type = config.get("batch_type")
+  #####
+  if checkpoint_manager.latest_checkpoint is not None:
+    tf.get_logger().info("Restoring parameters from %s", checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+  else:
+    if checkpoint_path is not None:
+      tf.get_logger().info("Restoring parameters from %s", checkpoint_path)
+      checkpoint.restore(checkpoint_path)
+  #####
+  _summary_writer = tf.summary.create_file_writer(config["model_dir"])
+  ###### early stopping criterion
+  current_max_eval_bleu = 0.0
+  descending_streak = 0
+  ######
+  batch_train_size = config["batch_train_size"]  
+  batch_type = batch_type
+  source_file = config["src"]
+  target_file = config["tgt"]
+  domain = config.get("domain",None)
+  
+  print("There are %d in-domain corpora"%len(source_file))
+  
+  train_dataset = create_trainining_dataset(strategy, model, domain, source_file, target_file, batch_train_size, batch_type, shuffle_buffer_size, 
+                                            maximum_length, length_bucket_width=config.get("length_bucket_width",1), 
+                                            multi_domain=config.get("multi_domain", True), picking_prob=config.get("picking_prob",None), temperature=config.get("temperature",1.0))
+  
+  #####
+  with strategy.scope():
+    model.create_variables(optimizer=optimizer)
+    gradient_accumulator = optimizer_util.GradientAccumulator() 
+    gradient_group_allocation_accumulator = optimizer_util.GradientAccumulator()
+    latent_logit_optimizer = tfa.optimizers.LazyAdam(config.get("latent_logit_lr",0.01))
+
+  temperature = tf.Variable(0.2,trainable=False)
+  
+  kl_term_coeff = config.get("kl_coeff",1.0)
+  K = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate",0.5)) * config.get("num_domain_unit_group",32)))
+  print("kl_term_coeff",kl_term_coeff)
+  print("topK: ", K)
+
+  def _accumulate_gradients(source, target):
+    domain = source["domain"][0]
+    kl_loss_per_layer = []
+    soft_mask_total_per_layer = []
+    soft_mask_logits_per_layer = []
+    delta_sigmoid_per_layer = []
+    residue_per_layer = []
+    for i in range(model.encoder.num_layers + model.decoder.num_layers + 1):
+      gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
+      latent_group_allocation_logit_ = tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain)
+      domain_allocation_probs = tf.math.softmax(latent_group_allocation_logit_)
+      kl_loss_per_layer.append(- tf.reduce_mean(domain_allocation_probs * tf.math.log(domain_allocation_probs)))
+      f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+x)/temperature)) - K
+      temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=100, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
+      residue_per_layer.append(tf.reduce_sum(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature)) - K)
+      soft_mask_logits = (gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature
+      soft_mask_logits_per_layer.append(soft_mask_logits)
+      #tf.print("soft_mask_logits",soft_mask_logits,summarize=-1)
+      soft_mask = tf.math.sigmoid(soft_mask_logits)
+      #tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
+      soft_mask_total_per_layer.append(tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask, model.unit_group_size),tf.float32)],-1))
+      delta_sigmoid_per_layer.append(tf.math.square(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature))/tf.math.exp((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature))
+    
+    # for i, mask_per_layer in enumerate(soft_mask_total_per_layer):
+    #   tf.print(mask_per_layer, "domain: ", domain, "layer: ", i, summarize=-1)
+
+    outputs, _ = model(
+        source,
+        domain_dropout_mask=soft_mask_total_per_layer,
+        labels=target,
+        training=True,
+        step=optimizer.iterations)
+    loss = model.compute_loss(outputs, target, training=True)
+
+    if isinstance(loss, tuple):
+      training_loss = loss[0] / loss[1]
+      reported_loss = loss[0] / loss[2]
+    else:
+      training_loss, reported_loss = loss, loss
+
+    if config.get("multi_domain", True):
+      _domain = source["domain"][0]
+    else:
+      _domain = 0
+
+    variables = model.trainable_variables
+    model_variables = []
+    for v in variables:
+      if not "latent_group_allocation_logit_per_layer" in v.name:
+        model_variables.append(v)
+      else:
+        continue
+    print("var numb: ", len(variables))
+    
+    gradients = optimizer.get_gradients(training_loss, model_variables)
+    deltaL_deltaM = optimizer.get_gradients(training_loss, soft_mask_logits_per_layer)
+    #optimizer.get_gradients(training_loss,soft_mask_logits_per_layer)
+    group_allocation_gradient_per_layer = []
+    for i in range(model.encoder.num_layers + model.decoder.num_layers+1):
+      delta_sigmoid = delta_sigmoid_per_layer[i]
+      deltaresidue_deltalogit1 = delta_sigmoid
+      M1 = tf.linalg.diag(delta_sigmoid)
+      deltaresidue_deltatempx1 = tf.reduce_sum(delta_sigmoid)
+      #tf.print("deltaresidue_deltatempx1",deltaresidue_deltatempx1)      
+      deltaTempx_deltaLogit = - tf.tile(tf.expand_dims(deltaresidue_deltalogit1 / deltaresidue_deltatempx1,0),[model.num_domain_unit_group,1])
+      #tf.print("deltaresidue_deltalogit", deltaresidue_deltalogit1, "deltaresidue_deltatempx", deltaresidue_deltatempx1, "deltaTempx_deltaLogit", deltaTempx_deltaLogit, summarize=-1)
+      deltaM_deltaLogit = tf.eye(model.num_domain_unit_group) + deltaTempx_deltaLogit
+      deltaL_deltaLogit = tf.linalg.matmul(tf.expand_dims(deltaL_deltaM[i],0),deltaM_deltaLogit)
+      group_allocation_gradient = optimizer.get_gradients(kl_loss_per_layer[i] * kl_term_coeff, model.latent_group_allocation_logit_per_layer[i])
+      group_allocation_gradient[0] = tf.clip_by_norm(tf.tensor_scatter_nd_add(group_allocation_gradient[0],tf.expand_dims(group_allocation_gradient[0].indices,1),deltaL_deltaLogit),1.0)
+      group_allocation_gradient_per_layer.append(group_allocation_gradient[0])
+    gradient_accumulator(gradients)
+    gradient_group_allocation_accumulator(group_allocation_gradient_per_layer)
+    num_examples = tf.reduce_sum(target["length"])
+       
+    return reported_loss, tf.math.add_n(kl_loss_per_layer)/len(kl_loss_per_layer), num_examples, _domain, tf.math.add_n(residue_per_layer)/len(residue_per_layer)
+     
+  def _apply_gradients():
+    variables = model.trainable_variables
+    model_variables = []
+    for v in variables:
+      if not "latent_group_allocation_logit_per_layer" in v.name:
+        model_variables.append(v)
+      else:
+        continue
+
+    grads_and_vars = []
+    for gradient, variable in zip(gradient_accumulator.gradients, model_variables):
+      # optimizer.apply_gradients will sum the gradients accross replicas.
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    optimizer.apply_gradients(grads_and_vars)
+
+    grads_and_vars = []
+    for gradient, variable in zip(gradient_group_allocation_accumulator.gradients, model.latent_group_allocation_logit_per_layer):
+      scaled_gradient = gradient / (strategy.num_replicas_in_sync * tf.cast(gradient_accumulator.step, tf.float32))
+      grads_and_vars.append((scaled_gradient, variable))
+    latent_logit_optimizer.apply_gradients(grads_and_vars)
+
+    gradient_accumulator.reset()
+    gradient_group_allocation_accumulator.reset()
+
+  @dataset_util.function_on_next(train_dataset)
+  def _train_forward(next_fn):    
+    with strategy.scope():
+      per_replica_source, per_replica_target = next_fn()
+      per_replica_loss, per_replica_kl_loss, per_replica_num_examples, per_replica_domain, per_replica_residue = strategy.run(
+          _accumulate_gradients, args=(per_replica_source, per_replica_target))
+      # TODO: these reductions could be delayed until _step is called.
+      loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, None)
+      kl_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_kl_loss, None)
+      _domain = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_domain, None)      
+      num_examples = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_num_examples, None)
+      residue = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_residue, None)
+
+    return loss, kl_loss, _domain, num_examples, residue
+  
+  @tf.function
+  def _step():
+    with strategy.scope():
+      strategy.run(_apply_gradients)
+
+  # Runs the training loop.
+  import time
+  start = time.time()  
+  train_data_flow = iter(_train_forward())
+  _, _, _, _, _ = next(train_data_flow)
+
+  print("number of replicas: %d"%strategy.num_replicas_in_sync)
+  print("accumulation step", config.get("accumulation_step",1))
+  _loss = []  
+  _kl_loss = []
+  _number_examples = []
+  _residue = []
+  step = optimizer.iterations.numpy()
+    
+  score_type = config.get("score_type","MultiBLEU")
+  if score_type == "sacreBLEU":
+    print("using sacreBLEU")
+    scorer = BLEUScorer()
+  elif score_type == "MultiBLEU":
+    print("using MultiBLEU")
+    scorer = MultiBLEUScorer()
+  ref_eval_concat = file_concatenate(config["eval_ref"],"ref_eval_concat",dir_name=os.path.join(config["model_dir"],"eval"))
+  gumbel_temperature_decay = config.get("gumbel_temperature_decay",1000)
+  r = config.get("r_coeff",1e-4)
+  min_temperature = config.get("min_temperature",0.5)
+  start_temperature = config.get("start_temperature",0.5)
+  print("dropout_rate",config.get("dropout_rate"))
+  print("min_temperature",min_temperature)
+  print("gumbel_temperature_decay",gumbel_temperature_decay)
+  print("r_coeff",r)
+  step = optimizer.iterations.numpy()
+  temperature.assign(tf.cast(tf.math.maximum(min_temperature, start_temperature * tf.math.exp(-r*step)),tf.float32))
+  print("temperature: ",temperature)
+  with _summary_writer.as_default():
+    while True:
+      #####Training batch
+      for _ in range(int(config.get("accumulation_step",1))):
+        loss, kl_loss, _domain, num_examples, residue = next(train_data_flow)    
+        _loss.append(loss.numpy())
+        _kl_loss.append(kl_loss.numpy())
+        _number_examples.append(num_examples.numpy())
+        _residue.append(residue.numpy())
+      _step()  
+      step = optimizer.iterations.numpy()
+      
+      if step % report_every == 0:
+        elapsed = time.time() - start
+        tf.get_logger().info(
+            "Step = %d ; Learning rate = %f ; Loss = %f; KL_loss = %f, temperature = %f, number_examples = %d, residue = %f, after %f seconds",
+            step, learning_rate(step), np.mean(_loss), np.mean(_kl_loss), temperature, np.sum(_number_examples), np.mean(_residue), elapsed)
+        tf.summary.experimental.set_step(step)
+        tf.summary.scalar("CE_loss", np.mean(_loss), description="training loss")
+        tf.summary.flush()
+        _loss = []
+        _kl_loss = []
+        _number_examples = []
+        _residue = []
+        start = time.time()
+      if step % gumbel_temperature_decay==0:
+        temperature.assign(tf.cast(tf.math.maximum(min_temperature, start_temperature * tf.math.exp(-r*step)),tf.float32))
+        #print("gumbel_temperature: ",gumbel_temperature)
+      if step % save_every == 0 and step > 0:
+        tf.get_logger().info("Saving checkpoint for step %d", step)
+        checkpoint_manager.save(checkpoint_number=step)
+      if step % config.get("latent_logit_print_every",2000)==0:
+        tf.print("latent_group_allocation_logit",model.latent_group_allocation_logit_per_layer[-1],summarize=-1)
+      if step % eval_every == 0 and step > 0:
+        checkpoint_path = checkpoint_manager.latest_checkpoint
+        tf.summary.experimental.set_step(step)
+        output_files = []
+        new_bleu = 0.0
+        for src,ref,i in zip(config["eval_src"],config["eval_ref"],config["eval_domain"]):
+            output_file = os.path.join(config["model_dir"],"eval",os.path.basename(src) + ".trans." + os.path.basename(checkpoint_path))
+            score = translate_topK_sparse_layer_multi_layer(src, ref, model, checkpoint_manager, checkpoint, i, output_file, topK=K, length_penalty=config.get("length_penalty",0.6), experiment=experiment)
+            tf.summary.scalar("eval_score_%d"%i, score, description="BLEU on test set %s"%src)
+            output_files.append(output_file)
+        ##### BLEU on concat dev set.
+        output_file_concat = file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
+        score = scorer(ref_eval_concat, output_file_concat)
+        print("score of model %s on concat dev set: "%checkpoint_manager.latest_checkpoint, score)
+        new_bleu = score
+        tf.summary.scalar("concat_eval_score", score, description="BLEU on concat dev set")
+        #############################
+        if new_bleu >= current_max_eval_bleu:
+          current_max_eval_bleu = new_bleu
+          descending_streak = 0
+        else:
+          descending_streak += 1
+      if descending_streak >= 5:
+        break
+      tf.summary.flush()
+      if step > train_steps:
+        break
 
 
 
