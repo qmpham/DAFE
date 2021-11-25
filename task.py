@@ -4019,7 +4019,7 @@ def model_inspect(config,
   print(acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers+1))
   print(p/(model.encoder.num_layers+model.decoder.num_layers+1))
   
-  np.savetxt("similarity.csv", p.numpy()/(model.encoder.num_layers+model.decoder.num_layers+1), delimiter="\t")
+  np.savetxt("similarity.csv", acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers+1), delimiter="\t")
 
   """
   checkpoint_path = checkpoint_manager.latest_checkpoint
