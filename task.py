@@ -18178,7 +18178,7 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
       soft_mask_logits_per_layer.append(soft_mask_logits)
       #tf.print("soft_mask_logits",soft_mask_logits,summarize=-1)
       soft_mask = tf.math.sigmoid(soft_mask_logits)
-      soft_mask_total_per_layer.append(tf.reduce_sum(tf.one_hot(tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain),k=K).indices, depth=model.num_domain_unit_group),0))
+      soft_mask_total_per_layer.append(tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.reduce_sum(tf.one_hot(tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain),k=K).indices, depth=model.num_domain_unit_group),0),tf.float32)],-1))
 
       #tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
       #soft_mask_total_per_layer.append(tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask, model.unit_group_size),tf.float32)],-1))
