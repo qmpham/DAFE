@@ -18178,8 +18178,10 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
       soft_mask_logits_per_layer.append(soft_mask_logits)
       #tf.print("soft_mask_logits",soft_mask_logits,summarize=-1)
       soft_mask = tf.math.sigmoid(soft_mask_logits)
+      soft_mask_total_per_layer.append(tf.reduce_sum(tf.one_hot(tf.math.top_k(tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain),k=K).indices, depth=model.num_domain_unit_group),0))
+
       #tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
-      soft_mask_total_per_layer.append(tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask, model.unit_group_size),tf.float32)],-1))
+      #soft_mask_total_per_layer.append(tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask, model.unit_group_size),tf.float32)],-1))
       delta_sigmoid_per_layer.append(tf.math.square(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature))/tf.math.exp((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature))
     
     # for i, mask_per_layer in enumerate(soft_mask_total_per_layer):
@@ -19146,26 +19148,41 @@ def train_elbo_hierarchical_topK_sparse_layer_multi_layer(config,
     latent_logit_optimizer = tfa.optimizers.LazyAdam(config.get("latent_logit_lr",0.01))
 
   temperature = tf.Variable(0.2,trainable=False)
-  
+  topK_temperature = tf.Variable(0.2,trainable=False)
   kl_term_coeff = config.get("kl_coeff",1.0)
-  K = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate",0.5)) * config.get("num_domain_unit_group",32)))
+  kl_topK_term_coeff = config.get("kl_topK_coeff",1.0)
+  #K = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate",0.5)) * config.get("num_domain_unit_group",32)))
   print("kl_term_coeff",kl_term_coeff)
-  print("topK: ", K)
+  print("kl_topK_term_coeff",kl_topK_term_coeff)
+  #print("topK: ", K)
 
   def _accumulate_gradients(source, target):
     domain = source["domain"][0]
     kl_loss_per_layer = []
+    kl_topK_loss_per_layer = []
     soft_mask_total_per_layer = []
     soft_mask_logits_per_layer = []
     delta_sigmoid_per_layer = []
+    delta_softmax_topK_per_layer = []
     residue_per_layer = []
-    for i in range(model.encoder.num_layers + model.decoder.num_layers + 1):
+    
+    for i in range(model.encoder.num_layers + model.decoder.num_layers):
       gumbel_sample = gumbel_dist.sample([model.num_domain_unit_group])
+      gumbel_topK_sample = gumbel_dist.sample([model.num_domain_unit_group-1])
+      #Logits
       latent_group_allocation_logit_ = tf.nn.embedding_lookup(model.latent_group_allocation_logit_per_layer[i],domain)
       latent_topk_logit_ = tf.nn.embedding_lookup(model.latent_topk_logit_per_layer[i],domain)
+
+      #Dropping probs
       domain_allocation_probs = tf.math.softmax(latent_group_allocation_logit_)
       domain_topk_probs = tf.math.softmax(latent_topk_logit_)
+      
+      # Rate upper bound
       kl_loss_per_layer.append(- tf.reduce_mean(domain_allocation_probs * tf.math.log(domain_allocation_probs)))
+      kl_topK_loss_per_layer.append(- tf.reduce_mean(domain_topk_probs * tf.math.log(domain_topk_probs)))
+
+      # Solve KKT constraints
+      K = tf.reduce_sum(tf.math.softmax((latent_topk_logit_+gumbel_topK_sample)/topK_temperature) * (tf.range(model.num_domain_unit_group-1)+1))
       f = lambda x: tf.reduce_sum(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+x)/temperature)) - K
       temp_x = tfp.math.find_root_chandrupatla(f, low=-100, high=100, position_tolerance=1e-08,value_tolerance=0.0, max_iterations=100, stopping_policy_fn=tf.reduce_all,validate_args=False, name='find_root_chandrupatla').estimated_root
       residue_per_layer.append(tf.reduce_sum(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature)) - K)
@@ -19176,7 +19193,7 @@ def train_elbo_hierarchical_topK_sparse_layer_multi_layer(config,
       #tf.print("soft_mask", soft_mask, "domain_allocation_probs",domain_allocation_probs,summarize=-1)
       soft_mask_total_per_layer.append(tf.concat([tf.ones(model.num_shared_units),tf.cast(tf.repeat(soft_mask, model.unit_group_size),tf.float32)],-1))
       delta_sigmoid_per_layer.append(tf.math.square(tf.math.sigmoid((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature))/tf.math.exp((gumbel_sample+latent_group_allocation_logit_+temp_x)/temperature))
-    
+      delta_softmax_topK_per_layer.append(tf.tile(tf.reshape(domain_topk_probs,(-1,1)),[1,model.num_domain_unit_group-1]) * (tf.eyes(model.num_domain_unit_group-1) - tf.tile(tf.reshape(domain_topk_probs,(1,-1)),[model.num_domain_unit_group-1,1])))
     # for i, mask_per_layer in enumerate(soft_mask_total_per_layer):
     #   tf.print(mask_per_layer, "domain: ", domain, "layer: ", i, summarize=-1)
 
@@ -19212,8 +19229,9 @@ def train_elbo_hierarchical_topK_sparse_layer_multi_layer(config,
     deltaL_deltaM = optimizer.get_gradients(training_loss, soft_mask_logits_per_layer)
     #optimizer.get_gradients(training_loss,soft_mask_logits_per_layer)
     group_allocation_gradient_per_layer = []
-    for i in range(model.encoder.num_layers + model.decoder.num_layers+1):
+    for i in range(model.encoder.num_layers + model.decoder.num_layers):
       delta_sigmoid = delta_sigmoid_per_layer[i]
+      delta_softmax_topk = delta_softmax_topK_per_layer[i]
       deltaresidue_deltalogit1 = delta_sigmoid
       M1 = tf.linalg.diag(delta_sigmoid)
       deltaresidue_deltatempx1 = tf.reduce_sum(delta_sigmoid)
@@ -19221,7 +19239,8 @@ def train_elbo_hierarchical_topK_sparse_layer_multi_layer(config,
       deltaTempx_deltaLogit = - tf.tile(tf.expand_dims(deltaresidue_deltalogit1 / deltaresidue_deltatempx1,0),[model.num_domain_unit_group,1])
       #tf.print("deltaresidue_deltalogit", deltaresidue_deltalogit1, "deltaresidue_deltatempx", deltaresidue_deltatempx1, "deltaTempx_deltaLogit", deltaTempx_deltaLogit, summarize=-1)
       deltaM_deltaLogit = tf.eye(model.num_domain_unit_group) + deltaTempx_deltaLogit
-      deltaL_deltaLogit = tf.linalg.matmul(tf.expand_dims(deltaL_deltaM[i],0),deltaM_deltaLogit)
+      deltaTempx_deltaTopKLogit = tf.linalg.matmul(tf.range(model.num_domain_unit_group-1),delta_softmax_topk) / deltaresidue_deltatempx1
+      deltaL_deltaLogit = tf.linalg.matmul(tf.expand_dims(deltaL_deltaM[i],0),deltaM_deltaLogit) # move temperature constant to step size
       group_allocation_gradient = optimizer.get_gradients(kl_loss_per_layer[i] * kl_term_coeff, model.latent_group_allocation_logit_per_layer[i])
       group_allocation_gradient[0] = tf.clip_by_norm(tf.tensor_scatter_nd_add(group_allocation_gradient[0],tf.expand_dims(group_allocation_gradient[0].indices,1),deltaL_deltaLogit),1.0)
       group_allocation_gradient_per_layer.append(group_allocation_gradient[0])
@@ -19369,47 +19388,6 @@ def train_elbo_hierarchical_topK_sparse_layer_multi_layer(config,
       tf.summary.flush()
       if step > train_steps:
         break
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

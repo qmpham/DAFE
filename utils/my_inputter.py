@@ -815,8 +815,142 @@ class Priming_SequenceToSequenceInputter_adv(inputters.ExampleInputter):
       _shift_target_sequence(labels, prefix="noisy_")
     return src, labels
 
+class My_multilingual_inputter(TextInputter):
+    def __init__(self, embedding_size=None, dropout=0.0, **kwargs):        
+        super(My_multilingual_inputter, self).__init__(**kwargs)
+        self.embedding_size = embedding_size
+        self.embedding_file = None
+        self.dropout = dropout
 
+    def initialize(self, data_config, asset_prefix=""):
+        super(My_multilingual_inputter, self).initialize(data_config, asset_prefix=asset_prefix)
+        embedding = _get_field(data_config, "embedding", prefix=asset_prefix)
+        if embedding is None and self.embedding_size is None:
+            raise ValueError("embedding_size must be set")
+        if embedding is not None:
+            self.embedding_file = embedding["path"]
+            self.trainable = embedding.get("trainable", True)
+            self.embedding_file_with_header = embedding.get("with_header", True)
+            self.case_insensitive_embeddings = embedding.get("case_insensitive", True)
 
+    def build(self, input_shape):
+        if self.embedding_file:
+            pretrained = load_pretrained_embeddings(
+                self.embedding_file,
+                self.vocabulary_file,
+                num_oov_buckets=self.num_oov_buckets,
+                with_header=self.embedding_file_with_header,
+                case_insensitive_embeddings=self.case_insensitive_embeddings)
+            self.embedding_size = pretrained.shape[-1]
+            initializer = tf.constant_initializer(value=pretrained.astype(self.dtype))
+        else:
+            initializer = None
+            scope_name = self.name_scope()
+            self.embedding = self.add_weight(
+                "%s_embedding"%scope_name,
+                [self.vocabulary_size, self.embedding_size],
+                initializer=initializer,
+                trainable=self.trainable)
+        super(My_multilingual_inputter, self).build(input_shape)
+
+    def call(self, features, training=None):
+      outputs = tf.nn.embedding_lookup(self.embedding, features["ids"])
+      outputs = common.dropout(outputs, self.dropout, training=training)
+      return outputs
+
+    def make_features(self, element=None, features=None, lang_src=1, lang_tgt=1,  is_noisy=1, training=None):
+        features = super(My_inputter, self).make_features(
+            element=element, features=features, training=training)
+
+        if "ids" in features and "domain" in features:
+          return features
+
+        features["ids"] = self.tokens_to_ids.lookup(features["tokens"])
+        features["lang_src"] = tf.constant(lang_src)
+        features["lang_tgt"] = tf.constant(lang_tgt)
+        features["is_noisy"] = tf.constant(is_noisy)
+        return features
+    
+    def make_inference_dataset(self,
+                             feature_file,
+                             batch_size,
+                             lang_src=1, 
+                             lang_tgt=1,
+                             is_noisy=1,
+                             length_bucket_width=None,
+                             num_threads=1,
+                             prefetch_buffer_size=None):
+    
+        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), lang_src=1, lang_tgt=1, is_noisy=is_noisy, training=False)
+        dataset = self.make_dataset(feature_file, training=False)
+        dataset = dataset.apply(dataset_util.inference_pipeline(
+            batch_size,
+            process_fn=map_func,
+            length_bucket_width=length_bucket_width,
+            length_fn=self.get_length,
+            num_threads=num_threads,
+            prefetch_buffer_size=prefetch_buffer_size))
+        return dataset
+    
+    def make_training_dataset(self,
+                            features_file,
+                            labels_file,
+                            batch_size,
+                            lang_src=1, lang_tgt=1,
+                            is_noisy=1,
+                            batch_type="tokens",
+                            batch_multiplier=1,
+                            batch_size_multiple=1,
+                            shuffle_buffer_size=None,
+                            length_bucket_width=None,
+                            maximum_features_length=None,
+                            maximum_labels_length=None,
+                            single_pass=False,
+                            num_shards=1,
+                            shard_index=0,
+                            num_threads=4,
+                            prefetch_buffer_size=None):
+        """See :meth:`opennmt.inputters.ExampleInputter.make_training_dataset`."""
+        _ = labels_file
+        dataset = self.make_dataset(features_file, training=True)
+        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), lang_src=1, lang_tgt=1, is_noisy=is_noisy, training=True)
+        print("batch_type", batch_type)
+        dataset = dataset.apply(dataset_util.training_pipeline(
+            batch_size,
+            batch_type=batch_type,
+            batch_multiplier=batch_multiplier,
+            length_bucket_width=length_bucket_width,
+            single_pass=single_pass,
+            process_fn=map_func,
+            num_threads=num_threads,
+            shuffle_buffer_size=shuffle_buffer_size,
+            prefetch_buffer_size=prefetch_buffer_size,
+            maximum_features_length=maximum_features_length,
+            maximum_labels_length=maximum_labels_length,
+            features_length_fn=self.get_length,
+            batch_size_multiple=batch_size_multiple,
+            num_shards=num_shards,
+            shard_index=shard_index))
+        return dataset
+    
+    def make_evaluation_dataset(self,
+                              features_file,
+                              labels_file,
+                              batch_size,
+                              lang_src=1, lang_tgt=1,
+                              is_noisy=1,
+                              num_threads=1,
+                              prefetch_buffer_size=None):
+        """See :meth:`opennmt.inputters.ExampleInputter.make_evaluation_dataset`."""
+        _ = labels_file
+        dataset = self.make_dataset(features_file, training=False)
+        map_func = lambda *arg: self.make_features(misc.item_or_tuple(arg), lang_src=1, lang_tgt=1, is_noisy=is_noisy, training=False)
+        dataset = dataset.apply(dataset_util.inference_pipeline(
+            batch_size,
+            process_fn=map_func,
+            num_threads=num_threads,
+            prefetch_buffer_size=prefetch_buffer_size))
+        return dataset
 
 
 
