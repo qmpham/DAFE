@@ -18159,6 +18159,8 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
   print("kl_term_coeff",kl_term_coeff)
   print("topK: ", K)
 
+  my_matrix = np.zeros((model.num_domain_unit_group),)
+
   def _accumulate_gradients(source, target):
     domain = source["domain"][0]
     kl_loss_per_layer = []
@@ -18216,7 +18218,9 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
     print("var numb: ", len(variables))
     
     gradients = optimizer.get_gradients(training_loss, model_variables)
-    deltaL_deltaM = optimizer.get_gradients(training_loss, soft_mask_logits_per_layer)
+    #deltaL_deltaM = optimizer.get_gradients(training_loss, soft_mask_logits_per_layer)
+    deltaL_deltaM = optimizer.get_gradients(training_loss, soft_mask_total_per_layer)
+    
     #optimizer.get_gradients(training_loss,soft_mask_logits_per_layer)
     group_allocation_gradient_per_layer = []
     for i in range(model.encoder.num_layers + model.decoder.num_layers+1):
@@ -18228,7 +18232,7 @@ def train_elbo_topK_sparse_layer_multi_layer(config,
       deltaTempx_deltaLogit = - tf.tile(tf.expand_dims(deltaresidue_deltalogit1 / deltaresidue_deltatempx1,0),[model.num_domain_unit_group,1])
       #tf.print("deltaresidue_deltalogit", deltaresidue_deltalogit1, "deltaresidue_deltatempx", deltaresidue_deltatempx1, "deltaTempx_deltaLogit", deltaTempx_deltaLogit, summarize=-1)
       deltaM_deltaLogit = tf.eye(model.num_domain_unit_group) + deltaTempx_deltaLogit
-      deltaL_deltaLogit = tf.linalg.matmul(tf.expand_dims(deltaL_deltaM[i],0),deltaM_deltaLogit)
+      deltaL_deltaLogit = tf.linalg.matmul(tf.expand_dims(deltaL_deltaM[i],0),tf.repeat(deltaM_deltaLogit,repeats=model.unit_group_size,axis=0))
       group_allocation_gradient = optimizer.get_gradients(kl_loss_per_layer[i] * kl_term_coeff, model.latent_group_allocation_logit_per_layer[i])
       group_allocation_gradient[0] = tf.clip_by_norm(tf.tensor_scatter_nd_add(group_allocation_gradient[0],tf.expand_dims(group_allocation_gradient[0].indices,1),deltaL_deltaLogit),1.0)
       group_allocation_gradient_per_layer.append(group_allocation_gradient[0])
