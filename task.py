@@ -19769,7 +19769,7 @@ def translate_Instance_Aware_topK_sparse_layer_multi_layer(source_file,
   domain_dropout_mask = []
 
   for i in range(model.mask_num):
-    topK_ = tf.math.top_k(),k=topK).indices.numpy()
+    #topK_ = tf.math.top_k(),k=topK).indices.numpy()
     group_allocation = np.zeros(model.num_domain_unit_group)
     for j in topK_:
       group_allocation[j] = 1
