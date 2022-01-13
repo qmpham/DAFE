@@ -29,6 +29,7 @@ from opennmt.inputters.text_inputter import WordEmbedder, TextInputter
 from utils.utils_ import variance_scaling_initialier, MultiBLEUScorer, create_slurm_strategy
 import task
 from optimizer import schedules as my_schedules
+from opennmt.encoders.self_attention_encoder import SelfAttentionEncoder
 from layers.layers import Regulation_Gate, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v6, Multi_domain_Gate_v1, Multi_domain_FeedForwardNetwork_v5, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, DAFE, Multi_domain_FeedForwardNetwork_v1, Multi_domain_FeedForwardNetwork_v0
 def main():
   seed = 1234
@@ -1391,6 +1392,58 @@ def main():
         version=config.get("decoder_version",2),
         stop_gradient_version=config.get("stop_gradient_version",1)))
   
+  elif experiment=="Multi_domain_SequenceToSequence_Instace_Aware_TopK_sparse_multi_layer":
+
+    model = Multi_domain_SequenceToSequence_TopK_sparse_multi_layer(
+    source_inputter=My_inputter(embedding_size=config.get("num_units",512)),
+    target_inputter=My_inputter(embedding_size=config.get("num_units",512)),
+    num_domains=num_domains,
+    num_units=config.get("num_units",512),
+    dropout_rate=config.get("dropout_rate",0.5),
+    num_domain_unit_group=config.get("num_domain_unit_group",16),
+    unit_group_size=config.get("unit_group_size",12),
+    num_shared_units=config.get("num_shared_units",480),
+    version = config.get("version",1),
+    meta_encoder = SelfAttentionEncoder(num_layers=2),
+    encoder=Multi_domain_SelfAttentionEncoder_sparse_multi_layer_v1(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        domain_region_sizes = config.get("domain_region_sizes",None),
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=d_classification_gate_stopping_gradient_enc,
+        num_units=config.get("num_units",512),
+        num_heads=config.get("num_heads",8),
+        ffn_inner_dim=config.get("ffn_inner_dim",2048),
+        dropout=config.get("dropout",0.1),
+        training_res_using_rate=config.get("training_res_using_rate",1.0),
+        testing_res_using_rate=config.get("testing_res_using_rate",1.0),
+        attention_dropout=config.get("attention_dropout",0.1),
+        ffn_dropout=config.get("ffn_dropout",0.1),
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+        version=config.get("encoder_version",2),
+        inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
+        stop_gradient_version=config.get("stop_gradient_version",1)),
+    decoder=Multi_domain_SelfAttentionDecoder_sparse_multi_layer_v1(
+        num_layers=6,
+        num_domains=num_domains,
+        num_domain_units=num_domain_units,
+        domain_region_sizes = config.get("domain_region_sizes",None),
+        ADAP_layer_stopping_gradient=ADAP_layer_stopping_gradient,
+        ADAP_gate_stopping_gradient=d_classification_gate_stopping_gradient_dec,
+        num_units=config.get("num_units",512),
+        num_heads=config.get("num_heads",8),
+        ffn_inner_dim=config.get("ffn_inner_dim",2048),
+        dropout=config.get("dropout",0.1),
+        training_res_using_rate=config.get("training_res_using_rate",1.0),
+        testing_res_using_rate=config.get("testing_res_using_rate",1.0),
+        attention_dropout=config.get("attention_dropout",0.1),
+        ffn_dropout=config.get("ffn_dropout",0.1),
+        multi_domain_adapter_class=Multi_domain_FeedForwardNetwork_v3,
+        inner_layer_norm=None if not config.get("inner_layer_norm") else Multi_LayerNorm,
+        version=config.get("decoder_version",2),
+        stop_gradient_version=config.get("stop_gradient_version",1)))
+
   elif experiment=="residualv28":
     model = SequenceToSequence_with_dprob(
     source_inputter=My_inputter(embedding_size=512),
