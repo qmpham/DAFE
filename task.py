@@ -36,6 +36,19 @@ from utils.dataprocess import count_lines
 from opennmt.utils import misc
 
 
+import seaborn as sns; sns.set_theme()
+import numpy as np
+import matplotlib.pyplot as plt
+
+def map_prod(x_labels,y_labels, matrix,name):
+    plt.figure()
+    ax = sns.heatmap(np.array(matrix),xticklabels=x_labels, yticklabels=y_labels)
+    ax.xaxis.set_ticks_position('top')
+    ax.tick_params(length=0)
+    fig = ax.get_figure()
+    fig.savefig(name,dpi=1000)
+
+
 def reward_rescale(rewards):
   abs_max = max([abs(r) for r in rewards])
   return [r/abs_max for r in rewards]
@@ -4021,6 +4034,8 @@ def model_inspect(config,
   print(p/(model.encoder.num_layers+model.decoder.num_layers+1))
   print(np.mean(acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers+1)))
   np.savetxt("similarity.csv", acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers+1), delimiter="\t")
+  x_axis_labels = ["domain_%d"%i for i in range(config.get("num_inspected_domains",8))]
+  map_prod(x_axis_labels, x_axis_labels,acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers), "similarity.png")
 
   """
   checkpoint_path = checkpoint_manager.latest_checkpoint
@@ -19766,28 +19781,27 @@ def translate_Instance_Aware_topK_sparse_layer_multi_layer(source_file,
   # Create the mapping for target ids to tokens.
   ids_to_tokens = model.labels_inputter.ids_to_tokens
 
-  domain_dropout_mask = []
-
-  for i in range(model.mask_num):
-    #topK_ = tf.math.top_k(),k=topK).indices.numpy()
-    group_allocation = np.zeros(model.num_domain_unit_group)
-    for j in topK_:
-      group_allocation[j] = 1
-
-    tf.print("group_allocation:",group_allocation,"domain:",domain,"layer:",i,summarize=-1)
-
-    group_allocation = tf.repeat(tf.Variable(group_allocation,dtype=tf.float32),model.unit_group_size)
-
-    domain_dropout_mask.append(tf.concat([tf.ones(model.num_shared_units),group_allocation],-1))  
-
   @tf.function
   def predict_next():    
     source = next(iterator)
     source_length = source["length"]
     batch_size = tf.shape(source_length)[0]
     source_inputs = model.features_inputter(source)
-    encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"], domain_dropout_mask[:model.encoder.num_layers+1]], source_length, training=False, internal_node_printing=True)
     
+    meta_encoding, sequence_length, _ = model.meta_encoder(
+        source_inputs, sequence_length=source_length, training=True)
+    padding_mask = model.meta_encoder.build_mask(source_inputs, sequence_length=sequence_length)
+    padding_mask = tf.expand_dims(padding_mask, 2)
+    meta_encoding = meta_encoding * padding_mask
+    batch_size = tf.shape(padding_mask)[0]
+    dropout_mask = []
+    for i in range(model.encoder.num_layers + model.decoder.num_layers):
+      latent_group_allocation_logit_ = model.mask_generators[i](tf.reduce_sum(meta_encoding)/tf.expand_dims(sequence_length,1))
+      soft_mask = tf.math.sigmoid(soft_mask_logits)
+      dropout_mask.append(tf.cast(tf.repeat(tf.reduce_sum(tf.one_hot(tf.math.top_k(latent_group_allocation_logit_,k=K).indices, depth=model.num_domain_unit_group),1),model.unit_group_size,axis=-1),tf.float32))
+
+      ncoder_outputs, _, _ = model.encoder([source_inputs, source["domain"], dropout_mask[:model.encoder.num_layers]], source_length, training=False, internal_node_printing=True)
+
     # Prepare the decoding strategy.
     if beam_size > 1:
       encoder_outputs = tfa.seq2seq.tile_batch(encoder_outputs, beam_size)
@@ -19800,7 +19814,7 @@ def translate_Instance_Aware_topK_sparse_layer_multi_layer(source_file,
     decoder_state = model.decoder.initial_state(
         memory=encoder_outputs,
         memory_sequence_length=source_length)
-    map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64), domain_dropout_mask[model.encoder.num_layers+1:]]
+    map_input_fn = lambda ids: [model.labels_inputter({"ids": ids}, training=False), tf.dtypes.cast(tf.fill(tf.expand_dims(tf.shape(ids)[0],0), domain), tf.int64), dropout_mask[model.encoder.num_layers:]]
     
     decoded = model.decoder.dynamic_decode(
         map_input_fn,
