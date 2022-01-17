@@ -45,6 +45,7 @@ def map_prod(x_labels,y_labels, matrix,name):
     ax = sns.heatmap(np.array(matrix),xticklabels=x_labels, yticklabels=y_labels)
     ax.xaxis.set_ticks_position('top')
     ax.tick_params(length=0)
+    plt.xticks(rotation=90)
     fig = ax.get_figure()
     fig.savefig(name,dpi=1000)
 
