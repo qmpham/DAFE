@@ -4035,7 +4035,7 @@ def model_inspect(config,
   print(np.mean(acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers+1)))
   np.savetxt("similarity.csv", acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers+1), delimiter="\t")
   x_axis_labels = ["%d"%i for i in range(config.get("num_inspected_domains",8))]
-  map_prod(x_axis_labels, x_axis_labels,acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers), "similarity.png")
+  map_prod(x_axis_labels, x_axis_labels,acc_similarity_matrix/(model.encoder.num_layers+model.decoder.num_layers+1), "similarity.png")
 
   """
   checkpoint_path = checkpoint_manager.latest_checkpoint
