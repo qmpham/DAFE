@@ -19801,7 +19801,7 @@ def translate_Instance_Aware_topK_sparse_layer_multi_layer(source_file,
       soft_mask = tf.math.sigmoid(soft_mask_logits)
       dropout_mask.append(tf.cast(tf.repeat(tf.reduce_sum(tf.one_hot(tf.math.top_k(latent_group_allocation_logit_,k=K).indices, depth=model.num_domain_unit_group),1),model.unit_group_size,axis=-1),tf.float32))
 
-      ncoder_outputs, _, _ = model.encoder([source_inputs, source["domain"], dropout_mask[:model.encoder.num_layers]], source_length, training=False, internal_node_printing=True)
+    encoder_outputs, _, _ = model.encoder([source_inputs, source["domain"], dropout_mask[:model.encoder.num_layers]], source_length, training=False, internal_node_printing=True)
 
     # Prepare the decoding strategy.
     if beam_size > 1:

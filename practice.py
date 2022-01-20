@@ -1936,6 +1936,7 @@ def main():
       print("translating %s in domain %d"%(src_file, domain))
       print("output_file: ", output_file)
       task.translate_topK_sparse_layer_multi_layer(src_file, None, model, new_checkpoint_manager, checkpoint, int(domain), output_file, topK=topK, length_penalty=0.6, experiment=experiment)
+  
   elif args.run == "translate_topK_sparse_layer_cluster":
     topK = config.get("domain_group_allocation_num",int( (1-config.get("dropout_rate")) * config.get("num_domain_unit_group")))
     model.create_variables()
@@ -1950,7 +1951,23 @@ def main():
         domain = i
         print("translating %s"%src_file)
         task.translate_topK_sparse_layer(src_file, None, model, new_checkpoint_manager, checkpoint, int(domain), output_file, topK=topK, length_penalty=0.6, experiment=experiment)
-      
+  
+  elif args.run == "translate_topK_sparse_layer_multi_layer_cluster":
+    topK = config.get("domain_group_allocation_num",int((1-config.get("dropout_rate",0.25)) * config.get("num_domain_unit_group")))
+    model.create_variables()
+    print("topK: ",topK)
+    new_checkpoint_manager = average_checkpoints_tf2_3(config["model_dir"], output_dir="%s/averaged_checkpoint"%config["model_dir"], trackables={"model":model},
+                        max_count=args.maxcount,
+                        model_key="model")
+    src_list = args.src_files
+    for root in src_list:
+      for i in range(int(args.n_clusters)):
+        src_file = "%s.cluster.%d"%(root,i)
+        output_file = os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(os.path.basename(root),i))
+        domain = i
+        print("translating %s"%src_file)
+        task.translate_topK_sparse_layer_multi_layer(src_file, None, model, new_checkpoint_manager, checkpoint, int(domain), output_file, topK=topK, length_penalty=0.6, experiment=experiment)
+  
   elif args.run == "priming_translate":
     model.create_variables()
     translate_config_file = args.src
