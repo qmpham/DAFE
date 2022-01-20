@@ -1971,7 +1971,7 @@ def main():
         print("translating %s"%src_file)
         output_files.append(output_file)
         task.translate_topK_sparse_layer_multi_layer(src_file, None, model, new_checkpoint_manager, checkpoint, int(domain), output_file, topK=topK, length_penalty=0.6, experiment=experiment)
-      output_file_concat = task.file_concatenate(output_files,"%s.%s"%(root,os.path.basename(checkpoint_path)))
+      output_file_concat = task.file_concatenate(output_files,"%s.%s"%(os.path.basename(root),os.path.basename(checkpoint_path)))
   elif args.run == "priming_translate":
     model.create_variables()
     translate_config_file = args.src
