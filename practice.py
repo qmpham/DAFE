@@ -1961,8 +1961,9 @@ def main():
                         model_key="model")
     checkpoint_path = new_checkpoint_manager.latest_checkpoint
     src_list = args.src_files
-    output_files = []
+    
     for root in src_list:
+      output_files = []
       for i in range(int(args.n_clusters)):
         src_file = "%s.cluster.%d"%(root,i)
         output_file = os.path.join(config["model_dir"],"eval","%s.cluster.%d.trans"%(os.path.basename(root),i))
@@ -1970,7 +1971,7 @@ def main():
         print("translating %s"%src_file)
         output_files.append(output_file)
         task.translate_topK_sparse_layer_multi_layer(src_file, None, model, new_checkpoint_manager, checkpoint, int(domain), output_file, topK=topK, length_penalty=0.6, experiment=experiment)
-    output_file_concat = task.file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
+      output_file_concat = task.file_concatenate(output_files,"output_file_concat.%s"%os.path.basename(checkpoint_path))
   elif args.run == "priming_translate":
     model.create_variables()
     translate_config_file = args.src
