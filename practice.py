@@ -37,7 +37,7 @@ def main():
   np.random.seed(seed) 
   #tf.random.set_seed(seed)
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("run", choices=["train","train_tf_25","translate_topK_sparse_layer_multi_layer_cluster","train_elbo_sparse_layer","train_elbo_topK_sparse_layer_multi_layer","fewshot_elbo_topK_sparse_layer_multi_layer","train_elbo_topK_sparse_layer_multi_layer_v1","translatev3_tf_25","train_elbo_topK_sparse_layer","translate_topK_sparse_layer","translate_topK_sparse_layer_cluster","translate_topK_sparse_layer_multi_layer","translate_sparse_layer","priming_translate","priming_train_chasing", "priming_translate_chasing", "priming_train","CL_marine","train_domain_mixing_residual","train_L2W","train_IW_v0","train_NGD_L2W_v1","train_L2W_v2","train_L2W_g","train_L2W_v3","debug_L2W_v1","debug_L2W_v2","debug_L2W_v3","train_L2W_v1","train_NGD_L2W","debug_NGD","train_NGD", "continue_NGD", "score", "EWC_stat", "EWC_res_stat", "translate_farajan", "translate_farajan_residual", "train_adv", "train_wada", "finetune_noisy_v1", "finetune_wada", "finetune_wada_v1", "proxy", "debug_slurm_train", "metatrainv16", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
+  parser.add_argument("run", choices=["train","train_tf_25","translate_topK_sparse_layer_multi_layer_cluster","finetune_elbo_topK_sparse_layer_multi_layer","train_elbo_sparse_layer","train_elbo_topK_sparse_layer_multi_layer","fewshot_elbo_topK_sparse_layer_multi_layer","train_elbo_topK_sparse_layer_multi_layer_v1","translatev3_tf_25","train_elbo_topK_sparse_layer","translate_topK_sparse_layer","translate_topK_sparse_layer_cluster","translate_topK_sparse_layer_multi_layer","translate_sparse_layer","priming_translate","priming_train_chasing", "priming_translate_chasing", "priming_train","CL_marine","train_domain_mixing_residual","train_L2W","train_IW_v0","train_NGD_L2W_v1","train_L2W_v2","train_L2W_g","train_L2W_v3","debug_L2W_v1","debug_L2W_v2","debug_L2W_v3","train_L2W_v1","train_NGD_L2W","debug_NGD","train_NGD", "continue_NGD", "score", "EWC_stat", "EWC_res_stat", "translate_farajan", "translate_farajan_residual", "train_adv", "train_wada", "finetune_noisy_v1", "finetune_wada", "finetune_wada_v1", "proxy", "debug_slurm_train", "metatrainv16", "proxy1","translatev7","kmeans", "translatev5", "translatev6","sentence_encode", "train_wdc", "train_denny_britz", "train_ldr", "visualize", "experimental_translate", "trainv3", "dcote", "metatrainv12", "trainv13", "trainv2", "trainv12", "metatrainv15", "translatev1", "trainv8", "translate", "translatev2", "translatev3", "metatrainv9", "metatrainv11", "debug","metatrainv1", "metatrainv2", "metatrainv3", "inspect", "metatrainv5", "metatrainv6", "metatrainv7", "metatrainv8", "metatrainv10", "elastic_finetune", "finetune"], help="Run type.")
   parser.add_argument("--config", help="configuration file")
   parser.add_argument("--config_root")
   parser.add_argument("--src")
@@ -1683,9 +1683,7 @@ def main():
   print("learning_rate: ", learning_rate)
   meta_train_optimizer = tf.keras.optimizers.SGD(config.get("meta_train_lr"))
   meta_test_optimizer = tfa.optimizers.LazyAdam(learning_rate, beta_1=config.get("adam_beta_1",0.9), beta_2=config.get("adam_beta_2",0.999),epsilon=config.get("adam_epsilon",1e-8))
-  # if experiment=="small_transformer":
-  #   meta_test_optimizer = tfa.optimizers.LazyAdam(0.0015)
-  #   print(meta_test_optimizer)
+  
   adapter_optimizer = tfa.optimizers.LazyAdam(learning_rate)
   model.initialize(data_config)
   checkpoint = tf.train.Checkpoint(model=model, optimizer=meta_test_optimizer)
@@ -1742,7 +1740,14 @@ def main():
     print("attention_dropout",config.get("attention_dropout",0.1)),
     print("ffn_dropout",config.get("ffn_dropout",0.1)),
     task.train_elbo_topK_sparse_layer_multi_layer(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint,adapter_optimizer=adapter_optimizer, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
-  
+  elif args.run == "finetune_elbo_topK_sparse_layer_multi_layer":
+    print("num_units",config.get("num_units",512)),
+    print("num_heads",config.get("num_heads",8)),
+    print("ffn_inner_dim",config.get("ffn_inner_dim",2048)),
+    print("dropout",config.get("dropout",0.1)),
+    print("attention_dropout",config.get("attention_dropout",0.1)),
+    print("ffn_dropout",config.get("ffn_dropout",0.1)),
+    task.finetune_elbo_topK_sparse_layer_multi_layer(config, meta_test_optimizer, learning_rate, model, strategy, checkpoint_manager, checkpoint,adapter_optimizer=adapter_optimizer, checkpoint_path=config.get("checkpoint_path",None), maximum_length=config.get("maximum_length",80), experiment=experiment, save_every=config.get("save_every",5000), eval_every=config.get("eval_every",10000))
   elif args.run == "fewshot_elbo_topK_sparse_layer_multi_layer":
     print("num_units",config.get("num_units",512)),
     print("num_heads",config.get("num_heads",8)),
