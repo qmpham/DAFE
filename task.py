@@ -18579,7 +18579,7 @@ def finetune_elbo_topK_sparse_layer_multi_layer(config,
   import time
   start = time.time()  
   train_data_flow = iter(_train_forward())
-  _, _, _, _, _ = next(train_data_flow)
+  _, _ = next(train_data_flow)
 
   print("number of replicas: %d"%strategy.num_replicas_in_sync)
   print("accumulation step", config.get("accumulation_step",1))
