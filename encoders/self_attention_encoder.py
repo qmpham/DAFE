@@ -10,7 +10,7 @@ from opennmt.encoders.encoder import Encoder
 from opennmt.encoders.self_attention_encoder import SelfAttentionEncoder
 from opennmt.layers.position import SinusoidalPositionEncoder
 from opennmt.layers import common
-from layers.common import LayerNorm, LayerNorm_v1, Multi_LayerNorm
+from layers.common import LayerNorm, LayerNorm_v1, Multi_LayerNorm, LayerNorm_v2
 from utils.utils_ import make_domain_mask
 from layers.layers import Regulation_Gate, Multi_domain_classification_gate, Multi_domain_classification_gate_v2, Multi_domain_FeedForwardNetwork_v9, Multi_domain_FeedForwardNetwork_v6, Multi_domain_FeedForwardNetwork_v8, Multi_domain_FeedForwardNetwork_v7, Multi_domain_FeedForwardNetwork, Multi_domain_FeedForwardNetwork_v2, Multi_domain_FeedForwardNetwork_v3, DAFE, Multi_domain_Gate, Multi_domain_Gate_v2
 from opennmt.utils.misc import shape_list
@@ -2218,7 +2218,7 @@ class Multi_domain_SelfAttentionEncoder_sparse_multi_layer(Encoder):
     if position_encoder_class is not None:
       self.position_encoder = position_encoder_class()
     print("encoder_version",version)
-    if version ==1:
+    if version == 1:
       self.layer_norm = Multi_LayerNorm(num_domains)
       self.layers = [
         transformer.SelfAttentionEncoderLayer_v1(
@@ -2230,7 +2230,20 @@ class Multi_domain_SelfAttentionEncoder_sparse_multi_layer(Encoder):
             attention_dropout=attention_dropout,
             ffn_dropout=ffn_dropout,
             ffn_activation=ffn_activation)
-        for i in range(num_layers)]     
+        for i in range(num_layers)]  
+    elif version == 3:
+      self.layer_norm = LayerNorm_v2(num_domains)
+      self.layers = [
+        transformer.SelfAttentionEncoderLayer_v1(
+            num_units,
+            num_heads,
+            ffn_inner_dim,
+            domain_numb = num_domains,
+            dropout=dropout,
+            attention_dropout=attention_dropout,
+            ffn_dropout=ffn_dropout,
+            ffn_activation=ffn_activation)
+        for i in range(num_layers)] 
     else:
       self.layer_norm = LayerNorm()
       self.layers = [

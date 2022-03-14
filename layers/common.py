@@ -108,6 +108,35 @@ class LayerNorm(tf.keras.layers.Layer):
         (self.beta, weights["beta"]),
         (self.gamma, weights["gamma"])
     ]
+
+class LayerNorm_v2(tf.keras.layers.Layer):
+  
+  def __init__(self, epsilon=1e-6, **kwargs):
+    
+    super(LayerNorm_v2, self).__init__(**kwargs)
+    self.epsilon = epsilon
+
+  def build(self, input_shape):
+    """Creates the variables."""
+    depth = input_shape[-1]
+    self.beta = self.add_weight(
+        "beta", [depth], initializer=tf.keras.initializers.Constant(0))
+    self.gamma = self.add_weight(
+        "gamma", [depth], initializer=tf.keras.initializers.Constant(1))
+    super(LayerNorm_v2, self).build(input_shape)
+
+  def call(self, x):  # pylint: disable=arguments-differ
+    """Normalizes :obj:`x`."""
+    mean = tf.reduce_mean(x, axis=[-1], keepdims=True)
+    variance = tf.reduce_mean(tf.square(x - mean), axis=[-1], keepdims=True)
+    norm_x = (x - mean) * tf.math.rsqrt(variance + self.epsilon)
+    return norm_x * self.gamma 
+
+  def map_v1_weights(self, weights):
+    return [
+        (self.beta, weights["beta"]),
+        (self.gamma, weights["gamma"])
+    ]
   
 class LayerNorm_v1(tf.keras.layers.Layer):
   
