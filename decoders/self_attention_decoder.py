@@ -6824,13 +6824,12 @@ class Multi_domain_SelfAttentionDecoder_sparse_multi_layer(Decoder):
             ffn_activation=ffn_activation)
         for i in range(num_layers)] 
     elif version==3:
-      self.layer_norm = common.LayerNorm_v2(num_domains)
+      self.layer_norm = common.LayerNorm_v2()
       self.layers = [
-        transformer.SelfAttentionDecoderLayer_v1(
+        transformer.SelfAttentionDecoderLayer(
             num_units,
             num_heads,
             ffn_inner_dim,
-            domain_numb = num_domains,
             dropout=dropout,
             attention_dropout=attention_dropout,
             ffn_dropout=ffn_dropout,
