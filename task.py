@@ -36,7 +36,7 @@ from utils.dataprocess import count_lines
 from opennmt.utils import misc
 
 
-#import seaborn as sns; sns.set_theme()
+import seaborn as sns; sns.set_theme()
 import numpy as np
 import matplotlib.pyplot as plt
 
