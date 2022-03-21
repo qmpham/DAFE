@@ -129,9 +129,9 @@ class LayerNorm_v2(tf.keras.layers.Layer):
   def call(self, x):  # pylint: disable=arguments-differ
     """Normalizes :obj:`x`."""
     #mean = tf.reduce_mean(x, axis=[-1], keepdims=True)
-    #variance = tf.reduce_mean(tf.square(x - mean), axis=[-1], keepdims=True)
+    variance = tf.reduce_mean(tf.square(x), axis=[-1], keepdims=True)
 
-    norm_x = x / tf.math.rsqrt(tf.reduce_mean(tf.square(x),axis=[-1], keepdims=True)) #(x - mean) * tf.math.rsqrt(variance + self.epsilon)
+    norm_x = x * tf.math.rsqrt(variance + self.epsilon)
     return norm_x * self.gamma 
 
   # def map_v1_weights(self, weights):
