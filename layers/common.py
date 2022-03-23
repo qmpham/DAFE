@@ -260,6 +260,70 @@ class LayerWrapper(tf.keras.layers.Layer):
     layer = tf.keras.layers.deserialize(config.pop("layer"))
     return cls(layer, **config)
 
+class LayerWrapper_v2(tf.keras.layers.Layer):
+  
+  def __init__(self,
+               layer,
+               normalize_input=False,
+               normalize_output=False,
+               input_dropout=0,
+               output_dropout=0,
+               residual_connection=False,
+               **kwargs):
+    
+    super(LayerWrapper_v2, self).__init__(**kwargs)
+    self.layer = layer
+    self.input_layer_norm = LayerNorm_v2() if normalize_input else None
+    self.output_layer_norm = LayerNorm_v2() if normalize_output else None
+    self.input_dropout = input_dropout
+    self.output_dropout = output_dropout
+    self.residual_connection = residual_connection
+
+  def call(self, inputs, *args, **kwargs):  # pylint: disable=arguments-differ
+    
+    training = kwargs.get("training")
+    x = inputs
+    if self.input_layer_norm is not None:
+      x = self.input_layer_norm(x)  # pylint: disable=not-callable
+    x = dropout(x, self.input_dropout, training=training)
+    tf.print("inner self attention: ", x[0,0,:], summarize=-1)
+    all_outputs = self.layer(x, *args, **kwargs)
+    if isinstance(all_outputs, tuple):
+      outputs = all_outputs[0]
+      extra_outputs = list(all_outputs)[1:]
+    else:
+      outputs = all_outputs
+      extra_outputs = None
+
+    outputs = dropout(outputs, self.output_dropout, training=training)
+    if self.residual_connection and outputs.shape[-1] == inputs.shape[-1]:
+      outputs += inputs
+    if self.output_layer_norm is not None:
+      outputs = self.output_layer_norm(outputs)  # pylint: disable=not-callable
+
+    if extra_outputs:
+      return tuple([outputs] + extra_outputs)
+    return outputs
+
+  def get_config(self):
+    """Returns the layer wrapper configuration."""
+    config = {
+        "layer": tf.keras.layers.serialize(self.layer),
+        "normalize_input": self.input_layer_norm is not None,
+        "normalize_output": self.output_layer_norm is not None,
+        "input_dropout": self.input_dropout,
+        "output_dropout": self.output_dropout,
+        "residual_connection": self.residual_connection
+    }
+    base_config = super(LayerWrapper, self).get_config()
+    return dict(list(base_config.items()) + list(config.items()))
+
+  @classmethod
+  def from_config(cls, config):
+    """Creates a layer wrapper from its configuration."""
+    layer = tf.keras.layers.deserialize(config.pop("layer"))
+    return cls(layer, **config)
+
 class Multi_ADAP_Dense(tf.keras.layers.Dense):
   
   def __init__(self, units, input_units, multi_domain_adapter_class, weight=None, transpose=False, num_domain_units=128, num_domains=6, **kwargs):
