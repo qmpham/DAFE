@@ -196,7 +196,7 @@ class LayerWrapper(tf.keras.layers.Layer):
     if self.input_layer_norm is not None:
       x = self.input_layer_norm(x)  # pylint: disable=not-callable
     x = dropout(x, self.input_dropout, training=training)
-
+    tf.print("inner self attention: ", x)
     all_outputs = self.layer(x, *args, **kwargs)
     if isinstance(all_outputs, tuple):
       outputs = all_outputs[0]
