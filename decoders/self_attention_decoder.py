@@ -6826,7 +6826,7 @@ class Multi_domain_SelfAttentionDecoder_sparse_multi_layer(Decoder):
     elif version==3:
       self.layer_norm = common.LayerNorm_v2()
       self.layers = [
-        transformer.SelfAttentionDecoderLayer(
+        transformer.SelfAttentionDecoderLayer_v4(
             num_units,
             num_heads,
             ffn_inner_dim,

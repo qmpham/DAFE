@@ -2234,7 +2234,7 @@ class Multi_domain_SelfAttentionEncoder_sparse_multi_layer(Encoder):
     elif version == 3:
       self.layer_norm = LayerNorm_v2()
       self.layers = [
-        transformer.SelfAttentionEncoderLayer(
+        transformer.SelfAttentionEncoderLayer_v4(
             num_units,
             num_heads,
             ffn_inner_dim,
